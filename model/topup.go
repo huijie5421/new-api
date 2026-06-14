@@ -22,6 +22,7 @@ type TopUp struct {
 	CreateTime      int64   `json:"create_time"`
 	CompleteTime    int64   `json:"complete_time"`
 	Status          string  `json:"status"`
+	RebateQuota     int64   `json:"rebate_quota" gorm:"default:0"` // 已返利给邀请人的额度(幂等标记,仅在线充值触发)
 }
 
 const (
@@ -285,6 +286,8 @@ func Recharge(referenceId string, customerId string, callerIp string) (err error
 	syncCreditUserQuotaCache(topUp.UserId, quota, "stripe topup")
 
 	RecordTopupLog(topUp.UserId, fmt.Sprintf("使用在线充值成功，充值金额: %v，支付金额：%d", logger.FormatQuota(quota), topUp.Amount), callerIp, topUp.PaymentMethod, PaymentMethodStripe)
+
+	RebateInviterForTopUp(topUp, int64(quota))
 
 	return nil
 }
@@ -591,6 +594,8 @@ func RechargeCreem(referenceId string, customerEmail string, customerName string
 
 	RecordTopupLog(topUp.UserId, fmt.Sprintf("使用Creem充值成功，充值额度: %v，支付金额：%.2f", quota, topUp.Money), callerIp, topUp.PaymentMethod, PaymentMethodCreem)
 
+	RebateInviterForTopUp(topUp, quota)
+
 	return nil
 }
 
@@ -649,6 +654,7 @@ func RechargeWaffo(tradeNo string, callerIp string) (err error) {
 
 	if quotaToAdd > 0 {
 		RecordTopupLog(topUp.UserId, fmt.Sprintf("Waffo充值成功，充值额度: %v，支付金额: %.2f", logger.FormatQuota(quotaToAdd), topUp.Money), callerIp, topUp.PaymentMethod, PaymentMethodWaffo)
+		RebateInviterForTopUp(topUp, int64(quotaToAdd))
 	}
 
 	return nil
@@ -709,7 +715,45 @@ func RechargeWaffoPancake(tradeNo string) (err error) {
 
 	if quotaToAdd > 0 {
 		RecordLog(topUp.UserId, LogTypeTopup, fmt.Sprintf("Waffo Pancake充值成功，充值额度: %v，支付金额: %.2f", logger.FormatQuota(quotaToAdd), topUp.Money))
+		RebateInviterForTopUp(topUp, int64(quotaToAdd))
 	}
 
 	return nil
+}
+
+// RebateInviterForTopUp 在线充值返利:把本次充值额度的一定比例返给邀请人(直接进可用额度)。
+// 仅由在线支付入账点调用(epay/stripe/creem/waffo/waffo_pancake);兑换码、管理员补单/加余额不触发。
+// 通过 TopUp.RebateQuota 做幂等,确保同一订单只返一次。
+func RebateInviterForTopUp(topUp *TopUp, rechargedQuota int64) {
+	if topUp == nil || rechargedQuota <= 0 {
+		return
+	}
+	if !common.RechargeRebateEnabled || common.RechargeRebateRatio <= 0 {
+		return
+	}
+	// 幂等:该订单已返过则跳过
+	if topUp.RebateQuota > 0 {
+		return
+	}
+	// 查找邀请人(topUp.UserId 是充值的被邀请人)
+	invitee, err := GetUserById(topUp.UserId, false)
+	if err != nil || invitee == nil || invitee.InviterId <= 0 {
+		return
+	}
+	inviterId := invitee.InviterId
+	rebate := int64(float64(rechargedQuota) * common.RechargeRebateRatio / 100.0)
+	if rebate <= 0 {
+		return
+	}
+	// 返利直接进邀请人可用额度
+	if err := IncreaseUserQuota(inviterId, int(rebate), true); err != nil {
+		common.SysError(fmt.Sprintf("充值返利失败 inviter_id=%d trade_no=%s error=%s", inviterId, topUp.TradeNo, err.Error()))
+		return
+	}
+	// 记录已返利额度(幂等标记)
+	topUp.RebateQuota = rebate
+	if err := DB.Model(&TopUp{}).Where("id = ?", topUp.Id).Update("rebate_quota", rebate).Error; err != nil {
+		common.SysError(fmt.Sprintf("充值返利标记写入失败 trade_no=%s error=%s", topUp.TradeNo, err.Error()))
+	}
+	RecordLog(inviterId, LogTypeSystem, fmt.Sprintf("邀请用户在线充值返利 %s", logger.LogQuota(int(rebate))))
 }
