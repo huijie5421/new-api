@@ -1,0 +1,42 @@
+name: Build & Push Rebate Image
+
+# 在 GitHub Actions(高配 runner)上构建 new-api 镜像并推送到 GHCR,
+# VPS 只需 docker pull,构建负载完全不落在 VPS 上。
+
+on:
+  push:
+    branches: [feat/custom]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/new-api:rebate
+            ghcr.io/${{ github.repository_owner }}/new-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
