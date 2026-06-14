@@ -144,6 +144,11 @@ var TelegramBotName = ""
 var QuotaForNewUser = 0
 var QuotaForInviter = 0
 var QuotaForInvitee = 0
+
+// 在线充值返利:被邀请人在线充值成功后,按比例把额度返给邀请人(直接进可用额度)。
+// 仅在线支付触发;兑换码、管理员加余额不触发。
+var RechargeRebateEnabled = false
+var RechargeRebateRatio = 0.0 // 返利比例(百分比),如 10 表示返利充值额度的 10%
 var ChannelDisableThreshold = 5.0
 var AutomaticDisableChannelEnabled = false
 var AutomaticEnableChannelEnabled = false
