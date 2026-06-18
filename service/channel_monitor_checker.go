@@ -44,6 +44,31 @@ func extractTextContent(raw json.RawMessage) string {
 	}
 }
 
+// isSSEStream reports whether the body is a Server-Sent-Events (streaming)
+// response. A 200 SSE response with at least one real data chunk means the
+// channel is serving requests and is therefore healthy — there is no single
+// JSON object to validate.
+func isSSEStream(body []byte) bool {
+	s := bytes.TrimSpace(body)
+	if len(s) == 0 {
+		return false
+	}
+	if !bytes.HasPrefix(s, []byte("data:")) && !bytes.Contains(s, []byte("\ndata:")) {
+		return false
+	}
+	for _, line := range bytes.Split(s, []byte("\n")) {
+		line = bytes.TrimSpace(line)
+		if !bytes.HasPrefix(line, []byte("data:")) {
+			continue
+		}
+		payload := bytes.TrimSpace(bytes.TrimPrefix(line, []byte("data:")))
+		if len(payload) > 0 && !bytes.Equal(payload, []byte("[DONE]")) {
+			return true
+		}
+	}
+	return false
+}
+
 // OpenAIChatAdapter implements ProviderAdapter for OpenAI chat completions
 type OpenAIChatAdapter struct{}
 
@@ -70,6 +95,7 @@ func (a *OpenAIChatAdapter) BuildRequest(endpoint string, apiKey string, model s
 			},
 		},
 		"max_tokens": 100,
+		"stream":     false,
 	}
 
 	// Merge custom body fields
@@ -116,8 +142,8 @@ func (a *OpenAIChatAdapter) ValidateResponse(statusCode int, responseBody []byte
 	}
 
 	content := extractTextContent(resp.Choices[0].Message.Content)
-	if !ValidateChallengeResponse(content, challenge) {
-		return false, "challenge validation failed"
+	if strings.TrimSpace(content) == "" {
+		return false, "empty response content"
 	}
 
 	return true, ""
@@ -138,8 +164,9 @@ func (a *OpenAIResponsesAdapter) BuildRequest(endpoint string, apiKey string, mo
 	}
 
 	reqBody := map[string]interface{}{
-		"model": model,
-		"input": challenge.Question,
+		"model":  model,
+		"input":  challenge.Question,
+		"stream": false,
 	}
 
 	for k, v := range body {
@@ -192,12 +219,8 @@ func (a *OpenAIResponsesAdapter) ValidateResponse(statusCode int, responseBody [
 		text = b.String()
 	}
 
-	if text == "" {
+	if strings.TrimSpace(text) == "" {
 		return false, "empty output"
-	}
-
-	if !ValidateChallengeResponse(text, challenge) {
-		return false, "challenge validation failed"
 	}
 
 	return true, ""
@@ -227,6 +250,7 @@ func (a *AnthropicAdapter) BuildRequest(endpoint string, apiKey string, model st
 			},
 		},
 		"max_tokens": 100,
+		"stream":     false,
 	}
 
 	for k, v := range body {
@@ -264,12 +288,8 @@ func (a *AnthropicAdapter) ValidateResponse(statusCode int, responseBody []byte,
 	}
 
 	text := extractTextContent(resp.Content)
-	if text == "" {
+	if strings.TrimSpace(text) == "" {
 		return false, "no content in response"
-	}
-
-	if !ValidateChallengeResponse(text, challenge) {
-		return false, "challenge validation failed"
 	}
 
 	return true, ""
@@ -347,8 +367,8 @@ func (a *GeminiAdapter) ValidateResponse(statusCode int, responseBody []byte, ch
 	}
 
 	text := resp.Candidates[0].Content.Parts[0].Text
-	if !ValidateChallengeResponse(text, challenge) {
-		return false, "challenge validation failed"
+	if strings.TrimSpace(text) == "" {
+		return false, "empty response content"
 	}
 
 	return true, ""
@@ -459,6 +479,15 @@ func PerformCheck(ctx context.Context, monitor *model.ChannelMonitor, modelName 
 	}
 
 	result.LatencyMs = int(time.Since(startTime).Milliseconds())
+
+	// Streaming (SSE) 200 responses: a channel returning a valid event stream is
+	// serving requests — treat as healthy without JSON-validating each chunk.
+	if resp.StatusCode == http.StatusOK && isSSEStream(responseBody) {
+		result.ResponseOK = true
+		result.Status = StatusSuccess
+		result.ErrorMsg = ""
+		return result
+	}
 
 	// Validate response
 	responseOK, errMsg := adapter.ValidateResponse(resp.StatusCode, responseBody, challenge)
