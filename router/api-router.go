@@ -419,8 +419,8 @@ func SetApiRouter(router *gin.Engine) {
 		}
 
 		// Channel Monitors (User - read-only status)
+		// 渠道状态对所有访客公开:查看运行状态无需登录(响应已脱敏,不含 api_key/endpoint/headers/body)
 		channelMonitorUserRoute := apiRouter.Group("/channel-monitors")
-		channelMonitorUserRoute.Use(middleware.UserAuth())
 		{
 			channelMonitorUserRoute.GET("/", controller.GetChannelMonitorStatusList)
 			channelMonitorUserRoute.GET("/:id", controller.GetChannelMonitorStatus)

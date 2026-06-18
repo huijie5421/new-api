@@ -73,20 +73,20 @@ export function formatLatency(ms: number | null | undefined): string {
 // Latency (ms) above which a *successful* check is still considered slow.
 export const SLOW_LATENCY_MS = 6000
 
-// Map a single timeline point onto a bar height + color tier. Since the backend
-// status is binary, we derive three visual tiers client-side:
-//   success & fast  -> green / full height
-//   success & slow  -> amber / medium height
-//   failure/unknown -> red   / short height
+// Map a single timeline point onto an uptime-style bar color. Bars are uniform
+// height (cleaner status-page look); status is encoded purely by color:
+//   success & fast  -> emerald
+//   success & slow  -> amber
+//   failure/unknown -> rose
 export function timelineBar(
   status: string,
   latencyMs: number
-): { heightPct: number; colorClass: string } {
+): { colorClass: string } {
   if (status === 'success') {
     if (latencyMs >= SLOW_LATENCY_MS) {
-      return { heightPct: 55, colorClass: 'bg-amber-500 dark:bg-amber-400' }
+      return { colorClass: 'bg-amber-400 dark:bg-amber-500' }
     }
-    return { heightPct: 100, colorClass: 'bg-emerald-500 dark:bg-emerald-400' }
+    return { colorClass: 'bg-emerald-500 dark:bg-emerald-400' }
   }
-  return { heightPct: 30, colorClass: 'bg-red-500 dark:bg-red-400' }
+  return { colorClass: 'bg-rose-500 dark:bg-rose-400' }
 }

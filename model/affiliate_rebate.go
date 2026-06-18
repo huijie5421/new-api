@@ -1,8 +1,27 @@
 package model
 
 import (
+	"strings"
+
 	"github.com/QuantumNous/new-api/common"
 )
+
+// maskUsername 对用户名打码,避免向邀请人暴露被邀请人的完整账号。
+// 例: huijie5421 -> hu*******1, ab -> a*, abc -> a**
+func maskUsername(name string) string {
+	r := []rune(name)
+	n := len(r)
+	switch {
+	case n == 0:
+		return ""
+	case n <= 2:
+		return string(r[0]) + "*"
+	case n <= 4:
+		return string(r[0]) + strings.Repeat("*", n-1)
+	default:
+		return string(r[:2]) + strings.Repeat("*", n-3) + string(r[n-1])
+	}
+}
 
 // AffiliateRebateRecord 充值返利台账：记录每一笔在线充值返利给邀请人的明细，便于溯源。
 type AffiliateRebateRecord struct {
@@ -35,6 +54,11 @@ func GetUserRebateRecords(inviterId int, pageInfo *common.PageInfo) ([]*Affiliat
 		return nil, 0, err
 	}
 
+	// 打码被邀请人用户名,避免暴露完整账号
+	for _, rec := range records {
+		rec.SourceUsername = maskUsername(rec.SourceUsername)
+	}
+
 	return records, total, nil
 }
 
@@ -54,6 +78,11 @@ func GetUserInvitees(inviterId int, pageInfo *common.PageInfo) ([]*User, int64, 
 		Offset(pageInfo.GetStartIdx()).
 		Find(&users).Error; err != nil {
 		return nil, 0, err
+	}
+
+	// 打码用户名,避免暴露完整账号
+	for _, u := range users {
+		u.Username = maskUsername(u.Username)
 	}
 
 	return users, total, nil

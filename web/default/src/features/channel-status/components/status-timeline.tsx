@@ -34,24 +34,44 @@ interface StatusTimelineProps {
   points: MonitorTimelinePoint[]
 }
 
-// Renders up to 60 vertical bars, oldest -> newest. The newest checks sit on
-// the right; when there are fewer than 60 points the empty slots are rendered
-// as muted placeholders on the LEFT.
+// Uptime-style timeline: up to 60 uniform-height rounded bars, oldest -> newest.
+// When there are fewer than 60 points the empty slots render as faint track
+// segments on the LEFT. Status is encoded by color; latency shows on hover.
 export function StatusTimeline({ points }: StatusTimelineProps) {
   const { t } = useTranslation()
 
-  // Keep only the most recent MAX_BARS, preserving ascending order.
   const recent = points.length > MAX_BARS ? points.slice(-MAX_BARS) : points
   const placeholders = Math.max(0, MAX_BARS - recent.length)
+  const upCount = recent.filter((p) => p.status === 'success').length
+  const uptime = recent.length > 0 ? (upCount / recent.length) * 100 : null
 
   return (
-    <div className='bg-background/50 rounded-xl border p-3 backdrop-blur-sm'>
-      <TooltipProvider delay={120}>
-        <div className='flex h-10 items-end gap-px'>
+    <div className='bg-muted/30 rounded-xl border p-3'>
+      <div className='mb-2 flex items-center justify-between'>
+        <span className='text-muted-foreground text-[11px] font-medium tracking-wide uppercase'>
+          {t('Last 60 checks')}
+        </span>
+        {uptime !== null && (
+          <span
+            className={cn(
+              'text-[11px] font-semibold tabular-nums',
+              uptime >= 99
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : uptime >= 90
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-rose-600 dark:text-rose-400'
+            )}
+          >
+            {uptime.toFixed(0)}% {t('Up')}
+          </span>
+        )}
+      </div>
+      <TooltipProvider delay={100}>
+        <div className='flex h-9 items-stretch gap-[2px]'>
           {Array.from({ length: placeholders }).map((_, i) => (
             <div
-              key={`placeholder-${i}`}
-              className='bg-muted h-1.5 min-w-px flex-1 rounded-full'
+              key={`ph-${i}`}
+              className='bg-muted/50 min-w-[2px] flex-1 rounded-[2px]'
             />
           ))}
           {recent.map((point, i) => (
@@ -59,9 +79,6 @@ export function StatusTimeline({ points }: StatusTimelineProps) {
           ))}
         </div>
       </TooltipProvider>
-      <div className='text-muted-foreground mt-2 text-[11px] font-medium'>
-        {t('Last 60 checks')}
-      </div>
     </div>
   )
 }
@@ -74,19 +91,19 @@ function statusLabel(status: string, t: (key: string) => string): string {
 
 function TimelineBar({ point }: { point: MonitorTimelinePoint }) {
   const { t } = useTranslation()
-  const { heightPct, colorClass } = timelineBar(point.status, point.latency_ms)
+  const { colorClass } = timelineBar(point.status, point.latency_ms)
   const relative = dayjs.unix(point.checked_at).fromNow()
 
   return (
     <Tooltip>
       <TooltipTrigger
         render={
-          <div className='flex h-full min-w-px flex-1 items-end'>
-            <div
-              className={cn('w-full rounded-full', colorClass)}
-              style={{ height: `${heightPct}%` }}
-            />
-          </div>
+          <div
+            className={cn(
+              'min-w-[2px] flex-1 cursor-default rounded-[2px] transition-all duration-150 hover:brightness-125',
+              colorClass
+            )}
+          />
         }
       />
       <TooltipContent>

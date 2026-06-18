@@ -264,7 +264,7 @@ export default function ChannelMonitorView() {
   const columnCount = 8
 
   return (
-    <div className='space-y-6 p-4 sm:p-6'>
+    <div className='h-full space-y-6 overflow-y-auto p-4 sm:p-6'>
       {/* Header */}
       <Card className='overflow-hidden border-blue-500/20'>
         <div className='relative overflow-hidden'>

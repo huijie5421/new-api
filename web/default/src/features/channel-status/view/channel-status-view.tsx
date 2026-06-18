@@ -154,7 +154,7 @@ export default function ChannelStatusView() {
   const operational = monitors.length > 0 && !hasFailure
 
   return (
-    <div className='min-h-full p-4 sm:p-6'>
+    <div className='mx-auto w-full max-w-7xl'>
       <div className='mx-auto max-w-7xl space-y-6'>
         {/* Hero */}
         <Card className='relative overflow-hidden border-transparent shadow-lg'>
