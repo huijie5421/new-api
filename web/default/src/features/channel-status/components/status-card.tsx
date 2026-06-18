@@ -21,8 +21,8 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import type { ChannelMonitor } from '../../channel-monitor/types'
-import type { TimeWindow } from '../types'
+import type { TimeWindow, UserMonitorSummary } from '../types'
+import { StatusTimeline } from './status-timeline'
 import {
   availabilityForWindow,
   availabilityHsl,
@@ -32,9 +32,9 @@ import {
 } from './status-helpers'
 
 interface StatusCardProps {
-  monitor: ChannelMonitor
+  monitor: UserMonitorSummary
   timeWindow: TimeWindow
-  onSelect: (monitor: ChannelMonitor) => void
+  onSelect: (monitor: UserMonitorSummary) => void
 }
 
 export function StatusCard({ monitor, timeWindow, onSelect }: StatusCardProps) {
@@ -113,6 +113,9 @@ export function StatusCard({ monitor, timeWindow, onSelect }: StatusCardProps) {
             />
           </div>
         </div>
+
+        {/* Check timeline (primary model, last 60 checks) */}
+        <StatusTimeline points={monitor.timeline ?? []} />
 
         {/* Metrics row */}
         <div className='grid grid-cols-2 gap-3'>

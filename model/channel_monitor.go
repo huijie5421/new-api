@@ -150,6 +150,25 @@ func GetChannelMonitorHistory(monitorID int, limit int, offset int) ([]*ChannelM
 	return histories, total, nil
 }
 
+// GetRecentHistoryForModel returns the most recent check results for a specific
+// monitor+model, ordered ascending by checked_at, limited to `limit` rows.
+func GetRecentHistoryForModel(monitorID int, model string, limit int) ([]*ChannelMonitorHistory, error) {
+	var histories []*ChannelMonitorHistory
+	// Fetch the newest `limit` rows (desc), then reverse to ascending so the
+	// timeline shows the most recent window oldest->newest.
+	err := DB.Where("monitor_id = ? AND model = ?", monitorID, model).
+		Order("checked_at desc").
+		Limit(limit).
+		Find(&histories).Error
+	if err != nil {
+		return nil, err
+	}
+	for i, j := 0, len(histories)-1; i < j; i, j = i+1, j-1 {
+		histories[i], histories[j] = histories[j], histories[i]
+	}
+	return histories, nil
+}
+
 func GetChannelMonitorTemplate(id int) (*ChannelMonitorRequestTemplate, error) {
 	template := &ChannelMonitorRequestTemplate{}
 	err := DB.First(template, id).Error

@@ -232,6 +232,11 @@ var (
 	SearchRateLimitEnable         = true
 	SearchRateLimitNum            = 10
 	SearchRateLimitDuration int64 = 60
+
+	// Per-user token-key reveal rate limit (applies after authentication, keyed by user ID)
+	TokenKeyRateLimitEnable         = true
+	TokenKeyRateLimitNum            = 30
+	TokenKeyRateLimitDuration int64 = 60
 )
 
 var RateLimitKeyExpirationDuration = 20 * time.Minute

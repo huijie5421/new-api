@@ -16,8 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import type { ChannelMonitor } from '../../channel-monitor/types'
-import type { TimeWindow } from '../types'
+import type { TimeWindow, UserMonitorSummary } from '../types'
 
 // Per-provider gradient + glow used for the card icon tile. Falls back to a
 // neutral slate gradient for unknown providers.
@@ -35,7 +34,7 @@ export function providerGradient(provider: string): string {
 
 // Read the availability rate (0..1 | null) for the selected window.
 export function availabilityForWindow(
-  monitor: ChannelMonitor,
+  monitor: UserMonitorSummary,
   window: TimeWindow
 ): number | null {
   switch (window) {
@@ -69,4 +68,25 @@ export function formatPercent(rate: number | null | undefined): string {
 export function formatLatency(ms: number | null | undefined): string {
   if (ms === null || ms === undefined || ms <= 0) return 'N/A'
   return `${ms} ms`
+}
+
+// Latency (ms) above which a *successful* check is still considered slow.
+export const SLOW_LATENCY_MS = 6000
+
+// Map a single timeline point onto a bar height + color tier. Since the backend
+// status is binary, we derive three visual tiers client-side:
+//   success & fast  -> green / full height
+//   success & slow  -> amber / medium height
+//   failure/unknown -> red   / short height
+export function timelineBar(
+  status: string,
+  latencyMs: number
+): { heightPct: number; colorClass: string } {
+  if (status === 'success') {
+    if (latencyMs >= SLOW_LATENCY_MS) {
+      return { heightPct: 55, colorClass: 'bg-amber-500 dark:bg-amber-400' }
+    }
+    return { heightPct: 100, colorClass: 'bg-emerald-500 dark:bg-emerald-400' }
+  }
+  return { heightPct: 30, colorClass: 'bg-red-500 dark:bg-red-400' }
 }

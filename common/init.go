@@ -126,6 +126,9 @@ func InitEnv() {
 	SearchRateLimitEnable = GetEnvOrDefaultBool("SEARCH_RATE_LIMIT_ENABLE", true)
 	SearchRateLimitNum = GetEnvOrDefault("SEARCH_RATE_LIMIT", 10)
 	SearchRateLimitDuration = int64(GetEnvOrDefault("SEARCH_RATE_LIMIT_DURATION", 60))
+	TokenKeyRateLimitEnable = GetEnvOrDefaultBool("TOKEN_KEY_RATE_LIMIT_ENABLE", true)
+	TokenKeyRateLimitNum = GetEnvOrDefault("TOKEN_KEY_RATE_LIMIT", 30)
+	TokenKeyRateLimitDuration = int64(GetEnvOrDefault("TOKEN_KEY_RATE_LIMIT_DURATION", 60))
 	initConstantEnv()
 }
 

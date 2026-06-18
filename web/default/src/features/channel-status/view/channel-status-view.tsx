@@ -26,8 +26,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { channelStatusAPI } from '../api'
-import type { ChannelMonitor } from '../../channel-monitor/types'
-import type { MonitorStatusDetail, TimeWindow } from '../types'
+import type { MonitorStatusDetail, TimeWindow, UserMonitorSummary } from '../types'
 import { StatusCard } from '../components/status-card'
 import { StatusDetailDialog } from '../components/status-detail-dialog'
 
@@ -59,7 +58,7 @@ function loadAutoRefreshPrefs(): AutoRefreshPrefs {
 export default function ChannelStatusView() {
   const { t } = useTranslation()
 
-  const [monitors, setMonitors] = useState<ChannelMonitor[]>([])
+  const [monitors, setMonitors] = useState<UserMonitorSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [timeWindow, setTimeWindow] = useState<TimeWindow>('7d')
@@ -70,7 +69,7 @@ export default function ChannelStatusView() {
   const [countdown, setCountdown] = useState(initialPrefs.interval)
 
   // Detail dialog state.
-  const [selected, setSelected] = useState<ChannelMonitor | null>(null)
+  const [selected, setSelected] = useState<UserMonitorSummary | null>(null)
   const [detail, setDetail] = useState<MonitorStatusDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -134,7 +133,7 @@ export default function ChannelStatusView() {
     return () => window.clearInterval(id)
   }, [autoRefresh, interval])
 
-  const handleSelect = useCallback(async (monitor: ChannelMonitor) => {
+  const handleSelect = useCallback(async (monitor: UserMonitorSummary) => {
     setSelected(monitor)
     setDialogOpen(true)
     setDetail(null)

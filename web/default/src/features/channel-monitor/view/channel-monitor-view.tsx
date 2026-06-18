@@ -20,6 +20,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Activity,
   AlertTriangle,
+  FileStack,
+  History,
   Loader2,
   Pencil,
   Play,
@@ -62,7 +64,9 @@ import { Dialog } from '@/components/dialog'
 import { channelMonitorAPI } from '../api'
 import type { ChannelMonitor, MonitorRunResult } from '../types'
 import { MonitorFormDialog } from '../components/monitor-form-dialog'
+import { MonitorHistoryDialog } from '../components/monitor-history-dialog'
 import { RunResultDialog } from '../components/run-result-dialog'
+import { TemplateManagerDialog } from '../components/template-manager-dialog'
 
 const PROVIDER_FILTERS: { value: string; label: string }[] = [
   { value: 'all', label: 'All providers' },
@@ -122,6 +126,14 @@ export default function ChannelMonitorView() {
   // form dialog
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<ChannelMonitor | null>(null)
+
+  // template manager dialog
+  const [templatesOpen, setTemplatesOpen] = useState(false)
+
+  // history dialog
+  const [historyTarget, setHistoryTarget] = useState<ChannelMonitor | null>(
+    null
+  )
 
   // run-result dialog
   const [runOpen, setRunOpen] = useState(false)
@@ -272,13 +284,23 @@ export default function ChannelMonitorView() {
                 </p>
               </div>
             </div>
-            <Button
-              onClick={openCreate}
-              className='bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md'
-            >
-              <Plus className='size-4' />
-              {t('Create Monitor')}
-            </Button>
+            <div className='flex items-center gap-2'>
+              <Button
+                variant='outline'
+                onClick={() => setTemplatesOpen(true)}
+                className='bg-background/60 backdrop-blur'
+              >
+                <FileStack className='size-4' />
+                {t('Templates')}
+              </Button>
+              <Button
+                onClick={openCreate}
+                className='bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md'
+              >
+                <Plus className='size-4' />
+                {t('Create Monitor')}
+              </Button>
+            </div>
           </CardContent>
         </div>
       </Card>
@@ -509,6 +531,21 @@ export default function ChannelMonitorView() {
                               <Button
                                 variant='ghost'
                                 size='icon-sm'
+                                onClick={() => setHistoryTarget(monitor)}
+                                aria-label={t('History')}
+                              />
+                            }
+                          >
+                            <History className='size-4' />
+                          </TooltipTrigger>
+                          <TooltipContent>{t('History')}</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <Button
+                                variant='ghost'
+                                size='icon-sm'
                                 onClick={() => openEdit(monitor)}
                                 aria-label={t('Edit')}
                               />
@@ -558,6 +595,21 @@ export default function ChannelMonitorView() {
         onOpenChange={setRunOpen}
         monitorName={runMonitorName}
         result={runResult}
+      />
+
+      {/* Template manager dialog */}
+      <TemplateManagerDialog
+        open={templatesOpen}
+        onOpenChange={setTemplatesOpen}
+      />
+
+      {/* History dialog */}
+      <MonitorHistoryDialog
+        open={!!historyTarget}
+        onOpenChange={(o) => {
+          if (!o) setHistoryTarget(null)
+        }}
+        monitor={historyTarget}
       />
 
       {/* Delete confirmation dialog */}

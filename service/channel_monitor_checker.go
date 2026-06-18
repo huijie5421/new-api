@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +15,34 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 )
+
+// extractTextContent reduces a message content field that may be a plain
+// string or an array of {type,text} parts (compatible gateways / reasoning
+// models) into a single string. Other shapes (null, object, etc.) yield "".
+func extractTextContent(raw json.RawMessage) string {
+	switch common.GetJsonType(raw) {
+	case "string":
+		var s string
+		if err := common.Unmarshal(raw, &s); err != nil {
+			return ""
+		}
+		return s
+	case "array":
+		var parts []struct {
+			Text string `json:"text"`
+		}
+		if err := common.Unmarshal(raw, &parts); err != nil {
+			return ""
+		}
+		var b strings.Builder
+		for _, p := range parts {
+			b.WriteString(p.Text)
+		}
+		return b.String()
+	default:
+		return ""
+	}
+}
 
 // OpenAIChatAdapter implements ProviderAdapter for OpenAI chat completions
 type OpenAIChatAdapter struct{}
@@ -66,7 +95,7 @@ func (a *OpenAIChatAdapter) ValidateResponse(statusCode int, responseBody []byte
 	var resp struct {
 		Choices []struct {
 			Message struct {
-				Content string `json:"content"`
+				Content json.RawMessage `json:"content"`
 			} `json:"message"`
 		} `json:"choices"`
 		Error *struct {
@@ -86,7 +115,7 @@ func (a *OpenAIChatAdapter) ValidateResponse(statusCode int, responseBody []byte
 		return false, "no choices in response"
 	}
 
-	content := resp.Choices[0].Message.Content
+	content := extractTextContent(resp.Choices[0].Message.Content)
 	if !ValidateChallengeResponse(content, challenge) {
 		return false, "challenge validation failed"
 	}
@@ -133,8 +162,13 @@ func (a *OpenAIResponsesAdapter) ValidateResponse(statusCode int, responseBody [
 	}
 
 	var resp struct {
-		Output string `json:"output"`
-		Error  *struct {
+		Output []struct {
+			Content []struct {
+				Text string `json:"text"`
+			} `json:"content"`
+		} `json:"output"`
+		OutputText string `json:"output_text"`
+		Error      *struct {
 			Message string `json:"message"`
 		} `json:"error"`
 	}
@@ -147,11 +181,22 @@ func (a *OpenAIResponsesAdapter) ValidateResponse(statusCode int, responseBody [
 		return false, resp.Error.Message
 	}
 
-	if resp.Output == "" {
+	text := resp.OutputText
+	if text == "" {
+		var b strings.Builder
+		for _, item := range resp.Output {
+			for _, c := range item.Content {
+				b.WriteString(c.Text)
+			}
+		}
+		text = b.String()
+	}
+
+	if text == "" {
 		return false, "empty output"
 	}
 
-	if !ValidateChallengeResponse(resp.Output, challenge) {
+	if !ValidateChallengeResponse(text, challenge) {
 		return false, "challenge validation failed"
 	}
 
@@ -204,10 +249,8 @@ func (a *AnthropicAdapter) ValidateResponse(statusCode int, responseBody []byte,
 	}
 
 	var resp struct {
-		Content []struct {
-			Text string `json:"text"`
-		} `json:"content"`
-		Error *struct {
+		Content json.RawMessage `json:"content"`
+		Error   *struct {
 			Message string `json:"message"`
 		} `json:"error"`
 	}
@@ -220,11 +263,11 @@ func (a *AnthropicAdapter) ValidateResponse(statusCode int, responseBody []byte,
 		return false, resp.Error.Message
 	}
 
-	if len(resp.Content) == 0 {
+	text := extractTextContent(resp.Content)
+	if text == "" {
 		return false, "no content in response"
 	}
 
-	text := resp.Content[0].Text
 	if !ValidateChallengeResponse(text, challenge) {
 		return false, "challenge validation failed"
 	}

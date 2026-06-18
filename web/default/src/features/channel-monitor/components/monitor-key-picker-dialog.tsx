@@ -103,6 +103,20 @@ export function MonitorKeyPickerDialog({
       onPick(value)
       onOpenChange(false)
     } catch (err) {
+      // A 429 from the rate limiter has NO JSON body, so the generic
+      // response?.data?.message lookup yields a misleading fallback. Surface a
+      // clear, actionable message instead. Keep the dialog open and the
+      // manual-input path intact (we just toast and reset pickingId below).
+      const status = (err as { response?: { status?: number } })?.response
+        ?.status
+      if (status === 429) {
+        toast.error(
+          t(
+            'Too many key requests, please wait a moment and retry, or paste the key manually'
+          )
+        )
+        return
+      }
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data
           ?.message || t('Failed to load the API key')

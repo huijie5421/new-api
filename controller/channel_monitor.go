@@ -476,6 +476,34 @@ func ApplyChannelMonitorTemplate(c *gin.Context) {
 
 // User endpoints (read-only status)
 
+// userTimelinePoint is a sanitized history point exposed to users (no error_msg).
+type userTimelinePoint struct {
+	Status    string `json:"status"`
+	LatencyMs int    `json:"latency_ms"`
+	CheckedAt int64  `json:"checked_at"`
+}
+
+// userMonitorStatus is the sanitized monitor object exposed to users. It
+// deliberately EXCLUDES secret/admin fields (api_key, endpoint, headers, body,
+// template_snapshot, created_by).
+type userMonitorStatus struct {
+	ID                  int                 `json:"id"`
+	Name                string              `json:"name"`
+	Provider            string              `json:"provider"`
+	APIMode             string              `json:"api_mode"`
+	PrimaryModel        string              `json:"primary_model"`
+	ExtraModels         string              `json:"extra_models"`
+	Group               string              `json:"group"`
+	Enabled             bool                `json:"enabled"`
+	LastStatus          string              `json:"last_status"`
+	LastLatencyMs       *int                `json:"last_latency_ms"`
+	LastCheckAt         *int64              `json:"last_check_at"`
+	AvailabilityRate7d  *float64            `json:"availability_rate_7d"`
+	AvailabilityRate15d *float64            `json:"availability_rate_15d"`
+	AvailabilityRate30d *float64            `json:"availability_rate_30d"`
+	Timeline            []userTimelinePoint `json:"timeline"`
+}
+
 // GetChannelMonitorStatusList returns summary status for all enabled monitors (user)
 func GetChannelMonitorStatusList(c *gin.Context) {
 	enabled := true
@@ -488,10 +516,41 @@ func GetChannelMonitorStatusList(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    monitors,
-	})
+	list := make([]userMonitorStatus, 0, len(monitors))
+	for _, m := range monitors {
+		item := userMonitorStatus{
+			ID:                  m.ID,
+			Name:                m.Name,
+			Provider:            m.Provider,
+			APIMode:             m.APIMode,
+			PrimaryModel:        m.PrimaryModel,
+			ExtraModels:         m.ExtraModels,
+			Group:               m.Group,
+			Enabled:             m.Enabled,
+			LastStatus:          m.LastStatus,
+			LastLatencyMs:       m.LastLatencyMs,
+			LastCheckAt:         m.LastCheckAt,
+			AvailabilityRate7d:  m.AvailabilityRate7d,
+			AvailabilityRate15d: m.AvailabilityRate15d,
+			AvailabilityRate30d: m.AvailabilityRate30d,
+			Timeline:            []userTimelinePoint{},
+		}
+
+		histories, err := model.GetRecentHistoryForModel(m.ID, m.PrimaryModel, 60)
+		if err == nil {
+			for _, h := range histories {
+				item.Timeline = append(item.Timeline, userTimelinePoint{
+					Status:    h.Status,
+					LatencyMs: h.LatencyMs,
+					CheckedAt: h.CheckedAt,
+				})
+			}
+		}
+
+		list = append(list, item)
+	}
+
+	common.ApiSuccess(c, list)
 }
 
 // GetChannelMonitorStatus returns detailed status for a monitor with multi-window availability (user)
@@ -599,8 +658,24 @@ func GetChannelMonitorStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data": gin.H{
-			"monitor": monitor,
-			"models":  modelStatuses,
+			"monitor": userMonitorStatus{
+				ID:                  monitor.ID,
+				Name:                monitor.Name,
+				Provider:            monitor.Provider,
+				APIMode:             monitor.APIMode,
+				PrimaryModel:        monitor.PrimaryModel,
+				ExtraModels:         monitor.ExtraModels,
+				Group:               monitor.Group,
+				Enabled:             monitor.Enabled,
+				LastStatus:          monitor.LastStatus,
+				LastLatencyMs:       monitor.LastLatencyMs,
+				LastCheckAt:         monitor.LastCheckAt,
+				AvailabilityRate7d:  monitor.AvailabilityRate7d,
+				AvailabilityRate15d: monitor.AvailabilityRate15d,
+				AvailabilityRate30d: monitor.AvailabilityRate30d,
+				Timeline:            []userTimelinePoint{},
+			},
+			"models": modelStatuses,
 		},
 	})
 }

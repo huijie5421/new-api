@@ -203,3 +203,12 @@ func SearchRateLimit() func(c *gin.Context) {
 	}
 	return userRateLimitFactory(common.SearchRateLimitNum, common.SearchRateLimitDuration, "SR")
 }
+
+// TokenKeyRateLimit returns a per-user rate limiter for token-key reveal endpoints.
+// Configurable via TOKEN_KEY_RATE_LIMIT_ENABLE / TOKEN_KEY_RATE_LIMIT / TOKEN_KEY_RATE_LIMIT_DURATION.
+func TokenKeyRateLimit() func(c *gin.Context) {
+	if !common.TokenKeyRateLimitEnable {
+		return defNext
+	}
+	return userRateLimitFactory(common.TokenKeyRateLimitNum, common.TokenKeyRateLimitDuration, "TK")
+}

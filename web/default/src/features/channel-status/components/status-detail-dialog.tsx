@@ -28,8 +28,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { ChannelMonitor } from '../../channel-monitor/types'
-import type { MonitorStatusDetail } from '../types'
+import type { MonitorStatusDetail, UserMonitorSummary } from '../types'
 import {
   availabilityHsl,
   formatLatency,
@@ -40,7 +39,7 @@ import {
 interface StatusDetailDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  monitor: ChannelMonitor | null
+  monitor: UserMonitorSummary | null
   detail: MonitorStatusDetail | null
   loading: boolean
 }

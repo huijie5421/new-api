@@ -17,16 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useEffect, useMemo, useState } from 'react'
-import {
-  Loader2,
-  Plus,
-  Trash2,
-  ChevronDown,
-  Globe,
-  Wand2,
-  X,
-  KeyRound,
-} from 'lucide-react'
+import { Loader2, ChevronDown, Globe, X, KeyRound } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -43,10 +34,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
 import { Dialog } from '@/components/dialog'
 import { channelMonitorAPI } from '../api'
 import type { APIMode, BodyMode, ChannelMonitor, Provider } from '../types'
+import {
+  AdvancedRequestConfig,
+  buildHeadersJson,
+  parseHeaderRows,
+  type HeaderRow,
+} from './advanced-request-config'
 import { MonitorKeyPickerDialog } from './monitor-key-picker-dialog'
 
 interface MonitorFormDialogProps {
@@ -54,11 +50,6 @@ interface MonitorFormDialogProps {
   onOpenChange: (open: boolean) => void
   monitor?: ChannelMonitor | null
   onSaved?: () => void
-}
-
-interface HeaderRow {
-  key: string
-  value: string
 }
 
 const PROVIDERS: { value: Provider; label: string }[] = [
@@ -79,23 +70,6 @@ const MAX_INTERVAL = 3600
 const DEFAULT_TIMEOUT = 10
 const MIN_TIMEOUT = 1
 const MAX_TIMEOUT = 60
-
-// Parse a JSON object string into key/value rows. Returns [] on invalid input.
-function parseHeaderRows(headers: string): HeaderRow[] {
-  if (!headers || !headers.trim()) return []
-  try {
-    const obj = JSON.parse(headers) as Record<string, unknown>
-    if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-      return Object.entries(obj).map(([key, value]) => ({
-        key,
-        value: typeof value === 'string' ? value : JSON.stringify(value),
-      }))
-    }
-  } catch {
-    // fall through to empty
-  }
-  return []
-}
 
 // Parse the extra_models JSON-encoded string[] into a string array.
 function parseExtraModels(extra: string): string[] {
@@ -216,18 +190,6 @@ export function MonitorFormDialog({
     setExtraModels((prev) => prev.filter((m) => m !== model))
   }
 
-  const updateHeaderRow = (index: number, patch: Partial<HeaderRow>) => {
-    setHeaderRows((prev) =>
-      prev.map((row, i) => (i === index ? { ...row, ...patch } : row))
-    )
-  }
-
-  const addHeaderRow = () =>
-    setHeaderRows((prev) => [...prev, { key: '', value: '' }])
-
-  const removeHeaderRow = (index: number) =>
-    setHeaderRows((prev) => prev.filter((_, i) => i !== index))
-
   const validateBodyJson = (raw: string): boolean => {
     if (!raw.trim()) {
       setBodyError(null)
@@ -238,30 +200,9 @@ export function MonitorFormDialog({
       setBodyError(null)
       return true
     } catch (err) {
-      setBodyError(
-        err instanceof Error ? err.message : t('Invalid JSON')
-      )
+      setBodyError(err instanceof Error ? err.message : t('Invalid JSON'))
       return false
     }
-  }
-
-  const formatBody = () => {
-    if (!body.trim()) return
-    try {
-      setBody(JSON.stringify(JSON.parse(body), null, 2))
-      setBodyError(null)
-    } catch (err) {
-      setBodyError(err instanceof Error ? err.message : t('Invalid JSON'))
-      toast.error(t('Body is not valid JSON.'))
-    }
-  }
-
-  const buildHeadersJson = (): string => {
-    const rows = headerRows.filter((r) => r.key.trim())
-    if (rows.length === 0) return ''
-    const obj: Record<string, string> = {}
-    for (const r of rows) obj[r.key.trim()] = r.value
-    return JSON.stringify(obj)
   }
 
   const validate = (): boolean => {
@@ -335,7 +276,7 @@ export function MonitorFormDialog({
       interval_seconds: intervalSeconds,
       timeout_seconds: timeoutSeconds,
       enabled,
-      headers: buildHeadersJson(),
+      headers: buildHeadersJson(headerRows),
       body_mode: bodyMode,
       body: body.trim(),
     }
@@ -692,117 +633,18 @@ export function MonitorFormDialog({
           </button>
 
           {advancedOpen && (
-            <div className='border-border space-y-5 border-t p-3'>
-              {/* Custom headers */}
-              <div className='space-y-2'>
-                <Label>{t('Custom Headers')}</Label>
-                <div className='space-y-2'>
-                  {headerRows.length === 0 && (
-                    <p className='text-muted-foreground text-xs'>
-                      {t('No custom headers.')}
-                    </p>
-                  )}
-                  {headerRows.map((row, i) => (
-                    <div key={i} className='flex items-center gap-2'>
-                      <Input
-                        value={row.key}
-                        onChange={(e) =>
-                          updateHeaderRow(i, { key: e.target.value })
-                        }
-                        placeholder={t('Header')}
-                        className='font-mono'
-                      />
-                      <Input
-                        value={row.value}
-                        onChange={(e) =>
-                          updateHeaderRow(i, { value: e.target.value })
-                        }
-                        placeholder={t('Value')}
-                        className='font-mono'
-                      />
-                      <Button
-                        type='button'
-                        variant='ghost'
-                        size='icon'
-                        className='text-muted-foreground hover:text-destructive shrink-0'
-                        onClick={() => removeHeaderRow(i)}
-                        aria-label={t('Remove header')}
-                      >
-                        <Trash2 className='size-4' />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                <Button
-                  type='button'
-                  variant='outline'
-                  size='sm'
-                  onClick={addHeaderRow}
-                >
-                  <Plus className='size-3.5' />
-                  {t('Add Header')}
-                </Button>
-              </div>
-
-              {/* Body mode */}
-              <div className='space-y-1.5'>
-                <Label>{t('Body Mode')}</Label>
-                <Select
-                  items={[
-                    { value: 'auto', label: t('Auto') },
-                    { value: 'minimal', label: t('Minimal') },
-                    { value: 'custom', label: t('Custom') },
-                  ]}
-                  value={bodyMode}
-                  onValueChange={(v) => setBodyMode(v as BodyMode)}
-                >
-                  <SelectTrigger className='w-full'>
-                    <SelectValue placeholder={t('Select body mode')} />
-                  </SelectTrigger>
-                  <SelectContent alignItemWithTrigger={false}>
-                    <SelectGroup>
-                      <SelectItem value='auto'>{t('Auto')}</SelectItem>
-                      <SelectItem value='minimal'>{t('Minimal')}</SelectItem>
-                      <SelectItem value='custom'>{t('Custom')}</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <p className='text-muted-foreground text-xs'>
-                  {t(
-                    'Auto builds the request body; Minimal sends a tiny probe; Custom uses the JSON below.'
-                  )}
-                </p>
-              </div>
-
-              {/* Body JSON */}
-              <div className='space-y-1.5'>
-                <div className='flex items-center justify-between'>
-                  <Label htmlFor='monitor-body'>{t('Request Body (JSON)')}</Label>
-                  <Button
-                    type='button'
-                    variant='ghost'
-                    size='xs'
-                    onClick={formatBody}
-                    disabled={!body.trim()}
-                  >
-                    <Wand2 className='size-3' />
-                    {t('Format')}
-                  </Button>
-                </div>
-                <Textarea
-                  id='monitor-body'
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  onBlur={() => validateBodyJson(body)}
-                  placeholder='{ "max_tokens": 1 }'
-                  rows={6}
-                  className='font-mono text-xs'
-                  aria-invalid={!!bodyError}
-                />
-                {bodyError && (
-                  <p className='text-destructive text-xs'>{bodyError}</p>
-                )}
-              </div>
+            <div className='border-border border-t p-3'>
+              <AdvancedRequestConfig
+                headerRows={headerRows}
+                bodyMode={bodyMode}
+                body={body}
+                bodyError={bodyError}
+                onHeaderRowsChange={setHeaderRows}
+                onBodyModeChange={setBodyMode}
+                onBodyChange={setBody}
+                onBodyErrorChange={setBodyError}
+                idPrefix='monitor'
+              />
             </div>
           )}
         </div>

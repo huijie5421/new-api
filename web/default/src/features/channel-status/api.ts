@@ -1,14 +1,14 @@
 import { api } from '@/lib/api'
-import type { ChannelMonitor } from '../channel-monitor/types'
-import type { MonitorStatusDetail } from './types'
+import type { MonitorStatusDetail, UserMonitorSummary } from './types'
 
 const API_BASE = '/api/channel-monitors'
 
 export const channelStatusAPI = {
   getAll: async () => {
-    const response = await api.get<{ success: boolean; data: ChannelMonitor[] }>(
-      API_BASE
-    )
+    const response = await api.get<{
+      success: boolean
+      data: UserMonitorSummary[]
+    }>(API_BASE)
     return response.data.data
   },
 

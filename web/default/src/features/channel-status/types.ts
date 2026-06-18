@@ -30,3 +30,35 @@ export interface MonitorStatusDetail {
 }
 
 export type TimeWindow = '7d' | '15d' | '30d';
+
+// One point of the primary-model check history surfaced on the user status
+// list. error_msg is stripped server-side. status is binary in practice
+// ('success' | 'failure'); 'unknown' is tolerated for forward-compat.
+export interface MonitorTimelinePoint {
+  status: string; // 'success' | 'failure' | 'unknown'
+  latency_ms: number;
+  checked_at: number; // Unix seconds
+}
+
+// Sanitized user-facing monitor object returned by GET /api/channel-monitors/
+// (channelStatusAPI.getAll). Secret/admin fields (api_key, endpoint, headers,
+// body, template_snapshot, created_by, ...) are excluded server-side; only the
+// read-only status surface is kept. Reuses the ChannelMonitor field shapes so
+// existing card code keeps compiling.
+export interface UserMonitorSummary {
+  id: number;
+  name: string;
+  provider: string;
+  api_mode: string;
+  primary_model: string;
+  extra_models: string;
+  group: string;
+  enabled: boolean;
+  last_status: string;
+  last_latency_ms: number | null;
+  last_check_at: number | null;
+  availability_rate_7d: number | null;
+  availability_rate_15d: number | null;
+  availability_rate_30d: number | null;
+  timeline?: MonitorTimelinePoint[];
+}
