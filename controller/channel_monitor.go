@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
@@ -540,7 +541,7 @@ func GetChannelMonitorStatus(c *gin.Context) {
 
 		// Calculate 7-day stats
 		rollups7d, _ := model.GetChannelMonitorRollups(id, modelName,
-			common.GetTimeString(-7*24*3600), common.GetTimeString(0))
+			time.Now().AddDate(0, 0, -7).Format("2006-01-02"), time.Now().Format("2006-01-02"))
 		if len(rollups7d) > 0 {
 			totalChecks := 0
 			successChecks := 0
@@ -558,7 +559,7 @@ func GetChannelMonitorStatus(c *gin.Context) {
 
 		// Calculate 15-day stats
 		rollups15d, _ := model.GetChannelMonitorRollups(id, modelName,
-			common.GetTimeString(-15*24*3600), common.GetTimeString(0))
+			time.Now().AddDate(0, 0, -15).Format("2006-01-02"), time.Now().Format("2006-01-02"))
 		if len(rollups15d) > 0 {
 			totalChecks := 0
 			successChecks := 0
@@ -576,7 +577,7 @@ func GetChannelMonitorStatus(c *gin.Context) {
 
 		// Calculate 30-day stats
 		rollups30d, _ := model.GetChannelMonitorRollups(id, modelName,
-			common.GetTimeString(-30*24*3600), common.GetTimeString(0))
+			time.Now().AddDate(0, 0, -30).Format("2006-01-02"), time.Now().Format("2006-01-02"))
 		if len(rollups30d) > 0 {
 			totalChecks := 0
 			successChecks := 0
