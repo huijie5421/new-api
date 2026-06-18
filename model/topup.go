@@ -619,15 +619,30 @@ func RebateInviterForTopUp(topUp *TopUp, rechargedQuota int64) {
 	if rebate <= 0 {
 		return
 	}
-	// 返利直接进邀请人可用额度
-	if err := IncreaseUserQuota(inviterId, int(rebate), true); err != nil {
+
+	// 更新邀请人统计数据（aff_count 和 aff_history_quota）
+	// 使用数据库事务确保原子性
+	err = DB.Transaction(func(tx *gorm.DB) error {
+		// 1. 返利直接进邀请人可用额度
+		if err := tx.Model(&User{}).Where("id = ?", inviterId).Update("quota", gorm.Expr("quota + ?", rebate)).Error; err != nil {
+			return err
+		}
+		// 2. 更新邀请人的返利统计：累计历史收入
+		if err := tx.Model(&User{}).Where("id = ?", inviterId).Update("aff_history_quota", gorm.Expr("aff_history_quota + ?", rebate)).Error; err != nil {
+			return err
+		}
+		// 3. 记录已返利额度(幂等标记)
+		if err := tx.Model(&TopUp{}).Where("id = ?", topUp.Id).Update("rebate_quota", rebate).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
 		common.SysError(fmt.Sprintf("充值返利失败 inviter_id=%d trade_no=%s error=%s", inviterId, topUp.TradeNo, err.Error()))
 		return
 	}
-	// 记录已返利额度(幂等标记)
+
 	topUp.RebateQuota = rebate
-	if err := DB.Model(&TopUp{}).Where("id = ?", topUp.Id).Update("rebate_quota", rebate).Error; err != nil {
-		common.SysError(fmt.Sprintf("充值返利标记写入失败 trade_no=%s error=%s", topUp.TradeNo, err.Error()))
-	}
 	RecordLog(inviterId, LogTypeSystem, fmt.Sprintf("邀请用户在线充值返利 %s", logger.LogQuota(int(rebate))))
 }

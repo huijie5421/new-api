@@ -393,5 +393,35 @@ func SetApiRouter(router *gin.Engine) {
 			deploymentsRoute.POST("/:id/extend", controller.ExtendDeployment)
 			deploymentsRoute.DELETE("/:id", controller.DeleteDeployment)
 		}
+
+		// Channel Monitors (Admin)
+		channelMonitorAdminRoute := apiRouter.Group("/admin/channel-monitors")
+		channelMonitorAdminRoute.Use(middleware.AdminAuth())
+		{
+			channelMonitorAdminRoute.GET("/", controller.GetAllChannelMonitors)
+			channelMonitorAdminRoute.GET("/:id", controller.GetChannelMonitor)
+			channelMonitorAdminRoute.POST("/", controller.CreateChannelMonitor)
+			channelMonitorAdminRoute.PUT("/:id", controller.UpdateChannelMonitor)
+			channelMonitorAdminRoute.DELETE("/:id", controller.DeleteChannelMonitor)
+			channelMonitorAdminRoute.POST("/:id/run", controller.RunChannelMonitorNow)
+			channelMonitorAdminRoute.GET("/:id/history", controller.GetChannelMonitorHistory)
+
+			// Templates
+			channelMonitorAdminRoute.GET("/templates", controller.GetAllChannelMonitorTemplates)
+			channelMonitorAdminRoute.GET("/templates/:id", controller.GetChannelMonitorTemplate)
+			channelMonitorAdminRoute.POST("/templates", controller.CreateChannelMonitorTemplate)
+			channelMonitorAdminRoute.PUT("/templates/:id", controller.UpdateChannelMonitorTemplate)
+			channelMonitorAdminRoute.DELETE("/templates/:id", controller.DeleteChannelMonitorTemplate)
+			channelMonitorAdminRoute.GET("/templates/:id/monitors", controller.GetTemplateAssociatedMonitors)
+			channelMonitorAdminRoute.POST("/templates/apply", controller.ApplyChannelMonitorTemplate)
+		}
+
+		// Channel Monitors (User - read-only status)
+		channelMonitorUserRoute := apiRouter.Group("/channel-monitors")
+		channelMonitorUserRoute.Use(middleware.UserAuth())
+		{
+			channelMonitorUserRoute.GET("/", controller.GetChannelMonitorStatusList)
+			channelMonitorUserRoute.GET("/:id", controller.GetChannelMonitorStatus)
+		}
 	}
 }

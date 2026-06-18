@@ -281,6 +281,11 @@ func migrateDB() error {
 		&CustomOAuthProvider{},
 		&UserOAuthBinding{},
 		&PerfMetric{},
+		&ChannelMonitor{},
+		&ChannelMonitorHistory{},
+		&ChannelMonitorDailyRollup{},
+		&ChannelMonitorRequestTemplate{},
+		&ChannelMonitorAggregationWatermark{},
 	)
 	if err != nil {
 		return err

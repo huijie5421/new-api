@@ -119,6 +119,16 @@ func main() {
 	// Subscription quota reset task (daily/weekly/monthly/custom)
 	service.StartSubscriptionQuotaResetTask()
 
+	// Channel Monitor Runner
+	channelMonitorRunner := service.GetChannelMonitorRunner()
+	if err := channelMonitorRunner.Start(); err != nil {
+		common.SysError(fmt.Sprintf("failed to start channel monitor runner: %v", err))
+	}
+	defer channelMonitorRunner.Stop()
+
+	// Channel Monitor Maintenance (aggregation + cleanup)
+	service.StartChannelMonitorMaintenanceTask()
+
 	// Wire task polling adaptor factory (breaks service -> relay import cycle)
 	service.GetTaskAdaptorFunc = func(platform constant.TaskPlatform) service.TaskPollingAdaptor {
 		a := relay.GetTaskAdaptor(platform)
