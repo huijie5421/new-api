@@ -63,9 +63,3 @@ var SSRFBlockedCIDRs = []string{
 	"fe80::/10",
 	"fc00::/7",
 }
-
-// Challenge thresholds
-const (
-	ChallengeMinNumber = 1
-	ChallengeMaxNumber = 50
-)
