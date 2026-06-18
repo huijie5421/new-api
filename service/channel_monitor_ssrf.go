@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -17,8 +18,10 @@ func SSRFProtectedDialer(timeout time.Duration) *net.Dialer {
 	}
 }
 
-// dialControl implements SSRF protection at dial time
-func dialControl(network, address string, c net.Conn) error {
+// dialControl implements SSRF protection at dial time.
+// net.Dialer.Control receives the already-resolved address, so checking it here
+// defeats DNS rebinding. The syscall.RawConn arg is required by the Control signature.
+func dialControl(network, address string, c syscall.RawConn) error {
 	if !SSRFBlockPrivateNetworks {
 		return nil
 	}

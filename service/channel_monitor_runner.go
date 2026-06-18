@@ -284,12 +284,12 @@ func (r *ChannelMonitorRunner) RunNow(monitorID int) (*MonitorRunResult, error) 
 
 	for _, modelName := range models {
 		wg.Add(1)
-		model := modelName
+		mName := modelName
 
 		r.workerPool.Go(func() {
 			defer wg.Done()
 
-			checkResult := PerformCheck(ctx, monitor, model)
+			checkResult := PerformCheck(ctx, monitor, mName)
 
 			modelResult := ModelCheckResult{
 				Model:      checkResult.Model,
