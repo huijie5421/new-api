@@ -38,6 +38,8 @@ import type {
   WaffoPaymentResponse,
   WaffoPancakePaymentRequest,
   WaffoPancakePaymentResponse,
+  RebateHistoryResponse,
+  InviteesResponse,
 } from './types'
 
 // ============================================================================
@@ -231,5 +233,35 @@ export async function completeOrder(
   request: CompleteOrderRequest
 ): Promise<ApiResponse> {
   const res = await api.post('/api/user/topup/complete', request)
+  return res.data
+}
+
+/**
+ * Get recharge rebate history for current user
+ */
+export async function getRebateHistory(
+  page: number,
+  pageSize: number
+): Promise<ApiResponse<RebateHistoryResponse>> {
+  const params = new URLSearchParams({
+    p: page.toString(),
+    page_size: pageSize.toString(),
+  })
+  const res = await api.get(`/api/user/aff/rebate?${params.toString()}`)
+  return res.data
+}
+
+/**
+ * Get invitees (referred users) for current user
+ */
+export async function getInvitees(
+  page: number,
+  pageSize: number
+): Promise<ApiResponse<InviteesResponse>> {
+  const params = new URLSearchParams({
+    p: page.toString(),
+    page_size: pageSize.toString(),
+  })
+  const res = await api.get(`/api/user/aff/invitees?${params.toString()}`)
   return res.data
 }

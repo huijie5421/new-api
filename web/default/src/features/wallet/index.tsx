@@ -25,6 +25,7 @@ import { SectionPageLayout } from '@/components/layout'
 import { AffiliateRewardsCard } from './components/affiliate-rewards-card'
 import { ReferralProgramCard } from './components/referral-program-card'
 import { BillingHistoryDialog } from './components/dialogs/billing-history-dialog'
+import { RebateHistoryDialog } from './components/dialogs/rebate-history-dialog'
 import { CreemConfirmDialog } from './components/dialogs/creem-confirm-dialog'
 import { PaymentConfirmDialog } from './components/dialogs/payment-confirm-dialog'
 import { TransferDialog } from './components/dialogs/transfer-dialog'
@@ -69,6 +70,7 @@ export function Wallet(props: WalletProps) {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [transferDialogOpen, setTransferDialogOpen] = useState(false)
   const [billingDialogOpen, setBillingDialogOpen] = useState(false)
+  const [rebateHistoryOpen, setRebateHistoryOpen] = useState(false)
   const [redemptionCode, setRedemptionCode] = useState('')
   const [creemDialogOpen, setCreemDialogOpen] = useState(false)
   const [selectedCreemProduct, setSelectedCreemProduct] =
@@ -78,6 +80,9 @@ export function Wallet(props: WalletProps) {
   const { status } = useStatus()
   const { currency } = useSystemConfig()
   const { topupInfo, presetAmounts, loading: topupLoading } = useTopupInfo()
+
+  const rebateEnabled = status?.recharge_rebate_enabled === true
+  const rebateRatio = (status?.recharge_rebate_ratio as number) ?? 0
 
   // Calculate effective exchange rate - when display type is USD, use rate of 1
   const effectiveUsdExchangeRate = useMemo(() => {
@@ -313,10 +318,13 @@ export function Wallet(props: WalletProps) {
                     user={user}
                     affiliateLink={affiliateLink}
                     onTransfer={() => setTransferDialogOpen(true)}
+                    onShowHistory={() => setRebateHistoryOpen(true)}
                     complianceConfirmed={
                       topupInfo?.payment_compliance_confirmed !== false
                     }
                     loading={affiliateLoading}
+                    rebateEnabled={rebateEnabled}
+                    rebateRatio={rebateRatio}
                   />
                   <SubscriptionPlansCard
                     topupInfo={topupInfo}
@@ -332,10 +340,13 @@ export function Wallet(props: WalletProps) {
                   user={user}
                   affiliateLink={affiliateLink}
                   onTransfer={() => setTransferDialogOpen(true)}
+                  onShowHistory={() => setRebateHistoryOpen(true)}
                   complianceConfirmed={
                     topupInfo?.payment_compliance_confirmed !== false
                   }
                   loading={affiliateLoading}
+                  rebateEnabled={rebateEnabled}
+                  rebateRatio={rebateRatio}
                 />
               )}
             </div>
@@ -380,6 +391,11 @@ export function Wallet(props: WalletProps) {
       <BillingHistoryDialog
         open={billingDialogOpen}
         onOpenChange={setBillingDialogOpen}
+      />
+
+      <RebateHistoryDialog
+        open={rebateHistoryOpen}
+        onOpenChange={setRebateHistoryOpen}
       />
 
       <CreemConfirmDialog

@@ -635,6 +635,20 @@ func RebateInviterForTopUp(topUp *TopUp, rechargedQuota int64) {
 		if err := tx.Model(&TopUp{}).Where("id = ?", topUp.Id).Update("rebate_quota", rebate).Error; err != nil {
 			return err
 		}
+		// 4. 写入返利台账，便于溯源
+		if err := tx.Create(&AffiliateRebateRecord{
+			InviterId:      inviterId,
+			SourceUserId:   invitee.Id,
+			SourceUsername: invitee.Username,
+			Quota:          rebate,
+			RechargedQuota: rechargedQuota,
+			Ratio:          common.RechargeRebateRatio,
+			TradeNo:        topUp.TradeNo,
+			TopUpId:        topUp.Id,
+			CreatedAt:      common.GetTimestamp(),
+		}).Error; err != nil {
+			return err
+		}
 		return nil
 	})
 

@@ -286,6 +286,7 @@ func migrateDB() error {
 		&ChannelMonitorDailyRollup{},
 		&ChannelMonitorRequestTemplate{},
 		&ChannelMonitorAggregationWatermark{},
+		&AffiliateRebateRecord{},
 	)
 	if err != nil {
 		return err
@@ -298,6 +299,10 @@ func migrateDB() error {
 		if err := DB.AutoMigrate(&SubscriptionPlan{}); err != nil {
 			return err
 		}
+	}
+	// Seed default channel-monitor request templates (idempotent).
+	if err := SeedDefaultChannelMonitorTemplates(); err != nil {
+		common.SysLog("failed to seed default channel monitor templates: " + err.Error())
 	}
 	return nil
 }
@@ -335,6 +340,7 @@ func migrateDBFast() error {
 		{&CustomOAuthProvider{}, "CustomOAuthProvider"},
 		{&UserOAuthBinding{}, "UserOAuthBinding"},
 		{&PerfMetric{}, "PerfMetric"},
+		{&AffiliateRebateRecord{}, "AffiliateRebateRecord"},
 	}
 	// 动态计算migration数量，确保errChan缓冲区足够大
 	errChan := make(chan error, len(migrations))

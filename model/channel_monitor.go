@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"time"
 
 	"gorm.io/gorm"
@@ -226,4 +227,66 @@ func GetChannelMonitorRollups(monitorID int, model string, startDate string, end
 	}
 	err := query.Order("bucket_date ASC").Find(&rollups).Error
 	return rollups, err
+}
+
+// SeedDefaultChannelMonitorTemplates inserts the built-in default request templates
+// (one per provider/API mode) if they do not already exist. Idempotent: safe to run
+// on every startup. Uses literal strings (not service consts) to avoid an import cycle.
+func SeedDefaultChannelMonitorTemplates() error {
+	defaults := []ChannelMonitorRequestTemplate{
+		{
+			Provider:    "openai",
+			Name:        "OpenAI Chat Completions (Default)",
+			APIMode:     "chat_completions",
+			BodyMode:    "auto",
+			Headers:     "{}",
+			Body:        `{"max_tokens":100,"temperature":0.7}`,
+			Description: "Default health-check template for OpenAI Chat Completions API.",
+			IsDefault:   true,
+		},
+		{
+			Provider:    "openai",
+			Name:        "OpenAI Responses (Default)",
+			APIMode:     "responses",
+			BodyMode:    "auto",
+			Headers:     "{}",
+			Body:        `{"max_tokens":100,"temperature":0.7}`,
+			Description: "Default health-check template for OpenAI Responses API.",
+			IsDefault:   true,
+		},
+		{
+			Provider:    "anthropic",
+			Name:        "Anthropic Messages (Default)",
+			APIMode:     "",
+			BodyMode:    "auto",
+			Headers:     "{}",
+			Body:        `{"max_tokens":100,"temperature":0.7}`,
+			Description: "Default health-check template for Anthropic Messages API.",
+			IsDefault:   true,
+		},
+		{
+			Provider:    "gemini",
+			Name:        "Gemini generateContent (Default)",
+			APIMode:     "",
+			BodyMode:    "auto",
+			Headers:     "{}",
+			Body:        `{"generationConfig":{"maxOutputTokens":100,"temperature":0.7}}`,
+			Description: "Default health-check template for Gemini generateContent API.",
+			IsDefault:   true,
+		},
+	}
+
+	for i := range defaults {
+		tpl := defaults[i]
+		var existing ChannelMonitorRequestTemplate
+		err := DB.Where("provider = ? AND name = ?", tpl.Provider, tpl.Name).First(&existing).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			if err := DB.Create(&tpl).Error; err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		}
+	}
+	return nil
 }

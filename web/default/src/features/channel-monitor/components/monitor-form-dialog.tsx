@@ -25,6 +25,7 @@ import {
   Globe,
   Wand2,
   X,
+  KeyRound,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -46,6 +47,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog } from '@/components/dialog'
 import { channelMonitorAPI } from '../api'
 import type { APIMode, BodyMode, ChannelMonitor, Provider } from '../types'
+import { MonitorKeyPickerDialog } from './monitor-key-picker-dialog'
 
 interface MonitorFormDialogProps {
   open: boolean
@@ -73,6 +75,10 @@ const API_MODES: { value: APIMode; label: string }[] = [
 const DEFAULT_INTERVAL = 60
 const MIN_INTERVAL = 15
 const MAX_INTERVAL = 3600
+
+const DEFAULT_TIMEOUT = 10
+const MIN_TIMEOUT = 1
+const MAX_TIMEOUT = 60
 
 // Parse a JSON object string into key/value rows. Returns [] on invalid input.
 function parseHeaderRows(headers: string): HeaderRow[] {
@@ -126,7 +132,10 @@ export function MonitorFormDialog({
   const [extraModelInput, setExtraModelInput] = useState('')
   const [groupName, setGroupName] = useState('')
   const [intervalSeconds, setIntervalSeconds] = useState(DEFAULT_INTERVAL)
+  const [timeoutSeconds, setTimeoutSeconds] = useState(DEFAULT_TIMEOUT)
   const [enabled, setEnabled] = useState(true)
+
+  const [keyPickerOpen, setKeyPickerOpen] = useState(false)
 
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [headerRows, setHeaderRows] = useState<HeaderRow[]>([])
@@ -150,6 +159,7 @@ export function MonitorFormDialog({
       setExtraModels(parseExtraModels(monitor.extra_models))
       setGroupName(monitor.group ?? '')
       setIntervalSeconds(monitor.interval_seconds || DEFAULT_INTERVAL)
+      setTimeoutSeconds(monitor.timeout_seconds || DEFAULT_TIMEOUT)
       setEnabled(monitor.enabled ?? true)
       setHeaderRows(parseHeaderRows(monitor.headers))
       setBodyMode((monitor.body_mode as BodyMode) || 'auto')
@@ -171,6 +181,7 @@ export function MonitorFormDialog({
       setExtraModels([])
       setGroupName('')
       setIntervalSeconds(DEFAULT_INTERVAL)
+      setTimeoutSeconds(DEFAULT_TIMEOUT)
       setEnabled(true)
       setHeaderRows([])
       setBodyMode('auto')
@@ -269,6 +280,21 @@ export function MonitorFormDialog({
         max: MAX_INTERVAL,
       })
     }
+    if (
+      !Number.isFinite(timeoutSeconds) ||
+      timeoutSeconds < MIN_TIMEOUT ||
+      timeoutSeconds > MAX_TIMEOUT
+    ) {
+      next.timeout = t('Timeout must be between {{min}} and {{max}} seconds', {
+        min: MIN_TIMEOUT,
+        max: MAX_TIMEOUT,
+      })
+    } else if (
+      Number.isFinite(intervalSeconds) &&
+      timeoutSeconds >= intervalSeconds
+    ) {
+      next.timeout = t('Timeout must be less than the interval')
+    }
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -307,6 +333,7 @@ export function MonitorFormDialog({
       extra_models: JSON.stringify(pendingExtra),
       group: groupName.trim(),
       interval_seconds: intervalSeconds,
+      timeout_seconds: timeoutSeconds,
       enabled,
       headers: buildHeadersJson(),
       body_mode: bodyMode,
@@ -346,6 +373,11 @@ export function MonitorFormDialog({
         min: MIN_INTERVAL,
         max: MAX_INTERVAL,
       }),
+    [t]
+  )
+
+  const timeoutHint = useMemo(
+    () => t('Request timeout in seconds (1-60, must be less than interval)'),
     [t]
   )
 
@@ -482,15 +514,26 @@ export function MonitorFormDialog({
         {/* API key */}
         <div className='space-y-1.5'>
           <Label htmlFor='monitor-apikey'>{t('API Key')}</Label>
-          <Input
-            id='monitor-apikey'
-            type='password'
-            autoComplete='new-password'
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder={isEdit ? '••••••••••••' : 'sk-...'}
-            className='font-mono'
-          />
+          <div className='flex gap-2'>
+            <Input
+              id='monitor-apikey'
+              type='password'
+              autoComplete='new-password'
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={isEdit ? '••••••••••••' : 'sk-...'}
+              className='font-mono'
+            />
+            <Button
+              type='button'
+              variant='outline'
+              className='shrink-0'
+              onClick={() => setKeyPickerOpen(true)}
+            >
+              <KeyRound className='size-4' />
+              {t('Select my key')}
+            </Button>
+          </div>
           <p className='text-muted-foreground text-xs'>
             {isEdit
               ? t('Leave blank to keep the existing key unchanged.')
@@ -561,8 +604,8 @@ export function MonitorFormDialog({
           </p>
         </div>
 
-        {/* Group + interval */}
-        <div className='grid gap-4 sm:grid-cols-2'>
+        {/* Group + interval + timeout */}
+        <div className='grid gap-4 sm:grid-cols-3'>
           <div className='space-y-1.5'>
             <Label htmlFor='monitor-group'>{t('Group')}</Label>
             <Input
@@ -590,6 +633,26 @@ export function MonitorFormDialog({
               <p className='text-destructive text-xs'>{errors.interval}</p>
             ) : (
               <p className='text-muted-foreground text-xs'>{intervalHint}</p>
+            )}
+          </div>
+          <div className='space-y-1.5'>
+            <Label htmlFor='monitor-timeout'>
+              {t('Timeout (seconds)')}{' '}
+              <span className='text-destructive'>*</span>
+            </Label>
+            <Input
+              id='monitor-timeout'
+              type='number'
+              min={MIN_TIMEOUT}
+              max={MAX_TIMEOUT}
+              value={timeoutSeconds}
+              onChange={(e) => setTimeoutSeconds(Number(e.target.value))}
+              aria-invalid={!!errors.timeout}
+            />
+            {errors.timeout ? (
+              <p className='text-destructive text-xs'>{errors.timeout}</p>
+            ) : (
+              <p className='text-muted-foreground text-xs'>{timeoutHint}</p>
             )}
           </div>
         </div>
@@ -744,6 +807,12 @@ export function MonitorFormDialog({
           )}
         </div>
       </div>
+
+      <MonitorKeyPickerDialog
+        open={keyPickerOpen}
+        onOpenChange={setKeyPickerOpen}
+        onPick={(value) => setApiKey(value)}
+      />
     </Dialog>
   )
 }

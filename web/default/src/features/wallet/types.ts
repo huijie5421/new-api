@@ -287,3 +287,67 @@ export interface BillingHistoryResponse {
 export interface CompleteOrderRequest {
   trade_no: string
 }
+
+/**
+ * Recharge rebate record (earned when a referred user recharges online)
+ */
+export interface RebateRecord {
+  /** Record ID */
+  id: number
+  /** Inviter (current user) ID */
+  inviter_id: number
+  /** Referred user ID who triggered the rebate */
+  source_user_id: number
+  /** Referred user's username */
+  source_username: string
+  /** Rebate quota credited to the inviter */
+  quota: number
+  /** Recharged quota that produced this rebate */
+  recharged_quota: number
+  /** Rebate ratio applied (percentage) */
+  ratio: number
+  /** Trade/order number of the source recharge */
+  trade_no: string
+  /** Source topup record ID */
+  top_up_id: number
+  /** Creation timestamp (unix seconds) */
+  created_at: number
+}
+
+/**
+ * Rebate history response
+ */
+export interface RebateHistoryResponse {
+  items: RebateRecord[]
+  total: number
+  page: number
+  page_size: number
+}
+
+/**
+ * Invitee record (a user referred by the current user)
+ */
+export interface InviteeRecord {
+  /** User ID */
+  id: number
+  /** Username */
+  username: string
+  /** Display name */
+  display_name: string
+  /** Join timestamp (unix seconds) */
+  created_at: number
+  /** Total used quota */
+  used_quota: number
+  /** Current quota balance */
+  quota: number
+}
+
+/**
+ * Invitees list response
+ */
+export interface InviteesResponse {
+  items: InviteeRecord[]
+  total: number
+  page: number
+  page_size: number
+}

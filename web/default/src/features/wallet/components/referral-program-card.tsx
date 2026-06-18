@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Gift, Users, TrendingUp, Share2 } from 'lucide-react'
+import { Gift, Users, TrendingUp, Share2, History } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { formatQuota } from '@/lib/format'
 import { Button } from '@/components/ui/button'
@@ -30,16 +30,22 @@ interface ReferralProgramCardProps {
   user: UserWalletData | null
   affiliateLink: string
   onTransfer: () => void
+  onShowHistory?: () => void
   complianceConfirmed?: boolean
   loading?: boolean
+  rebateEnabled?: boolean
+  rebateRatio?: number
 }
 
 export function ReferralProgramCard({
   user,
   affiliateLink,
   onTransfer,
+  onShowHistory,
   complianceConfirmed = true,
   loading,
+  rebateEnabled,
+  rebateRatio,
 }: ReferralProgramCardProps) {
   const { t } = useTranslation()
 
@@ -63,6 +69,7 @@ export function ReferralProgramCard({
   const pendingRewards = user?.aff_quota ?? 0
   const totalEarned = user?.aff_history_quota ?? 0
   const inviteCount = user?.aff_count ?? 0
+  const showRebate = !!rebateEnabled && (rebateRatio ?? 0) > 0
 
   return (
     <Card className='overflow-hidden border-purple-500/20 shadow-lg'>
@@ -82,6 +89,14 @@ export function ReferralProgramCard({
               <p className='text-muted-foreground text-xs'>
                 {t('Earn rewards when your referrals add funds')}
               </p>
+              {showRebate && (
+                <p className='text-purple-600 dark:text-purple-400 mt-1 text-xs font-medium'>
+                  {t(
+                    'Earn {{ratio}}% rebate when your referrals recharge online',
+                    { ratio: rebateRatio }
+                  )}
+                </p>
+              )}
             </div>
           </div>
 
@@ -173,6 +188,18 @@ export function ReferralProgramCard({
                   'Referral reward transfer is disabled until the administrator confirms compliance terms.'
                 )}
               </p>
+            )}
+
+            {/* Rebate History */}
+            {onShowHistory && (
+              <Button
+                onClick={onShowHistory}
+                variant='outline'
+                className='bg-background/70 border-purple-500/20 h-10 w-full'
+              >
+                <History className='mr-2 size-4' />
+                {t('Rebate History')}
+              </Button>
             )}
           </div>
         </CardContent>

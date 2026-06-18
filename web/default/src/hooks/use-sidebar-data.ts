@@ -26,8 +26,10 @@ import {
   LayoutDashboard,
   ListTodo,
   MessageSquare,
+  MonitorDot,
   Radio,
   Settings,
+  SignalHigh,
   Ticket,
   User,
   Users,
@@ -94,6 +96,11 @@ export function useSidebarData(): SidebarData {
             configUrls: ['/usage-logs/drawing', '/usage-logs/task'],
             icon: ListTodo,
           },
+          {
+            title: t('Channel Status'),
+            url: '/channel-status',
+            icon: SignalHigh,
+          },
         ],
       },
       {
@@ -120,6 +127,11 @@ export function useSidebarData(): SidebarData {
             title: t('Channels'),
             url: '/channels',
             icon: Radio,
+          },
+          {
+            title: t('Channel Monitor'),
+            url: '/channel-monitors',
+            icon: MonitorDot,
           },
           {
             title: t('Models'),

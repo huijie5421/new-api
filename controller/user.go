@@ -286,6 +286,34 @@ func GetAllUsers(c *gin.Context) {
 	return
 }
 
+// GetSelfRebateRecords 查询当前用户作为邀请人收到的返利台账记录
+func GetSelfRebateRecords(c *gin.Context) {
+	id := c.GetInt("id")
+	pageInfo := common.GetPageQuery(c)
+	records, total, err := model.GetUserRebateRecords(id, pageInfo)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	pageInfo.SetTotal(int(total))
+	pageInfo.SetItems(records)
+	common.ApiSuccess(c, pageInfo)
+}
+
+// GetSelfInvitees 查询当前用户邀请的用户列表
+func GetSelfInvitees(c *gin.Context) {
+	id := c.GetInt("id")
+	pageInfo := common.GetPageQuery(c)
+	invitees, total, err := model.GetUserInvitees(id, pageInfo)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	pageInfo.SetTotal(int(total))
+	pageInfo.SetItems(invitees)
+	common.ApiSuccess(c, pageInfo)
+}
+
 func SearchUsers(c *gin.Context) {
 	keyword := c.Query("keyword")
 	group := c.Query("group")
