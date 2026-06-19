@@ -36,12 +36,37 @@ export function safeDivide(
  * Calculate aggregated statistics from quota data
  */
 export function calculateDashboardStats(data: QuotaDataItem[]) {
-  return data.reduce(
+  const totals = data.reduce(
     (acc, item) => ({
       totalQuota: acc.totalQuota + (Number(item.quota) || 0),
       totalCount: acc.totalCount + (Number(item.count) || 0),
+      // token_used 已是缓存感知的总数（纯输入 + 输出 + 缓存写入 + 缓存读取）。
       totalTokens: acc.totalTokens + (Number(item.token_used) || 0),
+      totalInputTokens: acc.totalInputTokens + (Number(item.input_tokens) || 0),
+      totalCacheWriteTokens:
+        acc.totalCacheWriteTokens + (Number(item.cache_write_tokens) || 0),
+      totalCacheReadTokens:
+        acc.totalCacheReadTokens + (Number(item.cache_read_tokens) || 0),
     }),
-    { totalQuota: 0, totalCount: 0, totalTokens: 0 }
+    {
+      totalQuota: 0,
+      totalCount: 0,
+      totalTokens: 0,
+      totalInputTokens: 0,
+      totalCacheWriteTokens: 0,
+      totalCacheReadTokens: 0,
+    }
   )
+
+  // 缓存命中率（参照 sub2）：缓存读取 / (纯输入 + 缓存读取 + 缓存写入) × 100，仅统计输入侧。
+  const cacheDenominator =
+    totals.totalInputTokens +
+    totals.totalCacheReadTokens +
+    totals.totalCacheWriteTokens
+  const cacheHitRate =
+    cacheDenominator > 0
+      ? safeDivide(totals.totalCacheReadTokens * 100, cacheDenominator, 2)
+      : 0
+
+  return { ...totals, cacheHitRate }
 }

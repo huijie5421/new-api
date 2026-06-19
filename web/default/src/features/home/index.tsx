@@ -52,7 +52,9 @@ export function Home() {
             />
           ) : (
             <div className='container mx-auto py-8'>
-              <Markdown className='custom-home-content'>{content}</Markdown>
+              <Markdown className='custom-home-content prose-invert'>
+                {content}
+              </Markdown>
             </div>
           )}
         </main>

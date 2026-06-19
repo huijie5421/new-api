@@ -25,6 +25,9 @@ import {
   Flame,
   TrendingUp,
   Activity,
+  ArrowUpFromLine,
+  ArrowDownToLine,
+  Percent,
   type LucideIcon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -35,6 +38,7 @@ interface StatCardConfig {
   title: string
   description: string
   icon: LucideIcon
+  format?: 'number' | 'quota' | 'percent'
   getValue: (stat: Record<string, number>, days?: number) => number
 }
 
@@ -54,14 +58,37 @@ export function useModelStatCardsConfig(): StatCardConfig[] {
       title: t('Total Quota'),
       description: t('Statistical quota'),
       icon: Coins,
+      format: 'quota',
       getValue: (stat) => stat?.quota ?? 0,
     },
     {
       key: 'tokens',
       title: t('Total Tokens'),
-      description: t('Statistical tokens'),
+      description: t('Includes cache write & cache read'),
       icon: Layers,
       getValue: (stat) => stat?.tpm ?? 0,
+    },
+    {
+      key: 'cacheWrite',
+      title: t('Cache Write'),
+      description: t('Cache creation tokens'),
+      icon: ArrowUpFromLine,
+      getValue: (stat) => stat?.cacheWrite ?? 0,
+    },
+    {
+      key: 'cacheRead',
+      title: t('Cache Read'),
+      description: t('Cache hit tokens'),
+      icon: ArrowDownToLine,
+      getValue: (stat) => stat?.cacheRead ?? 0,
+    },
+    {
+      key: 'cacheHitRate',
+      title: t('Cache Hit Rate'),
+      description: t('Cache read share of input'),
+      icon: Percent,
+      format: 'percent',
+      getValue: (stat) => stat?.cacheHitRate ?? 0,
     },
     {
       key: 'avgRpm',

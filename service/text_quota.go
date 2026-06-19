@@ -459,6 +459,21 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 		InjectTieredBillingInfo(other, relayInfo, tieredResult)
 	}
 
+	// 缓存感知的 Token 拆分（用于数据看板统计，不影响计费）：
+	//   - cacheReadTokens：缓存读取（缓存命中）
+	//   - cacheWriteTokens：缓存写入（缓存创建，含 5m/1h 归一化）
+	//   - inputTokens：纯输入（已剔除缓存）。Anthropic 的 input_tokens 本身已不含缓存，直接使用；
+	//     OpenAI/其它语义的 prompt_tokens 含缓存读取/写入子集，需要剔除，从而保证
+	//     总 Token = 纯输入 + 输出 + 缓存写入 + 缓存读取 在各家上游下口径一致。
+	cacheReadTokens := summary.CacheTokens
+	inputTokens := summary.PromptTokens
+	if !summary.IsClaudeUsageSemantic && !isLegacyClaudeDerivedOpenAIUsage(relayInfo, usage) {
+		inputTokens -= cacheReadTokens + cacheWriteTokens
+		if inputTokens < 0 {
+			inputTokens = 0
+		}
+	}
+
 	model.RecordConsumeLog(ctx, relayInfo.UserId, model.RecordConsumeLogParams{
 		ChannelId:        relayInfo.ChannelId,
 		PromptTokens:     summary.PromptTokens,
@@ -472,6 +487,9 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 		IsStream:         relayInfo.IsStream,
 		Group:            relayInfo.UsingGroup,
 		Other:            other,
+		InputTokens:      inputTokens,
+		CacheReadTokens:  cacheReadTokens,
+		CacheWriteTokens: cacheWriteTokens,
 	})
 	gopool.Go(func() {
 		perfmetrics.RecordRelaySample(relayInfo, true, int64(summary.CompletionTokens))

@@ -28,7 +28,14 @@ export interface QuotaDataItem {
   username?: string
   model_name?: string
   created_at: number
+  // token_used 为缓存感知的总 Token 数：纯输入 + 输出 + 缓存写入 + 缓存读取。
   token_used?: number
+  // input_tokens 为纯输入（已剔除缓存），用于缓存命中率分母。
+  input_tokens?: number
+  // cache_write_tokens 缓存写入（缓存创建）Token 数。
+  cache_write_tokens?: number
+  // cache_read_tokens 缓存读取（缓存命中）Token 数。
+  cache_read_tokens?: number
   count?: number
   quota?: number
 }

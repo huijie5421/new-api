@@ -288,6 +288,13 @@ type RecordConsumeLogParams struct {
 	IsStream         bool                   `json:"is_stream"`
 	Group            string                 `json:"group"`
 	Other            map[string]interface{} `json:"other"`
+	// InputTokens 为剔除缓存读取/写入后的纯输入 Token 数（缓存感知）。文本计费链路会显式
+	// 填充；其它链路（无缓存）留空，RecordConsumeLog 会回退为 PromptTokens。
+	InputTokens int `json:"input_tokens"`
+	// CacheReadTokens 缓存读取（缓存命中）Token 数。
+	CacheReadTokens int `json:"cache_read_tokens"`
+	// CacheWriteTokens 缓存写入（缓存创建）Token 数。
+	CacheWriteTokens int `json:"cache_write_tokens"`
 }
 
 func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams) {
@@ -338,7 +345,17 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 	}
 	if common.DataExportEnabled {
 		gopool.Go(func() {
-			LogQuotaData(userId, username, params.ModelName, params.Quota, common.GetTimestamp(), params.PromptTokens+params.CompletionTokens)
+			// 缓存感知的数据看板汇总：
+			// inputTokens 为纯输入（剔除缓存读取/写入）。文本链路会显式设置；其它链路无缓存，
+			// 此时 InputTokens 为 0 且无缓存 Token，回退为 PromptTokens。
+			inputTokens := params.InputTokens
+			if inputTokens == 0 && params.CacheReadTokens == 0 && params.CacheWriteTokens == 0 {
+				inputTokens = params.PromptTokens
+			}
+			// token_used 记录缓存感知的总 Token 数：纯输入 + 输出 + 缓存写入 + 缓存读取。
+			totalTokens := inputTokens + params.CompletionTokens + params.CacheWriteTokens + params.CacheReadTokens
+			LogQuotaData(userId, username, params.ModelName, params.Quota, common.GetTimestamp(),
+				totalTokens, inputTokens, params.CacheWriteTokens, params.CacheReadTokens)
 		})
 	}
 }

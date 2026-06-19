@@ -46,6 +46,10 @@ export function LogStatCards(props: LogStatCardsProps) {
     totalQuota: number
     totalCount: number
     totalTokens: number
+    totalInputTokens: number
+    totalCacheWriteTokens: number
+    totalCacheReadTokens: number
+    cacheHitRate: number
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -98,27 +102,38 @@ export function LogStatCards(props: LogStatCardsProps) {
     rpm: stats?.totalCount ?? 0,
     quota: stats?.totalQuota ?? 0,
     tpm: stats?.totalTokens ?? 0,
+    cacheWrite: stats?.totalCacheWriteTokens ?? 0,
+    cacheRead: stats?.totalCacheReadTokens ?? 0,
+    cacheHitRate: stats?.cacheHitRate ?? 0,
   }
 
-  const items = statCardsConfig.map((config) => ({
-    title: config.title,
-    value:
-      config.key === 'quota'
-        ? formatQuota(config.getValue(adaptedStats, timeRangeMinutes))
-        : formatNumber(config.getValue(adaptedStats, timeRangeMinutes)),
-    desc: config.description,
-    icon: config.icon,
-  }))
+  const items = statCardsConfig.map((config) => {
+    const raw = config.getValue(adaptedStats, timeRangeMinutes)
+    let value: string
+    if (config.format === 'quota') {
+      value = formatQuota(raw)
+    } else if (config.format === 'percent') {
+      value = `${raw.toFixed(1)}%`
+    } else {
+      value = formatNumber(raw)
+    }
+    return {
+      title: config.title,
+      value,
+      desc: config.description,
+      icon: config.icon,
+    }
+  })
 
   return (
     <div className='overflow-hidden rounded-lg border'>
-      <div className='divide-border/60 grid grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-5'>
+      <div className='bg-border/60 grid grid-cols-2 gap-px sm:grid-cols-3 lg:grid-cols-4'>
         {items.map((it, idx) => {
           const Icon = it.icon
           return (
             <div
               key={it.title}
-              className={`px-3 py-2.5 sm:px-5 sm:py-4 ${idx === items.length - 1 && items.length % 2 !== 0 ? 'col-span-2 sm:col-span-1' : ''}`}
+              className={`bg-background px-3 py-2.5 sm:px-5 sm:py-4 ${idx === items.length - 1 && items.length % 2 !== 0 ? 'col-span-2 sm:col-span-1' : ''}`}
             >
               <div className='flex items-center gap-2'>
                 <Icon className='text-muted-foreground/60 size-3.5 shrink-0' />
