@@ -391,8 +391,40 @@ func GetProviderAdapter(provider string, apiMode string) (ProviderAdapter, error
 	}
 }
 
-// PerformCheck executes a single health check for a model
+// monitorRetryDelay 瞬时(请求层)失败后的重试等待时间。
+const monitorRetryDelay = 10 * time.Second
+
+// PerformCheck executes a health check for a model. If the first attempt fails
+// at the REQUEST layer (could not send / connect / read — i.e. a transient
+// network problem rather than the channel returning a bad response), it waits
+// 10s and retries once; a successful retry is recorded as success. Failures
+// that come from the upstream itself (non-2xx, error body, empty completion)
+// are NOT retried — those reflect a genuine channel problem.
 func PerformCheck(ctx context.Context, monitor *model.ChannelMonitor, modelName string) *CheckResult {
+	result, transient := performCheckOnce(ctx, monitor, modelName)
+	if result.Status == StatusSuccess || !transient {
+		return result
+	}
+
+	// Transient request-layer failure: wait and retry once.
+	select {
+	case <-ctx.Done():
+		return result
+	case <-time.After(monitorRetryDelay):
+	}
+
+	retry, _ := performCheckOnce(ctx, monitor, modelName)
+	if retry.Status == StatusSuccess {
+		return retry
+	}
+	// Retry also failed — keep the original result.
+	return result
+}
+
+// performCheckOnce executes a single health-check attempt. The second return
+// value is true when the failure occurred at the request layer (transient,
+// worth retrying) rather than from the upstream response.
+func performCheckOnce(ctx context.Context, monitor *model.ChannelMonitor, modelName string) (*CheckResult, bool) {
 	startTime := time.Now()
 	result := &CheckResult{
 		MonitorID: monitor.ID,
@@ -405,7 +437,7 @@ func PerformCheck(ctx context.Context, monitor *model.ChannelMonitor, modelName 
 	adapter, err := GetProviderAdapter(monitor.Provider, monitor.APIMode)
 	if err != nil {
 		result.ErrorMsg = err.Error()
-		return result
+		return result, false
 	}
 
 	// Generate challenge
@@ -418,14 +450,14 @@ func PerformCheck(ctx context.Context, monitor *model.ChannelMonitor, modelName 
 	if monitor.Headers != "" {
 		if err := common.Unmarshal([]byte(monitor.Headers), &headers); err != nil {
 			result.ErrorMsg = fmt.Sprintf("invalid headers JSON: %v", err)
-			return result
+			return result, false
 		}
 	}
 
 	if monitor.Body != "" {
 		if err := common.Unmarshal([]byte(monitor.Body), &body); err != nil {
 			result.ErrorMsg = fmt.Sprintf("invalid body JSON: %v", err)
-			return result
+			return result, false
 		}
 	}
 
@@ -433,7 +465,7 @@ func PerformCheck(ctx context.Context, monitor *model.ChannelMonitor, modelName 
 	reqURL, reqHeaders, reqBody, err := adapter.BuildRequest(monitor.Endpoint, monitor.APIKey, modelName, headers, body, challenge)
 	if err != nil {
 		result.ErrorMsg = err.Error()
-		return result
+		return result, false
 	}
 
 	// Create HTTP client with timeout and SSRF protection
@@ -454,28 +486,28 @@ func PerformCheck(ctx context.Context, monitor *model.ChannelMonitor, modelName 
 	req, err := http.NewRequestWithContext(ctx, "POST", reqURL, bytes.NewReader(reqBody))
 	if err != nil {
 		result.ErrorMsg = fmt.Sprintf("failed to create request: %v", err)
-		return result
+		return result, false
 	}
 
 	for k, v := range reqHeaders {
 		req.Header.Set(k, v)
 	}
 
-	// Execute request
+	// Execute request — a failure here is a transient request-layer problem.
 	resp, err := client.Do(req)
 	if err != nil {
 		result.ErrorMsg = fmt.Sprintf("request failed: %v", err)
 		result.LatencyMs = int(time.Since(startTime).Milliseconds())
-		return result
+		return result, true
 	}
 	defer resp.Body.Close()
 
-	// Read response
+	// Read response — a read failure is also transient.
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		result.ErrorMsg = fmt.Sprintf("failed to read response: %v", err)
 		result.LatencyMs = int(time.Since(startTime).Milliseconds())
-		return result
+		return result, true
 	}
 
 	result.LatencyMs = int(time.Since(startTime).Milliseconds())
@@ -486,10 +518,10 @@ func PerformCheck(ctx context.Context, monitor *model.ChannelMonitor, modelName 
 		result.ResponseOK = true
 		result.Status = StatusSuccess
 		result.ErrorMsg = ""
-		return result
+		return result, false
 	}
 
-	// Validate response
+	// Validate response — failures here come from the upstream, not transient.
 	responseOK, errMsg := adapter.ValidateResponse(resp.StatusCode, responseBody, challenge)
 	result.ResponseOK = responseOK
 
@@ -501,5 +533,5 @@ func PerformCheck(ctx context.Context, monitor *model.ChannelMonitor, modelName 
 		result.ErrorMsg = errMsg
 	}
 
-	return result
+	return result, false
 }
