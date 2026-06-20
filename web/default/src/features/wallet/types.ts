@@ -35,9 +35,56 @@ export interface ApiResponse<T = unknown> {
 export type TopupInfoResponse = ApiResponse<TopupInfo>
 export type RedemptionResponse = ApiResponse<number>
 export type AmountResponse = ApiResponse<string>
+
+/**
+ * Structured epay scan-to-pay detail returned by POST /api/user/pay under the
+ * top-level `payment` field (server-side parsed QR / payment link).
+ */
+export interface EpayPaymentDetail {
+  trade_no: string
+  pay_url?: string
+  form_url?: string
+  form_params?: Record<string, unknown>
+  qr_url?: string
+  payment_method?: string
+  amount?: number
+  money?: number
+}
+
 export type PaymentResponse = ApiResponse<Record<string, unknown>> & {
   url?: string
+  /** Structured scan-to-pay info (epay). */
+  payment?: EpayPaymentDetail
+  /** Top-level redundant fields mirrored by the backend. */
+  pay_url?: string
+  qr_url?: string
+  trade_no?: string
 }
+
+/**
+ * Result of processing an online payment.
+ * - external_opened: payment page opened in a new tab / form-submitted (legacy)
+ * - qr: server returned a scannable QR / payment link to show in-dialog
+ * - failed: request failed (a toast has already been shown)
+ */
+export type ProcessPaymentResult =
+  | { kind: 'external_opened' }
+  | { kind: 'qr'; payment: EpayPaymentDetail }
+  | { kind: 'failed' }
+
+/**
+ * Topup order status (GET /api/user/topup/status).
+ */
+export interface TopUpStatusData {
+  trade_no: string
+  status: string // pending | success | expired
+  amount?: number
+  money?: number
+  payment_method?: string
+  create_time?: number
+  complete_time?: number
+}
+export type TopUpStatusResponse = ApiResponse<TopUpStatusData>
 export type StripePaymentResponse = ApiResponse<{ pay_link: string }>
 export type AffiliateCodeResponse = ApiResponse<string>
 export type AffiliateTransferResponse = ApiResponse

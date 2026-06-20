@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { getSelf } from '@/lib/api'
 import { useStatus } from '@/hooks/use-status'
 import { useSystemConfig } from '@/hooks/use-system-config'
@@ -52,6 +53,7 @@ import type {
   PaymentMethod,
   PresetAmount,
   CreemProduct,
+  EpayPaymentDetail,
 } from './types'
 
 interface WalletProps {
@@ -68,6 +70,7 @@ export function Wallet(props: WalletProps) {
     useState<PaymentMethod>()
   const [paymentLoading, setPaymentLoading] = useState<string | null>(null)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [qrPayment, setQrPayment] = useState<EpayPaymentDetail | null>(null)
   const [transferDialogOpen, setTransferDialogOpen] = useState(false)
   const [billingDialogOpen, setBillingDialogOpen] = useState(false)
   const [rebateHistoryOpen, setRebateHistoryOpen] = useState(false)
@@ -192,15 +195,35 @@ export function Wallet(props: WalletProps) {
     if (!selectedPaymentMethod) return
 
     const isPancake = isWaffoPancakePayment(selectedPaymentMethod.type)
-    const success = isPancake
-      ? await processWaffoPancakePayment(topupAmount)
-      : await processPayment(topupAmount, selectedPaymentMethod.type)
+    if (isPancake) {
+      const ok = await processWaffoPancakePayment(topupAmount)
+      if (ok) {
+        setConfirmDialogOpen(false)
+        await fetchUser()
+      }
+      return
+    }
 
-    if (success) {
+    const result = await processPayment(topupAmount, selectedPaymentMethod.type)
+    if (result.kind === 'qr') {
+      // Keep the dialog open and switch it into the in-place scan-to-pay view.
+      setQrPayment(result.payment)
+    } else if (result.kind === 'external_opened') {
+      // Legacy flow: payment page opened externally.
       setConfirmDialogOpen(false)
+      setQrPayment(null)
       await fetchUser()
     }
+    // 'failed' → keep the dialog open so the user can retry.
   }
+
+  // Polling detected the order is paid.
+  const handlePaid = useCallback(async () => {
+    toast.success(t('Payment successful'))
+    setQrPayment(null)
+    setConfirmDialogOpen(false)
+    await fetchUser()
+  }, [fetchUser, t])
 
   // Handle redemption
   const handleRedeem = async () => {
@@ -369,7 +392,10 @@ export function Wallet(props: WalletProps) {
 
       <PaymentConfirmDialog
         open={confirmDialogOpen}
-        onOpenChange={setConfirmDialogOpen}
+        onOpenChange={(open) => {
+          setConfirmDialogOpen(open)
+          if (!open) setQrPayment(null)
+        }}
         onConfirm={handlePaymentConfirm}
         topupAmount={topupAmount}
         paymentAmount={paymentAmount}
@@ -378,6 +404,8 @@ export function Wallet(props: WalletProps) {
         processing={processing || pancakeProcessing}
         discountRate={getDiscountRate()}
         usdExchangeRate={effectiveUsdExchangeRate}
+        qrPayment={qrPayment}
+        onPaid={handlePaid}
       />
 
       <TransferDialog

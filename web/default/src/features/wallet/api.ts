@@ -40,6 +40,7 @@ import type {
   WaffoPancakePaymentResponse,
   RebateHistoryResponse,
   InviteesResponse,
+  TopUpStatusResponse,
 } from './types'
 
 // ============================================================================
@@ -119,6 +120,22 @@ export async function requestStripePayment(
   const res = await api.post('/api/user/stripe/pay', request, {
     skipBusinessError: true,
   } as Record<string, unknown>)
+  return res.data
+}
+
+/**
+ * Query the status of an online topup order (epay scan-to-pay polling).
+ * Only returns the current user's own order.
+ */
+export async function getTopUpStatus(
+  tradeNo: string
+): Promise<TopUpStatusResponse> {
+  const res = await api.get(
+    `/api/user/topup/status?trade_no=${encodeURIComponent(tradeNo)}`,
+    {
+      skipBusinessError: true,
+    } as Record<string, unknown>
+  )
   return res.data
 }
 
