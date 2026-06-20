@@ -300,7 +300,7 @@ func RequestEpay(c *gin.Context) {
 
 // buildEpayPayURL 将易支付返回的 uri 与表单参数 params 拼接成一个 GET 形式的支付链接。
 // 若 uri 无法解析则原样返回 uri。
-func buildEpayPayURL(uri string, params url.Values) string {
+func buildEpayPayURL(uri string, params map[string]string) string {
 	if uri == "" {
 		return ""
 	}
@@ -312,10 +312,8 @@ func buildEpayPayURL(uri string, params url.Values) string {
 		return uri
 	}
 	q := u.Query()
-	for k, vs := range params {
-		for _, v := range vs {
-			q.Add(k, v)
-		}
+	for k, v := range params {
+		q.Set(k, v)
 	}
 	u.RawQuery = q.Encode()
 	return u.String()
@@ -339,7 +337,7 @@ var (
 // tryParseEpayQRCode 尝试在服务器端解析易支付支付页中的二维码/付款链接。
 // 它只请求易支付网关(operation_setting.PayAddress)同源的地址,不做任意 URL fetch。
 // 任何失败都只记录日志并返回空字符串,绝不影响订单创建。
-func tryParseEpayQRCode(ctx context.Context, uri string, params url.Values, payURL string) (qrURL string) {
+func tryParseEpayQRCode(ctx context.Context, uri string, params map[string]string, payURL string) (qrURL string) {
 	defer func() {
 		// 解析逻辑(含正则/外部响应)出现任何 panic 都不能影响下单。
 		if r := recover(); r != nil {
@@ -534,7 +532,7 @@ func isAllowedEpayURL(raw string) bool {
 //     立即作为 redirectQR 返回,绝不再请求外域。
 //   - 若 Location/最终 URL 含 info=(submit.html?info=...),停止跟随并把该 URL 作为 finalURL 交给调用方解析。
 //   - 仅同源的 http(s) 重定向才会继续跟随(改用 GET)。
-func fetchEpayPaymentPage(ctx context.Context, postURL string, params url.Values) (finalURL string, body []byte, redirectQR string, err error) {
+func fetchEpayPaymentPage(ctx context.Context, postURL string, params map[string]string) (finalURL string, body []byte, redirectQR string, err error) {
 	reqCtx, cancel := context.WithTimeout(ctx, epayQRFetchTimeout)
 	defer cancel()
 
@@ -546,9 +544,15 @@ func fetchEpayPaymentPage(ctx context.Context, postURL string, params url.Values
 		},
 	}
 
+	// epay 的 params 为 map[string]string,转成表单编码字符串。
+	form := url.Values{}
+	for k, v := range params {
+		form.Set(k, v)
+	}
+
 	currentURL := postURL
 	method := http.MethodPost
-	var reqBody io.Reader = strings.NewReader(params.Encode())
+	var reqBody io.Reader = strings.NewReader(form.Encode())
 
 	for i := 0; i < 10; i++ {
 		if !isAllowedEpayURL(currentURL) {
