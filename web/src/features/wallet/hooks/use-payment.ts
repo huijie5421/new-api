@@ -35,7 +35,13 @@ import {
   isWaffoPancakePayment,
   submitPaymentForm,
 } from '../lib'
-import type { AmountRequest, AmountResponse } from '../types'
+import type {
+  AmountRequest,
+  AmountResponse,
+  EpayPaymentDetail,
+  PaymentResponse,
+  ProcessPaymentResult,
+} from '../types'
 
 // ============================================================================
 // Payment Hook
@@ -107,7 +113,10 @@ export function usePayment() {
 
   // Process payment
   const processPayment = useCallback(
-    async (topupAmount: number, paymentType: string) => {
+    async (
+      topupAmount: number,
+      paymentType: string
+    ): Promise<ProcessPaymentResult> => {
       try {
         setProcessing(true)
 
@@ -126,30 +135,54 @@ export function usePayment() {
 
         if (!isApiSuccess(response)) {
           toast.error(response.message || i18next.t('Payment request failed'))
-          return false
+          return { kind: 'failed' }
         }
 
-        // Handle Stripe payment
-        if (isStripe && response.data?.pay_link) {
-          window.open(response.data.pay_link as string, '_blank')
-          toast.success(i18next.t('Redirecting to payment page...'))
-          return true
-        }
-
-        // Handle non-Stripe payment
-        if (!isStripe && response.data) {
-          const url = (response as unknown as { url?: string }).url
-          if (url) {
-            submitPaymentForm(url, response.data)
+        // Handle Stripe payment — always external checkout.
+        if (isStripe) {
+          if (response.data?.pay_link) {
+            window.open(response.data.pay_link as string, '_blank')
             toast.success(i18next.t('Redirecting to payment page...'))
-            return true
+            return { kind: 'external_opened' }
           }
+          return { kind: 'failed' }
         }
 
-        return false
-      } catch {
+        // Handle epay payment.
+        const payResp = response as PaymentResponse
+        const payment = payResp.payment
+        const qrUrl = payment?.qr_url || payResp.qr_url
+
+        // Prefer the in-dialog scan-to-pay experience when a QR / payment link
+        // was parsed server-side.
+        if (qrUrl) {
+          const detail: EpayPaymentDetail = {
+            trade_no: payment?.trade_no || payResp.trade_no || '',
+            pay_url: payment?.pay_url || payResp.pay_url,
+            form_url: payment?.form_url || payResp.url,
+            form_params:
+              payment?.form_params ||
+              (payResp.data as Record<string, unknown> | undefined),
+            qr_url: qrUrl,
+            payment_method: payment?.payment_method || paymentType,
+            amount: payment?.amount,
+            money: payment?.money,
+          }
+          return { kind: 'qr', payment: detail }
+        }
+
+        // Fallback: legacy behavior — submit the form to open the payment page.
+        const url = payResp.url
+        if (url && payResp.data) {
+          submitPaymentForm(url, payResp.data)
+          toast.success(i18next.t('Redirecting to payment page...'))
+          return { kind: 'external_opened' }
+        }
+
+        return { kind: 'failed' }
+      } catch (_error) {
         toast.error(i18next.t('Payment request failed'))
-        return false
+        return { kind: 'failed' }
       } finally {
         setProcessing(false)
       }

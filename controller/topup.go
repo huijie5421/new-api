@@ -2,10 +2,16 @@ package controller
 
 import (
 	"errors"
+	"bytes"
+	"context"
+	"encoding/base64"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -342,7 +348,373 @@ func RequestEpay(c *gin.Context) {
 		return
 	}
 	logger.LogInfo(c.Request.Context(), fmt.Sprintf("易支付 充值订单创建成功 user_id=%d trade_no=%s payment_method=%s amount=%d money=%.2f uri=%q params=%q", id, tradeNo, req.PaymentMethod, req.Amount, payMoney, uri, common.GetJsonString(params)))
-	c.JSON(http.StatusOK, gin.H{"message": "success", "data": params, "url": uri})
+
+	// 拼接 GET 形式的支付链接(uri + params)。旧前端仍可用 url+data 走表单跳转。
+	payURL := buildEpayPayURL(uri, params)
+
+	// 服务器端尝试解析扫码/付款链接。失败不影响下单,只返回空 qr_url 并保留旧跳转数据。
+	qrURL := tryParseEpayQRCode(c.Request.Context(), uri, params, payURL)
+
+	// 兼容旧前端:data 必须仍为原始 params(旧前端 submitPaymentForm(url, data) 会把
+	// data 作为隐藏表单字段 POST 给支付网关)。结构化扫码信息单独放到顶层 payment 字段,
+	// 并在顶层冗余 pay_url/qr_url/trade_no 方便新前端直接读取。
+	c.JSON(http.StatusOK, gin.H{
+		"message": "success",
+		"data":    params,
+		"url":     uri,
+		"payment": gin.H{
+			"trade_no":       tradeNo,
+			"pay_url":        payURL,
+			"form_url":       uri,
+			"form_params":    params,
+			"qr_url":         qrURL,
+			"payment_method": req.PaymentMethod,
+			"amount":         amount,
+			"money":          payMoney,
+		},
+		"pay_url":  payURL,
+		"qr_url":   qrURL,
+		"trade_no": tradeNo,
+	})
+}
+
+// buildEpayPayURL 将易支付返回的 uri 与表单参数 params 拼接成一个 GET 形式的支付链接。
+// 若 uri 无法解析则原样返回 uri。
+func buildEpayPayURL(uri string, params url.Values) string {
+	if uri == "" {
+		return ""
+	}
+	if len(params) == 0 {
+		return uri
+	}
+	u, err := url.Parse(uri)
+	if err != nil {
+		return uri
+	}
+	q := u.Query()
+	for k, vs := range params {
+		for _, v := range vs {
+			q.Add(k, v)
+		}
+	}
+	u.RawQuery = q.Encode()
+	return u.String()
+}
+
+const (
+	epayQRFetchTimeout = 9 * time.Second
+	epayQRMaxBodyBytes = 1 << 20 // 1MB
+)
+
+var (
+	// z-pay submit.html?info=base64 形式(兼容 &amp; 转义后的 ; 分隔与 URL 编码字符)
+	epayInfoQueryRegex = regexp.MustCompile(`[?&;]info=([A-Za-z0-9+/=_%-]+)`)
+	// HTML 中常见的二维码/收款协议链接
+	epayQRSchemeRegex = regexp.MustCompile(`(?i)((?:https?:)?//qr\.alipay\.com/[^\s"'<>\\]+|wxp://[^\s"'<>\\]+|weixin://[^\s"'<>\\]+|alipayqr://[^\s"'<>\\]+|alipays://[^\s"'<>\\]+)`)
+	// <img src="...二维码图片..."> 形式
+	epayImgSrcRegex = regexp.MustCompile(`(?i)<img[^>]+src=["']([^"']+)["']`)
+	epayQRImgHint   = regexp.MustCompile(`(?i)(qr|qrcode|二维码|pay|alipay|weixin|wechat)`)
+)
+
+// tryParseEpayQRCode 尝试在服务器端解析易支付支付页中的二维码/付款链接。
+// 它只请求易支付网关(operation_setting.PayAddress)同源的地址,不做任意 URL fetch。
+// 任何失败都只记录日志并返回空字符串,绝不影响订单创建。
+func tryParseEpayQRCode(ctx context.Context, uri string, params url.Values, payURL string) (qrURL string) {
+	defer func() {
+		// 解析逻辑(含正则/外部响应)出现任何 panic 都不能影响下单。
+		if r := recover(); r != nil {
+			logger.LogError(ctx, fmt.Sprintf("易支付 解析二维码 panic: %v", r))
+			qrURL = ""
+		}
+	}()
+
+	// 优先:POST 表单到 uri。很多易支付页必须 POST 才会生成 submit.html?info=...,
+	// 仅 GET 拿不到二维码。跟随同源重定向;若重定向直接指向付款/二维码链接则直接采用。
+	if isAllowedEpayURL(uri) {
+		finalURL, body, redirectQR, err := fetchEpayPaymentPage(ctx, uri, params)
+		if err != nil {
+			logger.LogWarn(ctx, fmt.Sprintf("易支付 解析二维码 POST 失败 uri=%q error=%q", uri, err.Error()))
+		} else {
+			// 1) 重定向直接给出付款/二维码链接(qr.alipay.com / wxp:// / weixin:// / alipayqr://)。
+			if redirectQR != "" {
+				return redirectQR
+			}
+			// 2) 从最终 URL 中提取 info(submit.html?info=...);两种解析都试,兼容 + 被转空格等情况。
+			if q := extractInfoQRFromURL(finalURL); q != "" {
+				return q
+			}
+			if q := extractInfoQRFromText(finalURL); q != "" {
+				return q
+			}
+			// 3) 从响应 HTML 中提取。
+			html := string(bytes.TrimSpace(body))
+			if q := extractInfoQRFromText(html); q != "" {
+				return q
+			}
+			if m := epayQRSchemeRegex.FindStringSubmatch(html); len(m) > 1 {
+				return normalizeScheme(m[1])
+			}
+			// 4) 退而求其次:从 <img src> 中找带二维码语义的图片链接,相对路径基于最终页面 URL 解析为绝对地址。
+			for _, m := range epayImgSrcRegex.FindAllStringSubmatch(html, -1) {
+				if len(m) > 1 && epayQRImgHint.MatchString(m[1]) {
+					return resolveURL(finalURL, m[1])
+				}
+			}
+		}
+	} else {
+		logger.LogInfo(ctx, fmt.Sprintf("易支付 解析二维码 跳过(目标地址不在允许范围) uri=%q", uri))
+	}
+
+	// 兜底:POST 失败或未命中时,直接从 payURL/uri 的 info query 中解析(无需再请求)。
+	if q := extractInfoQRFromURL(payURL); q != "" {
+		return q
+	}
+	if q := extractInfoQRFromText(payURL); q != "" {
+		return q
+	}
+	if q := extractInfoQRFromURL(uri); q != "" {
+		return q
+	}
+
+	logger.LogInfo(ctx, fmt.Sprintf("易支付 解析二维码 未命中 uri=%q", uri))
+	return ""
+}
+
+// resolveURL 基于 base 将可能为相对路径的 ref 解析为绝对 URL;解析失败则原样返回 ref。
+func resolveURL(base, ref string) string {
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return ""
+	}
+	b, err := url.Parse(base)
+	if err != nil {
+		return ref
+	}
+	r, err := url.Parse(ref)
+	if err != nil {
+		return ref
+	}
+	return b.ResolveReference(r).String()
+}
+
+// isPaymentSchemeURL 判断链接是否本身就是可直接拉起支付/渲染二维码的付款链接,
+// 这类链接(常为外域或自定义协议)不应再发起请求,直接作为 qr_url 返回。
+func isPaymentSchemeURL(raw string) bool {
+	s := strings.ToLower(strings.TrimSpace(raw))
+	if s == "" {
+		return false
+	}
+	for _, p := range []string{"wxp://", "weixin://", "alipayqr://", "alipays://", "alipay://"} {
+		if strings.HasPrefix(s, p) {
+			return true
+		}
+	}
+	if u, err := url.Parse(raw); err == nil && strings.EqualFold(u.Host, "qr.alipay.com") {
+		return true
+	}
+	return false
+}
+
+// extractInfoQRFromURL 从一个 URL 的 info query 中解析二维码地址。
+func extractInfoQRFromURL(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+	info := u.Query().Get("info")
+	if info == "" {
+		return ""
+	}
+	return decodeInfoQR(info)
+}
+
+// extractInfoQRFromText 从一段文本(HTML 或 URL 字符串)中正则提取 info=base64 并解析。
+// 兼容 HTML 转义的 &amp; 以及 URL 编码(如 %3D);使用 PathUnescape 仅解码 %XX,
+// 不会把 base64 中的 + 误转成空格。
+func extractInfoQRFromText(text string) string {
+	// HTML 中 & 常被转义为 &amp;,先还原以便匹配 &info= / 分隔符。
+	text = strings.ReplaceAll(text, "&amp;", "&")
+	m := epayInfoQueryRegex.FindStringSubmatch(text)
+	if len(m) < 2 {
+		return ""
+	}
+	info := m[1]
+	if dec, err := url.PathUnescape(info); err == nil {
+		info = dec
+	}
+	return decodeInfoQR(info)
+}
+
+// decodeInfoQR 将 z-pay 的 info(base64 编码的 JSON)解码,取 url 或 url2 作为二维码地址。
+func decodeInfoQR(info string) string {
+	info = strings.TrimSpace(info)
+	if info == "" {
+		return ""
+	}
+	var decoded []byte
+	// 依次尝试标准/URL-safe、是否带 padding 的多种 base64 变体。
+	for _, enc := range []*base64.Encoding{
+		base64.StdEncoding,
+		base64.RawStdEncoding,
+		base64.URLEncoding,
+		base64.RawURLEncoding,
+	} {
+		if b, err := enc.DecodeString(info); err == nil {
+			decoded = b
+			break
+		}
+	}
+	if len(decoded) == 0 {
+		return ""
+	}
+	var payload struct {
+		URL  string `json:"url"`
+		URL2 string `json:"url2"`
+	}
+	if err := common.Unmarshal(decoded, &payload); err != nil {
+		return ""
+	}
+	if payload.URL != "" {
+		return normalizeScheme(payload.URL)
+	}
+	return normalizeScheme(payload.URL2)
+}
+
+// normalizeScheme 将以 // 开头的协议相对链接补全为 https。
+func normalizeScheme(s string) string {
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, "//") {
+		return "https:" + s
+	}
+	return s
+}
+
+// isAllowedEpayURL 仅允许请求易支付网关(PayAddress)同源的地址,防止 SSRF/任意 URL fetch。
+func isAllowedEpayURL(raw string) bool {
+	if raw == "" {
+		return false
+	}
+	target, err := url.Parse(raw)
+	if err != nil || (target.Scheme != "http" && target.Scheme != "https") {
+		return false
+	}
+	base, err := url.Parse(operation_setting.PayAddress)
+	if err != nil || base.Host == "" {
+		return false
+	}
+	return strings.EqualFold(target.Host, base.Host)
+}
+
+// fetchEpayPaymentPage 优先以 POST 表单方式请求易支付支付页(很多易支付页必须 POST 才会生成
+// submit.html?info=...),并手动跟随同源重定向(最多 10 跳)。超时 8-10s,响应体最多读取 1MB。
+//   - 若某次重定向 Location 直接是付款/二维码链接(qr.alipay.com / wxp:// / weixin:// / alipayqr://),
+//     立即作为 redirectQR 返回,绝不再请求外域。
+//   - 若 Location/最终 URL 含 info=(submit.html?info=...),停止跟随并把该 URL 作为 finalURL 交给调用方解析。
+//   - 仅同源的 http(s) 重定向才会继续跟随(改用 GET)。
+func fetchEpayPaymentPage(ctx context.Context, postURL string, params url.Values) (finalURL string, body []byte, redirectQR string, err error) {
+	reqCtx, cancel := context.WithTimeout(ctx, epayQRFetchTimeout)
+	defer cancel()
+
+	client := &http.Client{
+		Timeout: epayQRFetchTimeout,
+		// 关闭自动重定向,改为手动处理(需要在跳到外域/付款链接时停止并捕获 Location)。
+		CheckRedirect: func(r *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	currentURL := postURL
+	method := http.MethodPost
+	var reqBody io.Reader = strings.NewReader(params.Encode())
+
+	for i := 0; i < 10; i++ {
+		if !isAllowedEpayURL(currentURL) {
+			return finalURL, nil, "", fmt.Errorf("target not allowed: %s", currentURL)
+		}
+		req, reqErr := http.NewRequestWithContext(reqCtx, method, currentURL, reqBody)
+		if reqErr != nil {
+			return finalURL, nil, "", reqErr
+		}
+		req.Header.Set("User-Agent", "new-api-epay-qr/1.0")
+		if method == http.MethodPost {
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		}
+
+		resp, doErr := client.Do(req)
+		if doErr != nil {
+			return finalURL, nil, "", doErr
+		}
+		buf, _ := io.ReadAll(io.LimitReader(resp.Body, epayQRMaxBodyBytes))
+		resp.Body.Close()
+		finalURL = currentURL
+
+		if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+			loc := resp.Header.Get("Location")
+			if loc == "" {
+				return finalURL, buf, "", nil
+			}
+			// 原始 Location 即为付款/自定义协议链接(如 wxp://、weixin://、alipayqr://)。
+			if isPaymentSchemeURL(loc) {
+				return finalURL, buf, normalizeScheme(loc), nil
+			}
+			absLoc := resolveURL(currentURL, loc)
+			if isPaymentSchemeURL(absLoc) {
+				return finalURL, buf, normalizeScheme(absLoc), nil
+			}
+			// submit.html?info=... 直接把该 URL 作为最终地址,交由调用方解析 info,无需再请求。
+			if strings.Contains(absLoc, "info=") {
+				return absLoc, buf, "", nil
+			}
+			// 仅同源 http(s) 才继续跟随,且改用 GET。
+			if isAllowedEpayURL(absLoc) {
+				currentURL = absLoc
+				method = http.MethodGet
+				reqBody = nil
+				continue
+			}
+			// 外域且非付款链接 → 停止,不请求外域。
+			return finalURL, buf, "", nil
+		}
+
+		// 非重定向(200 等):返回最终 URL 与响应体。
+		if resp.Request != nil && resp.Request.URL != nil {
+			finalURL = resp.Request.URL.String()
+		}
+		return finalURL, buf, "", nil
+	}
+	return finalURL, body, "", fmt.Errorf("stopped after 10 redirects")
+}
+
+// GetUserTopUpStatus 返回当前登录用户自己某笔充值订单的状态。
+// 仅允许查询属于自己的订单;订单不存在或不属于当前用户时返回 success=false。
+func GetUserTopUpStatus(c *gin.Context) {
+	tradeNo := strings.TrimSpace(c.Query("trade_no"))
+	if tradeNo == "" {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "未提供订单号"})
+		return
+	}
+	userId := c.GetInt("id")
+	topUp := model.GetTopUpByTradeNo(tradeNo)
+	if topUp == nil || topUp.UserId != userId {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "订单不存在"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": gin.H{
+			"trade_no":       topUp.TradeNo,
+			"status":         topUp.Status,
+			"amount":         topUp.Amount,
+			"money":          topUp.Money,
+			"payment_method": topUp.PaymentMethod,
+			"create_time":    topUp.CreateTime,
+			"complete_time":  topUp.CompleteTime,
+		},
+	})
 }
 
 // tradeNo lock
