@@ -811,6 +811,31 @@ func HasActiveUserSubscription(userId int) (bool, error) {
 	return count > 0, nil
 }
 
+// HasActiveUserSubscriptionForGroup 检查用户是否存在「可在指定分组抵扣额度」的有效订阅。
+// 订阅额度仅在套餐升级分组(upgrade_group)下生效，因此这里联表过滤
+// plan.upgrade_group = usingGroup。usingGroup 为空时直接返回 false（不可抵扣）。
+// 与 PreConsumeUserSubscription 的过滤口径保持一致，避免 subscription_first 误判。
+func HasActiveUserSubscriptionForGroup(userId int, usingGroup string) (bool, error) {
+	if userId <= 0 {
+		return false, errors.New("invalid userId")
+	}
+	if strings.TrimSpace(usingGroup) == "" {
+		return false, nil
+	}
+	now := common.GetTimestamp()
+	// 表名采用 GORM 默认复数蛇形命名（与 SubscriptionPlan/UserSubscription 结构一致），
+	// 与本文件其他查询及 model_meta.go 的 Joins 风格保持一致。
+	var count int64
+	if err := DB.Model(&UserSubscription{}).
+		Joins("JOIN subscription_plans ON subscription_plans.id = user_subscriptions.plan_id").
+		Where("user_subscriptions.user_id = ? AND user_subscriptions.status = ? AND user_subscriptions.end_time > ?", userId, "active", now).
+		Where("subscription_plans.upgrade_group <> ? AND subscription_plans.upgrade_group = ?", "", usingGroup).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 // GetAllUserSubscriptions returns all subscriptions (active and expired) for a user.
 func GetAllUserSubscriptions(userId int) ([]SubscriptionSummary, error) {
 	if userId <= 0 {
@@ -1082,7 +1107,12 @@ func maybeResetUserSubscriptionWithPlanTx(tx *gorm.DB, sub *UserSubscription, pl
 }
 
 // PreConsumeUserSubscription pre-consumes from any active subscription total quota.
-func PreConsumeUserSubscription(requestId string, userId int, modelName string, quotaType int, amount int64) (*SubscriptionPreConsumeResult, error) {
+//
+// usingGroup 是当前请求实际使用的分组。订阅额度只能在「套餐升级分组(upgrade_group)」
+// 下抵扣：仅当 plan.UpgradeGroup 非空且等于 usingGroup 时，该订阅才参与扣费。
+// 套餐未设置 upgrade_group 的订阅一律不可抵扣。这里实时读取套餐的 upgrade_group，
+// 因此管理员修改套餐升级分组后，已购订阅会同步生效。
+func PreConsumeUserSubscription(requestId string, userId int, modelName string, quotaType int, amount int64, usingGroup string) (*SubscriptionPreConsumeResult, error) {
 	if userId <= 0 {
 		return nil, errors.New("invalid userId")
 	}
@@ -1133,6 +1163,10 @@ func PreConsumeUserSubscription(requestId string, userId int, modelName string, 
 			plan, err := getSubscriptionPlanByIdTx(tx, sub.PlanId)
 			if err != nil {
 				return err
+			}
+			// 订阅额度仅在套餐升级分组下抵扣：升级分组为空或与当前请求分组不一致的订阅跳过。
+			if strings.TrimSpace(plan.UpgradeGroup) == "" || plan.UpgradeGroup != usingGroup {
+				continue
 			}
 			if err := maybeResetUserSubscriptionWithPlanTx(tx, &sub, plan, now); err != nil {
 				return err
