@@ -52,7 +52,7 @@ import {
   updateBillingPreference,
 } from '@/features/subscriptions/api'
 import { SubscriptionPurchaseDialog } from '@/features/subscriptions/components/dialogs/subscription-purchase-dialog'
-import { formatDuration, formatResetPeriod } from '@/features/subscriptions/lib'
+import { formatDuration, formatResetPeriod, formatQuotaLabel, formatQuotaLabelByReset } from '@/features/subscriptions/lib'
 import type {
   PlanRecord,
   UserSubscriptionRecord,
@@ -468,7 +468,11 @@ export function SubscriptionPlansCard({
                         </div>
                       )}
                       <div className='text-muted-foreground mt-1'>
-                        {t('Total Quota')}:{' '}
+                        {formatQuotaLabelByReset(
+                          subscription?.next_reset_time,
+                          t
+                        )}
+                        :{' '}
                         {totalAmount > 0 ? (
                           <Tooltip>
                             <TooltipTrigger
@@ -528,8 +532,8 @@ export function SubscriptionPlansCard({
                   ? `${t('Quota Reset')}: ${formatResetPeriod(plan, t)}`
                   : null,
                 totalAmount > 0
-                  ? `${t('Total Quota')}: ${formatQuota(totalAmount)}`
-                  : `${t('Total Quota')}: ${t('Unlimited')}`,
+                  ? `${formatQuotaLabel(plan, t)}: ${formatQuota(totalAmount)}`
+                  : `${formatQuotaLabel(plan, t)}: ${t('Unlimited')}`,
                 limit > 0 ? `${t('Purchase Limit')}: ${limit}` : null,
                 plan.upgrade_group
                   ? `${t('Upgrade Group')}: ${plan.upgrade_group}`

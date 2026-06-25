@@ -37,6 +37,8 @@ import SubscriptionPurchaseModal from './modals/SubscriptionPurchaseModal';
 import {
   formatSubscriptionDuration,
   formatSubscriptionResetPeriod,
+  formatSubscriptionQuotaLabel,
+  formatSubscriptionQuotaLabelByReset,
 } from '../../helpers/subscriptionFormat';
 
 const { Text } = Typography;
@@ -451,7 +453,11 @@ const SubscriptionPlansCard = ({
                           </div>
                         )}
                         <div className='text-xs text-gray-500 mb-2'>
-                          {t('总额度')}:{' '}
+                          {formatSubscriptionQuotaLabelByReset(
+                            subscription?.next_reset_time,
+                            t,
+                          )}
+                          :{' '}
                           {totalAmount > 0 ? (
                             <Tooltip
                               content={`${t('原生额度')}：${usedAmount}/${totalAmount} · ${t('剩余')} ${remainAmount}`}
@@ -499,10 +505,11 @@ const SubscriptionPlansCard = ({
                 const isPopular = index === 0 && plans.length > 1;
                 const limit = Number(plan?.max_purchase_per_user || 0);
                 const limitLabel = limit > 0 ? `${t('限购')} ${limit}` : null;
+                const quotaLabelText = formatSubscriptionQuotaLabel(plan, t);
                 const totalLabel =
                   totalAmount > 0
-                    ? `${t('总额度')}: ${renderQuota(totalAmount)}`
-                    : `${t('总额度')}: ${t('不限')}`;
+                    ? `${quotaLabelText}: ${renderQuota(totalAmount)}`
+                    : `${quotaLabelText}: ${t('不限')}`;
                 const upgradeLabel = plan?.upgrade_group
                   ? `${t('升级分组')}: ${plan.upgrade_group}`
                   : null;

@@ -64,3 +64,29 @@ export function formatTimestamp(ts: number): string {
   if (!ts) return '-'
   return dayjs(ts * 1000).format('YYYY-MM-DD HH:mm:ss')
 }
+
+// Quota label that reflects how the quota is granted. When the plan resets the
+// quota per period (daily/weekly/monthly), "Total Quota" is misleading because
+// it reads as the whole-term total, so show the per-period wording instead.
+// Use for purchasable plan cards (full plan with quota_reset_period available).
+export function formatQuotaLabel(
+  plan: Partial<SubscriptionPlan>,
+  t: TFunction
+): string {
+  const period = plan?.quota_reset_period || 'never'
+  if (period === 'daily') return t('Daily Quota')
+  if (period === 'weekly') return t('Weekly Quota')
+  if (period === 'monthly') return t('Monthly Quota')
+  if (period === 'custom') return t('Periodic Quota')
+  return t('Total Quota')
+}
+
+// Quota label for the purchased-subscription list. The user-facing subscription
+// payload has no quota_reset_period, so we can only tell whether it resets via
+// next_reset_time.
+export function formatQuotaLabelByReset(
+  nextResetTime: number | undefined,
+  t: TFunction
+): string {
+  return Number(nextResetTime) > 0 ? t('Periodic Quota') : t('Total Quota')
+}
