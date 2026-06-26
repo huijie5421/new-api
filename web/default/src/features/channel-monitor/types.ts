@@ -40,6 +40,7 @@ export interface ChannelMonitor {
   headers: string; // JSON object string
   body: string; // JSON object string (request body snapshot)
   body_mode: string; // "auto" | "minimal" | "custom"
+  cc_spoof_enabled: boolean; // anthropic only: inject global Claude Code spoof
   template_id: number | null; // *int
   template_snapshot: string; // JSON string
   created_at: string; // RFC3339 timestamp

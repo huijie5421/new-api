@@ -285,6 +285,15 @@ export type OperationsSettings = {
   AutomaticRetryStatusCodes: string
   'monitor_setting.auto_test_channel_enabled': boolean
   'monitor_setting.auto_test_channel_minutes': number
+  'claude_code_spoof_setting.enabled': boolean
+  'claude_code_spoof_setting.user_agent': string
+  'claude_code_spoof_setting.anthropic_beta': string
+  'claude_code_spoof_setting.anthropic_version': string
+  'claude_code_spoof_setting.x_app': string
+  'claude_code_spoof_setting.extra_headers': string
+  'claude_code_spoof_setting.system_prompt': string
+  'claude_code_spoof_setting.metadata_user_id': string
+  'claude_code_spoof_setting.override_user_system': boolean
   SMTPServer: string
   SMTPPort: string
   SMTPAccount: string

@@ -14,6 +14,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 )
 
 // extractTextContent reduces a message content field that may be a plain
@@ -461,6 +462,12 @@ func performCheckOnce(ctx context.Context, monitor *model.ChannelMonitor, modelN
 		}
 	}
 
+	// Claude Code 伪装：仅 anthropic 监控且开启 cc_spoof_enabled 时，注入全局伪装配置
+	// 的请求头与 system / metadata.user_id，使探测请求被上游识别为官方 CLI。
+	if monitor.CCSpoofEnabled && monitor.Provider == ProviderAnthropic {
+		headers, body = applyClaudeCodeSpoof(headers, body)
+	}
+
 	// Build request
 	reqURL, reqHeaders, reqBody, err := adapter.BuildRequest(monitor.Endpoint, monitor.APIKey, modelName, headers, body, challenge)
 	if err != nil {
@@ -534,4 +541,73 @@ func performCheckOnce(ctx context.Context, monitor *model.ChannelMonitor, modelN
 	}
 
 	return result, false
+}
+
+// applyClaudeCodeSpoof 把全局 Claude Code 伪装配置注入到 anthropic 探测请求的
+// headers 与 body 中：
+//   - headers：合并伪装头（UA / X-App / anthropic-beta / anthropic-version 等），覆盖同名项
+//   - body.system：伪装 system 块插到数组首位（上游按首项判定）；OverrideUserSystem
+//     为 true 时仅保留伪装块，否则把用户原有 system 接其后
+//   - body.metadata.user_id：注入官方格式 user_id（保留用户已设的其他 metadata 字段，
+//     不覆盖用户显式设置的 user_id）
+//
+// 返回新的 headers / body，原 map 不被破坏性修改之外的副作用影响。
+func applyClaudeCodeSpoof(headers map[string]string, body map[string]interface{}) (map[string]string, map[string]interface{}) {
+	cfg := operation_setting.GetClaudeCodeSpoofSetting()
+
+	// --- headers ---
+	if headers == nil {
+		headers = make(map[string]string)
+	}
+	for k, v := range cfg.SpoofHeaders() {
+		headers[k] = v
+	}
+
+	// --- body ---
+	if body == nil {
+		body = make(map[string]interface{})
+	}
+
+	// system: 伪装块插到首位
+	if cfg.SystemPrompt != "" {
+		spoofBlock := map[string]interface{}{
+			"type": "text",
+			"text": cfg.SystemPrompt,
+		}
+		system := []interface{}{spoofBlock}
+		if !cfg.OverrideUserSystem {
+			system = append(system, normalizeSystemEntries(body["system"])...)
+		}
+		body["system"] = system
+	}
+
+	// metadata.user_id: 注入官方格式（不覆盖用户已显式设置的 user_id）
+	if cfg.MetadataUserID != "" {
+		metadata, _ := body["metadata"].(map[string]interface{})
+		if metadata == nil {
+			metadata = make(map[string]interface{})
+		}
+		if existing, ok := metadata["user_id"].(string); !ok || strings.TrimSpace(existing) == "" {
+			metadata["user_id"] = cfg.MetadataUserID
+		}
+		body["metadata"] = metadata
+	}
+
+	return headers, body
+}
+
+// normalizeSystemEntries 把 body 中已有的 system 字段统一转换为 anthropic system
+// 数组元素切片。支持三种来源：字符串（包成 text 块）、对象数组（原样保留）、其它（忽略）。
+func normalizeSystemEntries(raw interface{}) []interface{} {
+	switch v := raw.(type) {
+	case string:
+		if strings.TrimSpace(v) == "" {
+			return nil
+		}
+		return []interface{}{map[string]interface{}{"type": "text", "text": v}}
+	case []interface{}:
+		return v
+	default:
+		return nil
+	}
 }

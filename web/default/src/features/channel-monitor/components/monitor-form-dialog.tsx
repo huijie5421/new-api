@@ -64,7 +64,7 @@ const API_MODES: { value: APIMode; label: string }[] = [
 ]
 
 const DEFAULT_INTERVAL = 60
-const MIN_INTERVAL = 15
+const MIN_INTERVAL = 60
 const MAX_INTERVAL = 3600
 
 const DEFAULT_TIMEOUT = 10
@@ -108,6 +108,7 @@ export function MonitorFormDialog({
   const [intervalSeconds, setIntervalSeconds] = useState(DEFAULT_INTERVAL)
   const [timeoutSeconds, setTimeoutSeconds] = useState(DEFAULT_TIMEOUT)
   const [enabled, setEnabled] = useState(true)
+  const [ccSpoofEnabled, setCcSpoofEnabled] = useState(false)
 
   const [keyPickerOpen, setKeyPickerOpen] = useState(false)
 
@@ -135,6 +136,7 @@ export function MonitorFormDialog({
       setIntervalSeconds(monitor.interval_seconds || DEFAULT_INTERVAL)
       setTimeoutSeconds(monitor.timeout_seconds || DEFAULT_TIMEOUT)
       setEnabled(monitor.enabled ?? true)
+      setCcSpoofEnabled(monitor.cc_spoof_enabled ?? false)
       setHeaderRows(parseHeaderRows(monitor.headers))
       setBodyMode((monitor.body_mode as BodyMode) || 'auto')
       setBody(monitor.body ?? '')
@@ -157,6 +159,7 @@ export function MonitorFormDialog({
       setIntervalSeconds(DEFAULT_INTERVAL)
       setTimeoutSeconds(DEFAULT_TIMEOUT)
       setEnabled(true)
+      setCcSpoofEnabled(false)
       setHeaderRows([])
       setBodyMode('auto')
       setBody('')
@@ -279,6 +282,7 @@ export function MonitorFormDialog({
       headers: buildHeadersJson(headerRows),
       body_mode: bodyMode,
       body: body.trim(),
+      cc_spoof_enabled: provider === 'anthropic' ? ccSpoofEnabled : false,
     }
 
     // api_key: only send when provided (empty on edit = unchanged).
@@ -614,6 +618,27 @@ export function MonitorFormDialog({
             onCheckedChange={setEnabled}
           />
         </div>
+
+        {/* Claude Code spoof (anthropic only) */}
+        {provider === 'anthropic' && (
+          <div className='bg-muted/40 border-border flex items-center justify-between rounded-lg border px-3 py-2.5'>
+            <div>
+              <Label htmlFor='monitor-cc-spoof' className='cursor-pointer'>
+                {t('Claude Code spoof')}
+              </Label>
+              <p className='text-muted-foreground text-xs'>
+                {t(
+                  'Inject the global Claude Code identity (User-Agent, anthropic-beta, system prompt, metadata.user_id) so upstreams that require the official CLI accept the probe.'
+                )}
+              </p>
+            </div>
+            <Switch
+              id='monitor-cc-spoof'
+              checked={ccSpoofEnabled}
+              onCheckedChange={setCcSpoofEnabled}
+            />
+          </div>
+        )}
 
         {/* Advanced */}
         <div className='border-border rounded-lg border'>

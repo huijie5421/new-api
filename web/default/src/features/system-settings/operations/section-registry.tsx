@@ -17,6 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { SystemBehaviorSection } from '../general/system-behavior-section'
+import { ClaudeCodeSpoofSettingsSection } from '../integrations/claude-code-spoof-settings-section'
 import { EmailSettingsSection } from '../integrations/email-settings-section'
 import { MonitoringSettingsSection } from '../integrations/monitoring-settings-section'
 import { WorkerSettingsSection } from '../integrations/worker-settings-section'
@@ -59,6 +60,34 @@ const OPERATIONS_SECTIONS = [
             settings['monitor_setting.auto_test_channel_enabled'],
           'monitor_setting.auto_test_channel_minutes':
             settings['monitor_setting.auto_test_channel_minutes'],
+        }}
+      />
+    ),
+  },
+  {
+    id: 'claude-code-spoof',
+    titleKey: 'Claude Code Spoof',
+    build: (settings: OperationsSettings) => (
+      <ClaudeCodeSpoofSettingsSection
+        defaultValues={{
+          'claude_code_spoof_setting.enabled':
+            settings['claude_code_spoof_setting.enabled'],
+          'claude_code_spoof_setting.override_user_system':
+            settings['claude_code_spoof_setting.override_user_system'],
+          'claude_code_spoof_setting.user_agent':
+            settings['claude_code_spoof_setting.user_agent'],
+          'claude_code_spoof_setting.anthropic_version':
+            settings['claude_code_spoof_setting.anthropic_version'],
+          'claude_code_spoof_setting.x_app':
+            settings['claude_code_spoof_setting.x_app'],
+          'claude_code_spoof_setting.anthropic_beta':
+            settings['claude_code_spoof_setting.anthropic_beta'],
+          'claude_code_spoof_setting.system_prompt':
+            settings['claude_code_spoof_setting.system_prompt'],
+          'claude_code_spoof_setting.metadata_user_id':
+            settings['claude_code_spoof_setting.metadata_user_id'],
+          'claude_code_spoof_setting.extra_headers':
+            settings['claude_code_spoof_setting.extra_headers'],
         }}
       />
     ),

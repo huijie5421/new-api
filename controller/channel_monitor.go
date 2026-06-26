@@ -128,8 +128,29 @@ func CreateChannelMonitor(c *gin.Context) {
 
 // UpdateChannelMonitor updates an existing monitor (admin)
 func UpdateChannelMonitor(c *gin.Context) {
-	var monitor model.ChannelMonitor
-	if err := c.ShouldBindJSON(&monitor); err != nil {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid monitor ID",
+		})
+		return
+	}
+
+	// Load the existing record so server-derived fields (last_status,
+	// last_check_at, availability_rate_*, created_at) are preserved and the
+	// primary key is taken from the URL, not the request body.
+	existing, err := model.GetChannelMonitor(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"message": "Monitor not found",
+		})
+		return
+	}
+
+	var payload model.ChannelMonitor
+	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"message": fmt.Sprintf("Invalid request: %v", err),
@@ -137,15 +158,20 @@ func UpdateChannelMonitor(c *gin.Context) {
 		return
 	}
 
-	// Validate configuration
+	// An empty api_key on update means "keep the existing key unchanged".
+	if strings.TrimSpace(payload.APIKey) == "" {
+		payload.APIKey = existing.APIKey
+	}
+
+	// Validate configuration (after restoring the kept key).
 	if err := service.ValidateMonitorConfig(
-		monitor.Provider,
-		monitor.APIMode,
-		monitor.Endpoint,
-		monitor.APIKey,
-		monitor.PrimaryModel,
-		monitor.IntervalSeconds,
-		monitor.TimeoutSeconds,
+		payload.Provider,
+		payload.APIMode,
+		payload.Endpoint,
+		payload.APIKey,
+		payload.PrimaryModel,
+		payload.IntervalSeconds,
+		payload.TimeoutSeconds,
 	); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -154,7 +180,27 @@ func UpdateChannelMonitor(c *gin.Context) {
 		return
 	}
 
-	if err := model.UpdateChannelMonitor(&monitor); err != nil {
+	// Apply editable fields onto the existing record; statistics columns stay
+	// as loaded so the monitor's history/availability are not wiped.
+	existing.Name = payload.Name
+	existing.Provider = payload.Provider
+	existing.APIMode = payload.APIMode
+	existing.Endpoint = payload.Endpoint
+	existing.APIKey = payload.APIKey
+	existing.PrimaryModel = payload.PrimaryModel
+	existing.ExtraModels = payload.ExtraModels
+	existing.Group = payload.Group
+	existing.IntervalSeconds = payload.IntervalSeconds
+	existing.TimeoutSeconds = payload.TimeoutSeconds
+	existing.Enabled = payload.Enabled
+	existing.Headers = payload.Headers
+	existing.Body = payload.Body
+	existing.BodyMode = payload.BodyMode
+	existing.CCSpoofEnabled = payload.CCSpoofEnabled
+	// template_id / template_snapshot are managed via the template apply
+	// endpoint, not this form — keep the existing association untouched.
+
+	if err := model.UpdateChannelMonitor(existing); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"message": fmt.Sprintf("Failed to update monitor: %v", err),
@@ -164,11 +210,11 @@ func UpdateChannelMonitor(c *gin.Context) {
 
 	// Re-schedule in runner
 	runner := service.GetChannelMonitorRunner()
-	runner.Schedule(&monitor)
+	runner.Schedule(existing)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"data":    monitor,
+		"data":    existing,
 	})
 }
 
@@ -584,72 +630,39 @@ func GetChannelMonitorStatus(c *gin.Context) {
 
 	// Get rollup data for each model and time window
 	type ModelStatus struct {
-		Model              string  `json:"model"`
-		Availability7d     float64 `json:"availability_7d"`
-		Availability15d    float64 `json:"availability_15d"`
-		Availability30d    float64 `json:"availability_30d"`
-		AvgLatency7d       int     `json:"avg_latency_7d"`
-		AvgLatency15d      int     `json:"avg_latency_15d"`
-		AvgLatency30d      int     `json:"avg_latency_30d"`
+		Model           string  `json:"model"`
+		Availability7d  float64 `json:"availability_7d"`
+		Availability15d float64 `json:"availability_15d"`
+		Availability30d float64 `json:"availability_30d"`
+		AvgLatency7d    int     `json:"avg_latency_7d"`
+		AvgLatency15d   int     `json:"avg_latency_15d"`
+		AvgLatency30d   int     `json:"avg_latency_30d"`
 	}
 
 	modelStatuses := make([]ModelStatus, 0, len(models))
 
+	now := time.Now()
+	since7d := now.AddDate(0, 0, -7).Unix()
+	since15d := now.AddDate(0, 0, -15).Unix()
+	since30d := now.AddDate(0, 0, -30).Unix()
+
 	for _, modelName := range models {
 		status := ModelStatus{Model: modelName}
 
-		// Calculate 7-day stats
-		rollups7d, _ := model.GetChannelMonitorRollups(id, modelName,
-			time.Now().AddDate(0, 0, -7).Format("2006-01-02"), time.Now().Format("2006-01-02"))
-		if len(rollups7d) > 0 {
-			totalChecks := 0
-			successChecks := 0
-			totalLatency := 0
-			for _, r := range rollups7d {
-				totalChecks += r.TotalChecks
-				successChecks += r.SuccessChecks
-				totalLatency += r.AvgLatencyMs * r.TotalChecks
-			}
-			if totalChecks > 0 {
-				status.Availability7d = float64(successChecks) / float64(totalChecks)
-				status.AvgLatency7d = totalLatency / totalChecks
-			}
+		// Compute each window directly from history so today's checks and
+		// freshly-created monitors are reflected (daily rollups only cover
+		// completed days and would otherwise show 0% until the next 2 AM run).
+		if s, err := model.GetMonitorModelWindowStats(id, modelName, since7d); err == nil && s.TotalChecks > 0 {
+			status.Availability7d = float64(s.SuccessChecks) / float64(s.TotalChecks)
+			status.AvgLatency7d = s.AvgLatencyMs
 		}
-
-		// Calculate 15-day stats
-		rollups15d, _ := model.GetChannelMonitorRollups(id, modelName,
-			time.Now().AddDate(0, 0, -15).Format("2006-01-02"), time.Now().Format("2006-01-02"))
-		if len(rollups15d) > 0 {
-			totalChecks := 0
-			successChecks := 0
-			totalLatency := 0
-			for _, r := range rollups15d {
-				totalChecks += r.TotalChecks
-				successChecks += r.SuccessChecks
-				totalLatency += r.AvgLatencyMs * r.TotalChecks
-			}
-			if totalChecks > 0 {
-				status.Availability15d = float64(successChecks) / float64(totalChecks)
-				status.AvgLatency15d = totalLatency / totalChecks
-			}
+		if s, err := model.GetMonitorModelWindowStats(id, modelName, since15d); err == nil && s.TotalChecks > 0 {
+			status.Availability15d = float64(s.SuccessChecks) / float64(s.TotalChecks)
+			status.AvgLatency15d = s.AvgLatencyMs
 		}
-
-		// Calculate 30-day stats
-		rollups30d, _ := model.GetChannelMonitorRollups(id, modelName,
-			time.Now().AddDate(0, 0, -30).Format("2006-01-02"), time.Now().Format("2006-01-02"))
-		if len(rollups30d) > 0 {
-			totalChecks := 0
-			successChecks := 0
-			totalLatency := 0
-			for _, r := range rollups30d {
-				totalChecks += r.TotalChecks
-				successChecks += r.SuccessChecks
-				totalLatency += r.AvgLatencyMs * r.TotalChecks
-			}
-			if totalChecks > 0 {
-				status.Availability30d = float64(successChecks) / float64(totalChecks)
-				status.AvgLatency30d = totalLatency / totalChecks
-			}
+		if s, err := model.GetMonitorModelWindowStats(id, modelName, since30d); err == nil && s.TotalChecks > 0 {
+			status.Availability30d = float64(s.SuccessChecks) / float64(s.TotalChecks)
+			status.AvgLatency30d = s.AvgLatencyMs
 		}
 
 		modelStatuses = append(modelStatuses, status)

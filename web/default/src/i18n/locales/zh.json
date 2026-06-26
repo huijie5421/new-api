@@ -4803,6 +4803,26 @@
     "No check history yet.": "暂无检测历史。",
     "Too many key requests, please wait a moment and retry, or paste the key manually": "密钥请求过于频繁，请稍候重试，或手动粘贴密钥",
     "History": "历史记录",
-    "Last 60 checks": "最近 60 次检测"
+    "Last 60 checks": "最近 60 次检测",
+    "Claude Code spoof": "Claude Code 伪装",
+    "Inject the global Claude Code identity (User-Agent, anthropic-beta, system prompt, metadata.user_id) so upstreams that require the official CLI accept the probe.": "注入全局 Claude Code 身份（User-Agent、anthropic-beta、system 提示词、metadata.user_id），使要求官方 CLI 的上游接受探测请求。",
+    "Claude Code Spoof": "Claude Code 伪装",
+    "Save Claude Code spoof": "保存 Claude Code 伪装",
+    "Make Anthropic channel-monitor probes look like the official Claude Code CLI (User-Agent, anthropic-beta, system prompt, and metadata.user_id). Enable the \"Claude Code spoof\" switch on an Anthropic monitor to use these values.": "让 Anthropic 渠道监控的探测请求伪装成官方 Claude Code CLI（User-Agent、anthropic-beta、system 提示词、metadata.user_id）。在 Anthropic 监控上打开「Claude Code 伪装」开关即可启用这些值。",
+    "Enable spoof globally": "全局启用伪装",
+    "Reserved master switch. Per-monitor toggles currently control injection.": "预留总开关。当前由各监控的开关控制注入。",
+    "Override user system prompt": "覆盖用户 system 提示词",
+    "When on, only the spoof system prompt is sent. When off, it is prepended before any custom system entries.": "打开时仅发送伪装 system 提示词；关闭时把伪装提示词插到自定义 system 条目之前。",
+    "anthropic-version": "anthropic-version",
+    "X-App": "X-App",
+    "anthropic-beta": "anthropic-beta",
+    "Comma-separated beta tokens sent in the anthropic-beta header.": "anthropic-beta 头中以逗号分隔的 beta token 列表。",
+    "System prompt": "System 提示词",
+    "Injected as the first system block. Must match the official prompt to pass upstream checks.": "注入为 system 数组首项。需与官方提示词一致才能通过上游校验。",
+    "metadata.user_id": "metadata.user_id",
+    "Injected into body.metadata.user_id. Must satisfy the official format.": "注入到 body.metadata.user_id。需满足官方格式。",
+    "Extra headers (JSON)": "额外请求头（JSON）",
+    "Additional headers (e.g. X-Stainless-*) merged before the fixed spoof headers.": "额外请求头（如 X-Stainless-*），在固定伪装头之前合并。",
+    "Must be a valid JSON object": "必须是合法的 JSON 对象"
   }
 }

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -33,7 +34,7 @@ func runMaintenanceTasks() {
 		common.SysError("Channel Monitor: Failed to run aggregation: " + err.Error())
 	} else {
 		common.SysLog("Channel Monitor: Aggregation completed - processed " +
-			string(rune(stats.ProcessedDays)) + " days")
+			strconv.Itoa(stats.ProcessedDays) + " days")
 	}
 
 	// Cleanup old data

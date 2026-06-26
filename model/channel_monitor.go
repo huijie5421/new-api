@@ -9,64 +9,65 @@ import (
 
 // ChannelMonitor represents a channel monitoring configuration
 type ChannelMonitor struct {
-	ID                 int       `json:"id" gorm:"primarykey"`
-	Name               string    `json:"name" gorm:"type:varchar(255);not null;index"`
-	Provider           string    `json:"provider" gorm:"type:varchar(50);not null;index"` // openai, anthropic, gemini
-	APIMode            string    `json:"api_mode" gorm:"type:varchar(50);not null"`        // chat_completions, responses (OpenAI-specific)
-	Endpoint           string    `json:"endpoint" gorm:"type:varchar(512);not null"`
-	APIKey             string    `json:"api_key" gorm:"type:text;not null"` // Encrypted
-	PrimaryModel       string    `json:"primary_model" gorm:"type:varchar(255);not null"`
-	ExtraModels        string    `json:"extra_models" gorm:"type:text"` // JSON array of additional models
-	Group              string    `json:"group" gorm:"type:varchar(64);default:'default';index"`
-	IntervalSeconds    int       `json:"interval_seconds" gorm:"not null;default:300"` // Default 5 minutes
-	TimeoutSeconds     int       `json:"timeout_seconds" gorm:"not null;default:10"`
-	Enabled            bool      `json:"enabled" gorm:"not null;default:true;index"`
-	Headers            string    `json:"headers" gorm:"type:text"`           // JSON object of custom headers
-	Body               string    `json:"body" gorm:"type:text"`              // JSON object, full request body snapshot
-	BodyMode           string    `json:"body_mode" gorm:"type:varchar(20)"`  // "auto", "minimal", "custom"
-	TemplateID         *int      `json:"template_id" gorm:"index"`           // Optional reference to template
-	TemplateSnapshot   string    `json:"template_snapshot" gorm:"type:text"` // JSON, copy of template at apply time
-	CreatedAt          time.Time `json:"created_at"`
-	UpdatedAt          time.Time `json:"updated_at"`
-	LastCheckAt        *int64    `json:"last_check_at" gorm:"index"`    // Unix timestamp
-	LastStatus         string    `json:"last_status" gorm:"type:varchar(20)"` // "success", "failure", "unknown"
-	LastLatencyMs      *int      `json:"last_latency_ms"`
-	AvailabilityRate7d *float64  `json:"availability_rate_7d"`  // 7-day rolling availability (0-1)
-	AvailabilityRate15d *float64 `json:"availability_rate_15d"` // 15-day rolling availability (0-1)
-	AvailabilityRate30d *float64 `json:"availability_rate_30d"` // 30-day rolling availability (0-1)
+	ID                  int       `json:"id" gorm:"primarykey"`
+	Name                string    `json:"name" gorm:"type:varchar(255);not null;index"`
+	Provider            string    `json:"provider" gorm:"type:varchar(50);not null;index"` // openai, anthropic, gemini
+	APIMode             string    `json:"api_mode" gorm:"type:varchar(50);not null"`       // chat_completions, responses (OpenAI-specific)
+	Endpoint            string    `json:"endpoint" gorm:"type:varchar(512);not null"`
+	APIKey              string    `json:"api_key" gorm:"type:text;not null"` // Encrypted
+	PrimaryModel        string    `json:"primary_model" gorm:"type:varchar(255);not null"`
+	ExtraModels         string    `json:"extra_models" gorm:"type:text"` // JSON array of additional models
+	Group               string    `json:"group" gorm:"type:varchar(64);default:'default';index"`
+	IntervalSeconds     int       `json:"interval_seconds" gorm:"not null;default:300"` // Default 5 minutes
+	TimeoutSeconds      int       `json:"timeout_seconds" gorm:"not null;default:10"`
+	Enabled             bool      `json:"enabled" gorm:"not null;default:true;index"`
+	Headers             string    `json:"headers" gorm:"type:text"`                       // JSON object of custom headers
+	Body                string    `json:"body" gorm:"type:text"`                          // JSON object, full request body snapshot
+	BodyMode            string    `json:"body_mode" gorm:"type:varchar(20)"`              // "auto", "minimal", "custom"
+	CCSpoofEnabled      bool      `json:"cc_spoof_enabled" gorm:"not null;default:false"` // 仅 anthropic：注入全局 Claude Code 伪装(头+system+metadata)
+	TemplateID          *int      `json:"template_id" gorm:"index"`                       // Optional reference to template
+	TemplateSnapshot    string    `json:"template_snapshot" gorm:"type:text"`             // JSON, copy of template at apply time
+	CreatedAt           time.Time `json:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at"`
+	LastCheckAt         *int64    `json:"last_check_at" gorm:"index"`          // Unix timestamp
+	LastStatus          string    `json:"last_status" gorm:"type:varchar(20)"` // "success", "failure", "unknown"
+	LastLatencyMs       *int      `json:"last_latency_ms"`
+	AvailabilityRate7d  *float64  `json:"availability_rate_7d"`  // 7-day rolling availability (0-1)
+	AvailabilityRate15d *float64  `json:"availability_rate_15d"` // 15-day rolling availability (0-1)
+	AvailabilityRate30d *float64  `json:"availability_rate_30d"` // 30-day rolling availability (0-1)
 }
 
 // ChannelMonitorHistory stores individual check results
 type ChannelMonitorHistory struct {
-	ID          int64     `json:"id" gorm:"primarykey"`
-	MonitorID   int       `json:"monitor_id" gorm:"not null;index:idx_monitor_time"`
-	Model       string    `json:"model" gorm:"type:varchar(255);not null;index:idx_model_time"`
-	Status      string    `json:"status" gorm:"type:varchar(20);not null"` // "success", "failure"
-	LatencyMs   int       `json:"latency_ms"`
-	ErrorMsg    string    `json:"error_msg" gorm:"type:text"`
-	CheckedAt   int64     `json:"checked_at" gorm:"not null;index:idx_monitor_time;index:idx_model_time"` // Unix timestamp
-	ResponseOK  bool      `json:"response_ok" gorm:"not null"` // Whether response validation passed
-	CreatedAt   time.Time `json:"created_at"`
+	ID         int64     `json:"id" gorm:"primarykey"`
+	MonitorID  int       `json:"monitor_id" gorm:"not null;index:idx_monitor_time"`
+	Model      string    `json:"model" gorm:"type:varchar(255);not null;index:idx_model_time"`
+	Status     string    `json:"status" gorm:"type:varchar(20);not null"` // "success", "failure"
+	LatencyMs  int       `json:"latency_ms"`
+	ErrorMsg   string    `json:"error_msg" gorm:"type:text"`
+	CheckedAt  int64     `json:"checked_at" gorm:"not null;index:idx_monitor_time;index:idx_model_time"` // Unix timestamp
+	ResponseOK bool      `json:"response_ok" gorm:"not null"`                                            // Whether response validation passed
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 // ChannelMonitorDailyRollup stores aggregated daily statistics
 type ChannelMonitorDailyRollup struct {
-	ID              int64     `json:"id" gorm:"primarykey"`
-	MonitorID       int       `json:"monitor_id" gorm:"not null;uniqueIndex:idx_monitor_model_date"`
-	Model           string    `json:"model" gorm:"type:varchar(255);not null;uniqueIndex:idx_monitor_model_date"`
-	BucketDate      string    `json:"bucket_date" gorm:"type:varchar(10);not null;uniqueIndex:idx_monitor_model_date;index"` // YYYY-MM-DD
-	TotalChecks     int       `json:"total_checks" gorm:"not null;default:0"`
-	SuccessChecks   int       `json:"success_checks" gorm:"not null;default:0"`
-	FailureChecks   int       `json:"failure_checks" gorm:"not null;default:0"`
-	AvgLatencyMs    int       `json:"avg_latency_ms" gorm:"not null;default:0"`
-	MinLatencyMs    int       `json:"min_latency_ms"`
-	MaxLatencyMs    int       `json:"max_latency_ms"`
-	P50LatencyMs    int       `json:"p50_latency_ms"`
-	P95LatencyMs    int       `json:"p95_latency_ms"`
-	P99LatencyMs    int       `json:"p99_latency_ms"`
-	AvailabilityRate float64  `json:"availability_rate" gorm:"not null;default:0"` // success_checks / total_checks
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID               int64     `json:"id" gorm:"primarykey"`
+	MonitorID        int       `json:"monitor_id" gorm:"not null;uniqueIndex:idx_monitor_model_date"`
+	Model            string    `json:"model" gorm:"type:varchar(255);not null;uniqueIndex:idx_monitor_model_date"`
+	BucketDate       string    `json:"bucket_date" gorm:"type:varchar(10);not null;uniqueIndex:idx_monitor_model_date;index"` // YYYY-MM-DD
+	TotalChecks      int       `json:"total_checks" gorm:"not null;default:0"`
+	SuccessChecks    int       `json:"success_checks" gorm:"not null;default:0"`
+	FailureChecks    int       `json:"failure_checks" gorm:"not null;default:0"`
+	AvgLatencyMs     int       `json:"avg_latency_ms" gorm:"not null;default:0"`
+	MinLatencyMs     int       `json:"min_latency_ms"`
+	MaxLatencyMs     int       `json:"max_latency_ms"`
+	P50LatencyMs     int       `json:"p50_latency_ms"`
+	P95LatencyMs     int       `json:"p95_latency_ms"`
+	P99LatencyMs     int       `json:"p99_latency_ms"`
+	AvailabilityRate float64   `json:"availability_rate" gorm:"not null;default:0"` // success_checks / total_checks
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 
 // ChannelMonitorRequestTemplate stores reusable request templates by provider
@@ -76,8 +77,8 @@ type ChannelMonitorRequestTemplate struct {
 	Name        string    `json:"name" gorm:"type:varchar(255);not null;uniqueIndex:idx_provider_name"`
 	APIMode     string    `json:"api_mode" gorm:"type:varchar(50);not null"`
 	BodyMode    string    `json:"body_mode" gorm:"type:varchar(20);not null"` // "auto", "minimal", "custom"
-	Headers     string    `json:"headers" gorm:"type:text"`                    // JSON object
-	Body        string    `json:"body" gorm:"type:text"`                       // JSON object
+	Headers     string    `json:"headers" gorm:"type:text"`                   // JSON object
+	Body        string    `json:"body" gorm:"type:text"`                      // JSON object
 	Description string    `json:"description" gorm:"type:text"`
 	IsDefault   bool      `json:"is_default" gorm:"not null;default:false;index"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -86,9 +87,9 @@ type ChannelMonitorRequestTemplate struct {
 
 // ChannelMonitorAggregationWatermark tracks the last aggregated timestamp
 type ChannelMonitorAggregationWatermark struct {
-	ID                int       `json:"id" gorm:"primarykey"`
-	LastAggregatedAt  int64     `json:"last_aggregated_at" gorm:"not null"` // Unix timestamp
-	UpdatedAt         time.Time `json:"updated_at"`
+	ID               int       `json:"id" gorm:"primarykey"`
+	LastAggregatedAt int64     `json:"last_aggregated_at" gorm:"not null"` // Unix timestamp
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 
 func GetChannelMonitor(id int) (*ChannelMonitor, error) {
@@ -248,6 +249,47 @@ func GetChannelMonitorRollups(monitorID int, model string, startDate string, end
 	return rollups, err
 }
 
+// MonitorModelWindowStats holds availability + latency aggregates computed
+// directly from raw history rows for a monitor+model over a time window.
+type MonitorModelWindowStats struct {
+	TotalChecks   int
+	SuccessChecks int
+	AvgLatencyMs  int
+}
+
+// GetMonitorModelWindowStats computes availability/latency for a monitor+model
+// from history rows with checked_at >= since. Unlike daily rollups this
+// includes the current (incomplete) day, so freshly-created monitors and
+// today's checks are reflected immediately. History is retained for 30 days,
+// which covers the 7/15/30-day windows.
+func GetMonitorModelWindowStats(monitorID int, modelName string, since int64) (*MonitorModelWindowStats, error) {
+	var histories []*ChannelMonitorHistory
+	err := DB.Select("status", "latency_ms").
+		Where("monitor_id = ? AND model = ? AND checked_at >= ?", monitorID, modelName, since).
+		Find(&histories).Error
+	if err != nil {
+		return nil, err
+	}
+
+	stats := &MonitorModelWindowStats{}
+	totalLatency := 0
+	latencyCount := 0
+	for _, h := range histories {
+		stats.TotalChecks++
+		if h.Status == "success" {
+			stats.SuccessChecks++
+		}
+		if h.LatencyMs > 0 {
+			totalLatency += h.LatencyMs
+			latencyCount++
+		}
+	}
+	if latencyCount > 0 {
+		stats.AvgLatencyMs = totalLatency / latencyCount
+	}
+	return stats, nil
+}
+
 // SeedDefaultChannelMonitorTemplates inserts the built-in default request templates
 // (one per provider/API mode) if they do not already exist. Idempotent: safe to run
 // on every startup. Uses literal strings (not service consts) to avoid an import cycle.
@@ -291,6 +333,19 @@ func SeedDefaultChannelMonitorTemplates() error {
 			Headers:     "{}",
 			Body:        `{"generationConfig":{"maxOutputTokens":100,"temperature":0.7}}`,
 			Description: "Default health-check template for Gemini generateContent API.",
+			IsDefault:   true,
+		},
+		{
+			Provider: "anthropic",
+			Name:     "Claude Code 伪装",
+			APIMode:  "",
+			BodyMode: "auto",
+			// 头：UA + X-App + anthropic-beta + anthropic-version + 直连标记，
+			// 与 setting/operation_setting/claude_code_spoof_setting.go 的全局默认值对齐。
+			Headers: `{"User-Agent":"claude-cli/2.1.161 (external, cli)","X-App":"cli","anthropic-version":"2023-06-01","anthropic-beta":"claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2025-05-14,prompt-caching-scope-2026-01-05,effort-2025-11-24,context-management-2025-06-27,extended-cache-ttl-2025-04-11","Anthropic-Dangerous-Direct-Browser-Access":"true"}`,
+			// body：system 数组首项 + metadata.user_id，被 checker 合并进默认请求体。
+			Body:        `{"max_tokens":100,"system":[{"type":"text","text":"You are Claude Code, Anthropic's official CLI for Claude."}],"metadata":{"user_id":"user_0000000000000000000000000000000000000000000000000000000000000000_account_00000000-0000-0000-0000-000000000000_session_00000000-0000-0000-0000-000000000000"}}`,
+			Description: "完整模拟官方 Claude Code CLI：UA + anthropic-beta + system + metadata.user_id 全部对齐，绕过 Anthropic 上游 'Claude Code only' 限制（如 Max 套餐）。也可改用线路监控的「Claude Code 伪装」开关引用全局配置。",
 			IsDefault:   true,
 		},
 	}
