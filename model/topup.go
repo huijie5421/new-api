@@ -628,7 +628,9 @@ func RebateInviterForTopUp(topUp *TopUp, rechargedQuota int64) {
 			return err
 		}
 		// 2. 更新邀请人的返利统计：累计历史收入
-		if err := tx.Model(&User{}).Where("id = ?", inviterId).Update("aff_history_quota", gorm.Expr("aff_history_quota + ?", rebate)).Error; err != nil {
+		// 注意：数据库列名是 aff_history（见 User.AffHistoryQuota 的 `column:aff_history` 标签），
+		// 不是 aff_history_quota。裸字符串会被 GORM 当原始列名拼进 SQL，写错列会导致整笔事务回滚。
+		if err := tx.Model(&User{}).Where("id = ?", inviterId).Update("aff_history", gorm.Expr("aff_history + ?", rebate)).Error; err != nil {
 			return err
 		}
 		// 3. 记录已返利额度(幂等标记)
@@ -658,5 +660,10 @@ func RebateInviterForTopUp(topUp *TopUp, rechargedQuota int64) {
 	}
 
 	topUp.RebateQuota = rebate
+	// 事务用裸 SQL 直接改了邀请人 quota，需同步失效其缓存，
+	// 否则中转鉴权侧会继续读到旧余额，直到缓存过期（SYNC_FREQUENCY）。
+	if err := invalidateUserCache(inviterId); err != nil {
+		common.SysLog(fmt.Sprintf("充值返利后失效邀请人缓存失败 inviter_id=%d error=%s", inviterId, err.Error()))
+	}
 	RecordLog(inviterId, LogTypeSystem, fmt.Sprintf("邀请用户在线充值返利 %s", logger.LogQuota(int(rebate))))
 }
