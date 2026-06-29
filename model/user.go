@@ -391,6 +391,12 @@ func (user *User) Insert(inviterId int) error {
 	user.Quota = common.QuotaForNewUser
 	//user.SetAccessToken(common.GetUUID())
 	user.AffCode = common.GetRandomString(4)
+	// 持久化邀请人关系：inviterId 仅用于发放一次性邀请奖励，不会自动落库。
+	// 必须在此显式写入 inviter_id，否则后续在线充值返利会因 invitee.InviterId==0 而静默失效
+	// （OAuth 注册入口均未手动设置该字段，详见 RebateInviterForTopUp）。
+	if inviterId != 0 {
+		user.InviterId = inviterId
+	}
 
 	// 初始化用户设置，包括默认的边栏配置
 	if user.Setting == "" {
@@ -449,6 +455,11 @@ func (user *User) InsertWithTx(tx *gorm.DB, inviterId int) error {
 	}
 	user.Quota = common.QuotaForNewUser
 	user.AffCode = common.GetRandomString(4)
+	// 持久化邀请人关系：见 Insert 中的同一说明。OAuth 注册走本函数，
+	// 不写 inviter_id 会导致充值返利对所有第三方登录用户失效。
+	if inviterId != 0 {
+		user.InviterId = inviterId
+	}
 
 	// 初始化用户设置
 	if user.Setting == "" {
