@@ -188,6 +188,8 @@ func Register(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
 	}
+	// 用户名查重前先去除首尾空白，避免 "Remi" 与 "Remi " 这类仅差空格的重复注册
+	user.Username = strings.TrimSpace(user.Username)
 	if err := common.Validate.Struct(&user); err != nil {
 		common.ApiErrorI18n(c, i18n.MsgUserInputInvalid, map[string]any{"Error": err.Error()})
 		return

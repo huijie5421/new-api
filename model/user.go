@@ -167,11 +167,13 @@ func CheckUserExistOrDeleted(username string, email string) (bool, error) {
 
 	// err := DB.Unscoped().First(&user, "username = ? or email = ?", username, email).Error
 	// check email if empty
+	// 用户名查重做大小写+首尾空白不敏感比较，防止 "Remi"/"remi"/"Remi " 这类变体重复注册。
+	// （DB 列为 utf8mb4_0900_bin / SQLite binary，均区分大小写，故在查询层用 LOWER+TRIM 兜底。）
 	var err error
 	if email == "" {
-		err = DB.Unscoped().First(&user, "username = ?", username).Error
+		err = DB.Unscoped().First(&user, "LOWER(TRIM(username)) = LOWER(TRIM(?))", username).Error
 	} else {
-		err = DB.Unscoped().First(&user, "username = ? or email = ?", username, email).Error
+		err = DB.Unscoped().First(&user, "LOWER(TRIM(username)) = LOWER(TRIM(?)) or email = ?", username, email).Error
 	}
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
