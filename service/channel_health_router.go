@@ -5,7 +5,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -27,7 +26,8 @@ import (
 //   - 状态机：red<=Warn → OK；[Warn,Bad) → WARN(探测)；>=Bad 且连续 Confirm 窗 → BAD。
 //     BAD 冷却 CooldownSeconds（×Backoff 退避至上限）；冷却到期转 PROBING，探测连续
 //     RecoverOKStreak 窗健康 → 回 OK。
-//   - 选路时 BAD/PROBING 渠道被排除（PROBING 以 ProbeRatio 概率放探测流量回去），
+//   - 选路时 BAD/PROBING 渠道被排除（PROBING 渠道在冷却到期后，由 MaybePickProbeChannel
+//     确定性地把下一个请求放回去探测，按 ProbeIntervalSeconds 限流），
 //     从而按 priority 临时降级到同层其它渠道或下一优先级层。
 //   - 状态发生切换时写一条管理日志（type=管理，归属 root，详情含原因+证据）。
 //
@@ -57,9 +57,10 @@ type channelHealthEntry struct {
 	state          string
 	enteredAt      int64
 	badStreak      int   // 连续达到 BadRedCnt 的评估窗数（用于确认）
-	probeOKStreak  int   // PROBING 期间连续健康探测窗数
+	probeOKStreak  int   // PROBING 期间连续健康探测样本数（按单次结果累计）
 	cooldownUntil  int64 // BAD/PROBING 冷却截止（unix 秒）
 	cooldownRounds int   // 退避计数
+	nextProbeAt    int64 // PROBING 期间下一次允许放探测流量的时刻（unix 秒），用于确定性探测+限流
 
 	// 末次切换证据（写日志用）
 	lastSwitchReason string
@@ -76,9 +77,6 @@ var (
 	// root 用户 id 缓存（写管理日志归属者）。
 	healthRouterRootUserID   int
 	healthRouterRootUserOnce sync.Once
-
-	// 探测/canary 概率用的轻量随机源（避免 time/rand 在脚本沙箱的限制，这里是生产 Go 代码无此问题）。
-	healthProbeCounter atomic.Uint64
 )
 
 // healthKey 渠道健康状态按 (group, channelId) 维度隔离：同一渠道在不同分组的
@@ -382,6 +380,7 @@ func (e *channelHealthEntry) status(group string, channelID int) channelHealthSt
 		e.state = healthStateProbing
 		e.probeOKStreak = 0
 		e.enteredAt = common.GetTimestamp()
+		e.nextProbeAt = common.GetTimestamp() // 立即允许第一个请求探测（确定性，不靠概率）
 		e.lastSwitchReason = "冷却到期，开始分流探测流量检测源渠道是否恢复"
 		transitioned = true
 	}
@@ -465,36 +464,54 @@ func BuildHealthExcludeSet(group string) (exclude map[int]bool, probeTargets []i
 	return exclude, probeTargets
 }
 
-// MaybePickProbeChannel 以 ProbeRatio 概率从探测目标中选一个渠道放本次请求（用于
-// 冷却后探测源渠道是否恢复）。返回 nil 表示本次走正常选路。
+// MaybePickProbeChannel 决定本次请求是否放给某个 PROBING 渠道做恢复探测。
+//
+// 修复 2026-06-30 缺陷：原实现按 ProbeRatio(8%) 概率触发，在低流量/主力被切的分组
+// 几乎不触发，导致渠道永久卡死探测态、回不到低成本。改为「确定性探测 + 限流」：
+// 进入探测态后，下一个到达该分组的请求即被放给探测渠道；放行后把 nextProbeAt 推后
+// ProbeIntervalSeconds 秒，避免在等待结果期间向尚未确认健康的渠道灌流量。
+// 这样哪怕分组每小时只有几个请求，冷却到期后第一个请求也必定触发探测，不再卡死。
 func MaybePickProbeChannel(group, modelName string, probeTargets []int) *model.Channel {
 	if len(probeTargets) == 0 {
 		return nil
 	}
+	now := common.GetTimestamp()
+	for _, cid := range probeTargets {
+		e := healthStore.get(group, cid)
+		if !e.tryClaimProbe(now) {
+			continue
+		}
+		ch, err := model.CacheGetChannel(cid)
+		if err != nil || ch == nil {
+			continue
+		}
+		// 探测渠道必须仍能服务该分组+模型，且处于启用状态。
+		if ch.Status != common.ChannelStatusEnabled || !model.IsChannelEnabledForGroupModel(group, modelName, cid) {
+			continue
+		}
+		return ch
+	}
+	return nil
+}
+
+// tryClaimProbe 若当前处于 PROBING 且到达放行时刻，则占用本次探测名额（把下次放行时刻
+// 推后一个探测间隔）并返回 true；否则返回 false。原子操作，避免并发重复灌流量。
+func (e *channelHealthEntry) tryClaimProbe(now int64) bool {
 	cfg := operation_setting.GetChannelHealthRouterSetting()
-	if cfg.ProbeRatio <= 0 {
-		return nil
+	interval := int64(cfg.ProbeIntervalSeconds)
+	if interval <= 0 {
+		interval = 30
 	}
-	// 简单概率门：用计数器取模近似 ProbeRatio，避免引入额外随机源依赖。
-	denom := int(1.0/cfg.ProbeRatio + 0.5)
-	if denom < 1 {
-		denom = 1
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.state != healthStateProbing {
+		return false
 	}
-	if common.GetRandomInt(denom) != 0 {
-		return nil
+	if now < e.nextProbeAt {
+		return false
 	}
-	// 轮转选一个探测目标。
-	idx := int(healthProbeCounter.Add(1)) % len(probeTargets)
-	cid := probeTargets[idx]
-	ch, err := model.CacheGetChannel(cid)
-	if err != nil || ch == nil {
-		return nil
-	}
-	// 探测渠道必须仍能服务该分组+模型，且处于启用状态。
-	if ch.Status != common.ChannelStatusEnabled || !model.IsChannelEnabledForGroupModel(group, modelName, cid) {
-		return nil
-	}
-	return ch
+	e.nextProbeAt = now + interval
+	return true
 }
 
 // ShouldVetoAffinityForHealth 渠道是否因健康原因否决亲和（仅 BAD 否决）。

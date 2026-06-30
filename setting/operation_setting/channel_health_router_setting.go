@@ -53,11 +53,10 @@ type ChannelHealthRouterSetting struct {
 	RecoverOKStreak int `json:"recover_ok_streak"` // PROBING → OK 所需连续健康探测窗数
 
 	// ---- 冷却 + 探测 ----
-	CooldownSeconds    int     `json:"cooldown_seconds"`     // 基础冷却（秒）
-	CooldownMaxSeconds int     `json:"cooldown_max_seconds"` // 退避上限（秒）
-	CooldownBackoff    float64 `json:"cooldown_backoff"`     // 退避倍率
-	ProbeRatio         float64 `json:"probe_ratio"`          // PROBING/WARN 探测分流比例
-	CanaryRatio        float64 `json:"canary_ratio"`         // 状态未知备用渐进放量比例
+	CooldownSeconds      int     `json:"cooldown_seconds"`       // 基础冷却（秒）
+	CooldownMaxSeconds   int     `json:"cooldown_max_seconds"`   // 退避上限（秒）
+	CooldownBackoff      float64 `json:"cooldown_backoff"`       // 退避倍率
+	ProbeIntervalSeconds int     `json:"probe_interval_seconds"` // PROBING 期间两次探测的最小间隔（秒），确定性探测+限流
 
 	// ---- 与渠道亲和协作 ----
 	// VetoAffinityOnBad 渠道处于 BAD 时是否否决亲和（放弃缓存局部性切走）。
@@ -71,10 +70,11 @@ type ChannelHealthRouterSetting struct {
 }
 
 // 默认值：全部由生产 gpt-5.5 数据校准（详见设计文档 §2/§3）。
-// EnabledGroups 默认开启三个分组（名称逐字对齐生产 channels.group，已用 hex 校验）：
-// GPT PRO号池 / GPT RPO订阅专用 / GPT PLUS极速版。
+// 2026-06-30 事故后改回保守默认：Enabled=false、EnabledGroups 预填三个目标分组但不自动生效。
+// 上线后先在 DB 路径(MEMORY_CACHE_ENABLED=false)灰度验证，再经 options 表把 enabled 置 true。
+// 分组名逐字对齐生产 channels.group（已 hex 校验）：GPT PRO号池 / GPT RPO订阅专用 / GPT PLUS极速版。
 var channelHealthRouterSetting = ChannelHealthRouterSetting{
-	Enabled: true,
+	Enabled: false,
 	EnabledGroups: []string{
 		"GPT PRO号池",
 		"GPT RPO订阅专用",
@@ -100,11 +100,10 @@ var channelHealthRouterSetting = ChannelHealthRouterSetting{
 	ConfirmWindows:  3,
 	RecoverOKStreak: 3,
 
-	CooldownSeconds:    900,   // 15 分钟
-	CooldownMaxSeconds: 14400, // 4 小时
-	CooldownBackoff:    2.0,
-	ProbeRatio:         0.08,
-	CanaryRatio:        0.05,
+	CooldownSeconds:      900,   // 15 分钟
+	CooldownMaxSeconds:   14400, // 4 小时
+	CooldownBackoff:      2.0,
+	ProbeIntervalSeconds: 30, // 探测期两次探测最小间隔，避免向未确认渠道灌流量
 
 	VetoAffinityOnBad: true,
 

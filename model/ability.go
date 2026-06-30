@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 
@@ -108,27 +109,102 @@ func GetChannel(group string, model string, retry int) (*Channel, error) {
 }
 
 // GetChannelExcluding 是 GetChannel 的排除变体（DB 兜底路径，MemoryCacheEnabled=false 时使用）。
-// 从候选 abilities 中剔除 exclude 集合中的渠道，用 GORM NOT IN 实现（三库兼容）。
-// exclude 为空时行为与 GetChannel 完全一致。
+// 从候选中剔除 exclude 集合中的渠道，且能正确「跨优先级层降级」：当某优先级层的渠道
+// 被全部排除时，自动落到下一更低优先级层（与内存路径 GetRandomSatisfiedChannelExcluding
+// 行为一致）。exclude 为空时退化为原 GetChannel 语义。
+//
+// 实现要点：不能复用 getChannelQuery（它把优先级钉死在单层，无法跨层降级）。改为一次性
+// 取出该 group+model 的全部 enabled abilities，在内存中排除、按 priority 重新分层后再选。
 func GetChannelExcluding(group string, model string, retry int, exclude map[int]bool) (*Channel, error) {
+	if len(exclude) == 0 {
+		// 无排除：保持与原实现完全一致的查询路径（含 getChannelQuery 的单层语义）。
+		return getChannelOriginal(group, model, retry)
+	}
+
+	var abilities []Ability
+	err := DB.Where(commonGroupCol+" = ? and model = ? and enabled = ?", group, model, true).
+		Find(&abilities).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(abilities) == 0 {
+		return nil, nil
+	}
+
+	// 排除被标记的渠道；若排除后为空，回退为不排除（保可用，避免健康误判致整组不可用）。
+	filtered := make([]Ability, 0, len(abilities))
+	for _, a := range abilities {
+		if !exclude[a.ChannelId] {
+			filtered = append(filtered, a)
+		}
+	}
+	if len(filtered) > 0 {
+		abilities = filtered
+	}
+
+	// 按 priority 收集去重并降序排序，按 retry 选定目标优先级层（跨层降级的关键）。
+	prioritySet := make(map[int64]bool)
+	for _, a := range abilities {
+		prioritySet[a.getPriorityValue()] = true
+	}
+	sortedPriorities := make([]int64, 0, len(prioritySet))
+	for p := range prioritySet {
+		sortedPriorities = append(sortedPriorities, p)
+	}
+	sort.Slice(sortedPriorities, func(i, j int) bool { return sortedPriorities[i] > sortedPriorities[j] })
+
+	if retry >= len(sortedPriorities) {
+		retry = len(sortedPriorities) - 1
+	}
+	if retry < 0 {
+		retry = 0
+	}
+	targetPriority := sortedPriorities[retry]
+
+	// 目标层内加权随机（沿用原 +10 平滑：每渠道有效权重 = weight + 10）。
+	var targetAbilities []Ability
+	weightSum := uint(0)
+	for _, a := range abilities {
+		if a.getPriorityValue() == targetPriority {
+			targetAbilities = append(targetAbilities, a)
+			weightSum += a.Weight + 10
+		}
+	}
+	if len(targetAbilities) == 0 {
+		return nil, nil
+	}
+
+	chosenID := targetAbilities[0].ChannelId
+	weight := common.GetRandomInt(int(weightSum))
+	for _, a := range targetAbilities {
+		weight -= int(a.Weight) + 10
+		if weight <= 0 {
+			chosenID = a.ChannelId
+			break
+		}
+	}
+
+	channel := Channel{}
+	err = DB.First(&channel, "id = ?", chosenID).Error
+	return &channel, err
+}
+
+// getPriorityValue 返回 ability 的优先级（nil 视为 0，与 Channel.GetPriority 默认一致）。
+func (ability *Ability) getPriorityValue() int64 {
+	if ability.Priority == nil {
+		return 0
+	}
+	return *ability.Priority
+}
+
+// getChannelOriginal 是原 GetChannel 的实现（无排除路径），保持单层优先级语义不变。
+func getChannelOriginal(group string, model string, retry int) (*Channel, error) {
 	var abilities []Ability
 
 	var err error = nil
 	channelQuery, err := getChannelQuery(group, model, retry)
 	if err != nil {
 		return nil, err
-	}
-	if len(exclude) > 0 {
-		ids := make([]int, 0, len(exclude))
-		for id := range exclude {
-			ids = append(ids, id)
-		}
-		excludedQuery := channelQuery.Where("channel_id NOT IN ?", ids)
-		// 仅当排除后仍有候选时才应用，否则回退为不排除（保可用）。
-		var cnt int64
-		if err = excludedQuery.Model(&Ability{}).Count(&cnt).Error; err == nil && cnt > 0 {
-			channelQuery = excludedQuery
-		}
 	}
 	err = channelQuery.Order("weight DESC").Find(&abilities).Error
 	if err != nil {
