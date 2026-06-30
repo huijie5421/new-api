@@ -91,7 +91,6 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 			return nil, selectGroup, errors.New("auto groups is not enabled")
 		}
 		autoGroups := GetUserAutoGroup(userGroup)
-
 		// startGroupIndex: the group index to start searching from
 		// startGroupIndex: 开始搜索的分组索引
 		startGroupIndex := 0
@@ -115,7 +114,7 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 			}
 			logger.LogDebug(param.Ctx, "Auto selecting group: %s, priorityRetry: %d", autoGroup, priorityRetry)
 
-			channel, _ = model.GetRandomSatisfiedChannel(autoGroup, param.ModelName, priorityRetry)
+			channel, _ = selectChannelWithHealth(autoGroup, param.ModelName, priorityRetry)
 			if channel == nil {
 				// Current group has no available channel for this model, try next group
 				// 当前分组没有该模型的可用渠道，尝试下一个分组
@@ -153,10 +152,25 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 			break
 		}
 	} else {
-		channel, err = model.GetRandomSatisfiedChannel(param.TokenGroup, param.ModelName, param.GetRetry())
+		channel, err = selectChannelWithHealth(param.TokenGroup, param.ModelName, param.GetRetry())
 		if err != nil {
 			return nil, param.TokenGroup, err
 		}
 	}
 	return channel, selectGroup, nil
+}
+
+// selectChannelWithHealth 在普通选路前应用自动健康路由：
+//   - 分组未开启健康路由 → 等价于 model.GetRandomSatisfiedChannel（零行为变更）。
+//   - 已开启 → 排除 BAD/PROBING 渠道（按 priority 临时降级），并以 ProbeRatio 概率
+//     放探测流量回 PROBING 渠道以判断其是否恢复。
+func selectChannelWithHealth(group, modelName string, retry int) (*model.Channel, error) {
+	exclude, probeTargets := BuildHealthExcludeSet(group)
+	if len(exclude) == 0 && len(probeTargets) == 0 {
+		return model.GetRandomSatisfiedChannel(group, modelName, retry)
+	}
+	if pick := MaybePickProbeChannel(group, modelName, probeTargets); pick != nil {
+		return pick, nil
+	}
+	return model.GetRandomSatisfiedChannelExcluding(group, modelName, retry, exclude)
 }

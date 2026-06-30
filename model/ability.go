@@ -104,6 +104,13 @@ func getChannelQuery(group string, model string, retry int) (*gorm.DB, error) {
 }
 
 func GetChannel(group string, model string, retry int) (*Channel, error) {
+	return GetChannelExcluding(group, model, retry, nil)
+}
+
+// GetChannelExcluding 是 GetChannel 的排除变体（DB 兜底路径，MemoryCacheEnabled=false 时使用）。
+// 从候选 abilities 中剔除 exclude 集合中的渠道，用 GORM NOT IN 实现（三库兼容）。
+// exclude 为空时行为与 GetChannel 完全一致。
+func GetChannelExcluding(group string, model string, retry int, exclude map[int]bool) (*Channel, error) {
 	var abilities []Ability
 
 	var err error = nil
@@ -111,11 +118,19 @@ func GetChannel(group string, model string, retry int) (*Channel, error) {
 	if err != nil {
 		return nil, err
 	}
-	if common.UsingSQLite || common.UsingPostgreSQL {
-		err = channelQuery.Order("weight DESC").Find(&abilities).Error
-	} else {
-		err = channelQuery.Order("weight DESC").Find(&abilities).Error
+	if len(exclude) > 0 {
+		ids := make([]int, 0, len(exclude))
+		for id := range exclude {
+			ids = append(ids, id)
+		}
+		excludedQuery := channelQuery.Where("channel_id NOT IN ?", ids)
+		// 仅当排除后仍有候选时才应用，否则回退为不排除（保可用）。
+		var cnt int64
+		if err = excludedQuery.Model(&Ability{}).Count(&cnt).Error; err == nil && cnt > 0 {
+			channelQuery = excludedQuery
+		}
 	}
+	err = channelQuery.Order("weight DESC").Find(&abilities).Error
 	if err != nil {
 		return nil, err
 	}

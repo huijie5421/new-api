@@ -95,9 +95,17 @@ func SyncChannelCache(frequency int) {
 }
 
 func GetRandomSatisfiedChannel(group string, model string, retry int) (*Channel, error) {
+	return GetRandomSatisfiedChannelExcluding(group, model, retry, nil)
+}
+
+// GetRandomSatisfiedChannelExcluding 在普通选路基础上，从候选中剔除 exclude 集合中的渠道。
+// 用于自动健康路由：被判 BAD/PROBING 的渠道被排除后，priority 分层会自动跳过“剔除后为空”
+// 的优先级层，流量落到同层其它渠道或下一更低优先级层（即按 priority 临时降级）。
+// exclude 为 nil/空时行为与原 GetRandomSatisfiedChannel 完全一致。
+func GetRandomSatisfiedChannelExcluding(group string, model string, retry int, exclude map[int]bool) (*Channel, error) {
 	// if memory cache is disabled, get channel directly from database
 	if !common.MemoryCacheEnabled {
-		return GetChannel(group, model, retry)
+		return GetChannelExcluding(group, model, retry, exclude)
 	}
 
 	channelSyncLock.RLock()
@@ -114,6 +122,20 @@ func GetRandomSatisfiedChannel(group string, model string, retry int) (*Channel,
 
 	if len(channels) == 0 {
 		return nil, nil
+	}
+
+	// 应用排除集：只保留未被排除的候选。若排除后为空，回退为不排除（保可用，
+	// 避免因健康误判导致整个分组+模型不可用）。
+	if len(exclude) > 0 {
+		filtered := make([]int, 0, len(channels))
+		for _, id := range channels {
+			if !exclude[id] {
+				filtered = append(filtered, id)
+			}
+		}
+		if len(filtered) > 0 {
+			channels = filtered
+		}
 	}
 
 	if len(channels) == 1 {
