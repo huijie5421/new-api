@@ -45,6 +45,8 @@ type ChannelHealthRouterSetting struct {
 	NoFirstByteIsRed bool `json:"no_first_byte_is_red"`
 
 	// ---- 红色计数分带（窗口 = WindowSize）----
+	// 注：单请求评级为“组合判定”——首字与响应两维度等级求和，sum>=3 才计红，
+	// 单一维度差（如首字波动）仅算黄，不会单独把请求判红。
 	WarnRedCnt      int `json:"warn_red_cnt"`      // >= 触发 WARN（探测）
 	BadRedCnt       int `json:"bad_red_cnt"`       // >= 触发 BAD（需连续确认）
 	ConfirmWindows  int `json:"confirm_windows"`   // BAD 连续确认窗数
@@ -93,8 +95,8 @@ var channelHealthRouterSetting = ChannelHealthRouterSetting{
 
 	NoFirstByteIsRed: true,
 
-	WarnRedCnt:      3,
-	BadRedCnt:       6,
+	WarnRedCnt:      2,
+	BadRedCnt:       3,
 	ConfirmWindows:  3,
 	RecoverOKStreak: 3,
 

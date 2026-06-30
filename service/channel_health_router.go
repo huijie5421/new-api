@@ -121,16 +121,14 @@ func rateRelaySample(cfg *operation_setting.ChannelHealthRouterSetting, info *re
 	now := time.Now()
 	hasTTFB := info.IsStream && info.HasSendResponse()
 
-	// 首字色
+	// 无首字（流式但完全没收到首字）是硬故障，不参与组合佐证，直接计红。
+	noFirstByte := info.IsStream && !hasTTFB && cfg.NoFirstByteIsRed
+
+	// 首字色（有首字时按延迟分带；无首字单独处理，见上）
 	frtLvl := int8(0)
-	if info.IsStream {
-		if hasTTFB {
-			frtMs := info.FirstResponseTime.Sub(info.StartTime).Milliseconds()
-			frtLvl = bandFromThresholds(int(frtMs), cfg.FrtYellowMs, cfg.FrtRedMs)
-		} else if cfg.NoFirstByteIsRed {
-			// 流式但未观测到首字 —— 强故障信号，计红。
-			frtLvl = 2
-		}
+	if hasTTFB {
+		frtMs := info.FirstResponseTime.Sub(info.StartTime).Milliseconds()
+		frtLvl = bandFromThresholds(int(frtMs), cfg.FrtYellowMs, cfg.FrtRedMs)
 	}
 
 	// 响应色：输出 token 足够时按流速，否则按总时长。
@@ -159,10 +157,25 @@ func rateRelaySample(cfg *operation_setting.ChannelHealthRouterSetting, info *re
 		respLvl = bandFromThresholds(durSec, cfg.DurationYellowSec, cfg.DurationRedSec)
 	}
 
-	if frtLvl >= respLvl {
-		return frtLvl
+	if noFirstByte {
+		return 2
 	}
-	return respLvl
+
+	// 组合判定（而非取最差）：单一维度差只算波动，需两维度互相佐证才升级。
+	// 等级求和 sum = frtLvl + respLvl：
+	//   sum==0           → 绿(0)
+	//   sum∈{1,2}        → 黄(1)  例如「首字红(2)+响应绿(0)=2」= 首字波动但实际正常 → 仅黄
+	//   sum>=3           → 红(2)  需两维度都不佳（至少一黄一红）才判红
+	// 这样首字单飞的红/黄（多为网络波动）不会单独把请求判红。
+	sum := int(frtLvl) + int(respLvl)
+	switch {
+	case sum == 0:
+		return 0
+	case sum >= 3:
+		return 2
+	default:
+		return 1
+	}
 }
 
 // bandFromThresholds 越小越好的指标分带：< yellow 绿(0)，[yellow,red) 黄(1)，>= red 红(2)。
