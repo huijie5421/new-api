@@ -51,7 +51,11 @@ type responseTask struct {
 	Seconds            string `json:"seconds,omitempty"`
 	Size               string `json:"size,omitempty"`
 	RemixedFromVideoID string `json:"remixed_from_video_id,omitempty"`
-	Error              *struct {
+	// 上游返回的真实视频地址（不同聚合站字段名不一，全部兼容）
+	VideoURL  string `json:"video_url,omitempty"`
+	ResultURL string `json:"result_url,omitempty"`
+	URL       string `json:"url,omitempty"`
+	Error     *struct {
 		Message string `json:"message"`
 		Code    string `json:"code"`
 	} `json:"error,omitempty"`
@@ -94,7 +98,8 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 	return relaycommon.ValidateMultipartDirect(c, info)
 }
 
-// EstimateBilling 根据用户请求的 seconds 和 size 计算 OtherRatios。
+// EstimateBilling 根据用户请求的 seconds 计算 OtherRatios。
+// 仅按秒计费：最终额度 = ModelPrice × seconds，不计入 size 系数。
 func (a *TaskAdaptor) EstimateBilling(c *gin.Context, info *relaycommon.RelayInfo) map[string]float64 {
 	// remix 路径的 OtherRatios 已在 ResolveOriginTask 中设置
 	if info.Action == constant.TaskActionRemix {
@@ -114,19 +119,9 @@ func (a *TaskAdaptor) EstimateBilling(c *gin.Context, info *relaycommon.RelayInf
 		seconds = 4
 	}
 
-	size := req.Size
-	if size == "" {
-		size = "720x1280"
-	}
-
-	ratios := map[string]float64{
+	return map[string]float64{
 		"seconds": float64(seconds),
-		"size":    1,
 	}
-	if size == "1792x1024" || size == "1024x1792" {
-		ratios["size"] = 1.666667
-	}
-	return ratios
 }
 
 func (a *TaskAdaptor) BuildRequestURL(info *relaycommon.RelayInfo) (string, error) {
@@ -304,7 +299,11 @@ func (a *TaskAdaptor) ParseTaskResult(respBody []byte) (*relaycommon.TaskInfo, e
 		taskResult.Status = model.TaskStatusInProgress
 	case "completed":
 		taskResult.Status = model.TaskStatusSuccess
-		// Url intentionally left empty — the caller constructs the proxy URL using the public task ID
+		// 记录上游真实视频地址到 ResultURL（仅服务端使用，供 VideoProxy 取流）。
+		// 客户端响应中的地址由 ConvertToOpenAIVideo 替换为本站代理 URL，不暴露上游。
+		if u := firstNonEmptyURL(resTask.VideoURL, resTask.ResultURL, resTask.URL); u != "" {
+			taskResult.Url = u
+		}
 	case "failed", "cancelled":
 		taskResult.Status = model.TaskStatusFailure
 		if resTask.Error != nil {
@@ -327,5 +326,28 @@ func (a *TaskAdaptor) ConvertToOpenAIVideo(task *model.Task) ([]byte, error) {
 	if data, err = sjson.SetBytes(data, "id", task.TaskID); err != nil {
 		return nil, errors.Wrap(err, "set id failed")
 	}
+	// 覆盖 task_id 为本站公开 ID
+	data, _ = sjson.SetBytes(data, "task_id", task.TaskID)
+	// 用请求时的原始模型名，避免暴露上游归一化后的模型名
+	if task.Properties.OriginModelName != "" {
+		data, _ = sjson.SetBytes(data, "model", task.Properties.OriginModelName)
+	}
+	// 成功后，将所有对外视频地址替换为本站代理 URL，隐藏上游真实地址
+	if task.Status == model.TaskStatusSuccess {
+		proxyURL := taskcommon.BuildProxyURL(task.TaskID)
+		data, _ = sjson.SetBytes(data, "video_url", proxyURL)
+		data, _ = sjson.SetBytes(data, "result_url", proxyURL)
+		data, _ = sjson.SetBytes(data, "url", proxyURL)
+	}
 	return data, nil
+}
+
+// firstNonEmptyURL 返回第一个非空（去空白后）的字符串。
+func firstNonEmptyURL(candidates ...string) string {
+	for _, c := range candidates {
+		if s := strings.TrimSpace(c); s != "" {
+			return s
+		}
+	}
+	return ""
 }

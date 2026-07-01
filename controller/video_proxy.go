@@ -107,7 +107,15 @@ func VideoProxy(c *gin.Context) {
 			return
 		}
 	case constant.ChannelTypeOpenAI, constant.ChannelTypeSora:
-		videoURL = fmt.Sprintf("%s/v1/videos/%s/content", baseURL, task.GetUpstreamTaskID())
+		// 优先使用已存储的上游真实直链（如聚合站返回静态视频 URL）；
+		// 若没有（如 OpenAI 原生 Sora），回退到官方 /content 端点。
+		stored := strings.TrimSpace(task.GetResultURL())
+		if stored != "" && !isTaskProxyContentURL(stored, task.TaskID) &&
+			(strings.HasPrefix(stored, "http://") || strings.HasPrefix(stored, "https://")) {
+			videoURL = stored
+		} else {
+			videoURL = fmt.Sprintf("%s/v1/videos/%s/content", baseURL, task.GetUpstreamTaskID())
+		}
 		req.Header.Set("Authorization", "Bearer "+channel.Key)
 	default:
 		// Video URL is stored in PrivateData.ResultURL (fallback to FailReason for old data)
