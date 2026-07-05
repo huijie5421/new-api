@@ -99,6 +99,32 @@ func AigcWorkshopModelBinding() gin.HandlerFunc {
 			c.Next()
 			return
 		}
+		if c.GetBool("use_access_token") {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": types.NewError(
+					errors.New("暂不支持使用 access token"),
+					types.ErrorCodeAccessDenied,
+					types.ErrOptionWithSkipRetry(),
+				).ToOpenAIError(),
+			})
+			c.Abort()
+			return
+		}
+
+		userId := c.GetInt("id")
+		userCache, err := model.GetUserCache(userId)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": types.NewError(
+					err,
+					types.ErrorCodeQueryDataError,
+					types.ErrOptionWithSkipRetry(),
+				).ToOpenAIError(),
+			})
+			c.Abort()
+			return
+		}
+		userCache.WriteContext(c)
 
 		var request aigcWorkshopModelRequest
 		if err := common.UnmarshalBodyReusable(c, &request); err != nil {
@@ -111,11 +137,7 @@ func AigcWorkshopModelBinding() gin.HandlerFunc {
 			return
 		}
 
-		userGroup := common.GetContextKeyString(c, constant.ContextKeyUserGroup)
-		if userGroup == "" {
-			userGroup = c.GetString("group")
-		}
-		option, err := resolveAigcWorkshopModelOption(kind, userGroup, modelName, c.GetHeader(aigcWorkshopGroupHeader))
+		option, err := resolveAigcWorkshopModelOption(kind, userCache.Group, modelName, c.GetHeader(aigcWorkshopGroupHeader))
 		if err != nil {
 			abortAigcWorkshopOpenAIError(c, http.StatusForbidden, err)
 			return
@@ -125,6 +147,23 @@ func AigcWorkshopModelBinding() gin.HandlerFunc {
 		common.SetContextKey(c, constant.ContextKeyTokenGroup, option.Group)
 		c.Set("aigc_model_group", option.Group)
 		c.Set("aigc_model_kind", string(kind))
+
+		tempToken := &model.Token{
+			UserId: userId,
+			Name:   fmt.Sprintf("aigc-%s-%s", kind, option.Group),
+			Group:  option.Group,
+		}
+		if err = middleware.SetupContextForToken(c, tempToken); err != nil {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": types.NewError(
+					err,
+					types.ErrorCodeAccessDenied,
+					types.ErrOptionWithSkipRetry(),
+				).ToOpenAIError(),
+			})
+			c.Abort()
+			return
+		}
 		c.Next()
 	}
 }

@@ -322,3 +322,20 @@
 ### Notes
 - `progress.md`：追加本轮 Docker 构建与本地容器路由验证记录。
 - 回滚方式：只需使用版本控制回退本次 `progress.md` 追加段落；本轮未新增业务代码改动。
+
+## 2026-07-05 - Task: 修复 AIGC 工坊提交请求 403
+
+### What was done
+- 排查生产日志，确认 `/api/aigc/models` 登录态可正常返回，但图片和电商规划提交在进入 relay 前返回 403。
+- 修复 AIGC 工坊提交链路：在 `Distribute` 中间件执行前加载用户缓存、写入用户分组，并创建网页登录态免 Key 临时 token 上下文。
+- 保留 access token 禁用边界，AIGC 工坊仍只支持网页登录态，不支持直接用 access token 发起。
+
+### Testing
+- `gofmt -w controller\aigc_workshop.go`：通过。
+- `go test ./controller ./router ./service -run 'TestDetect(FixedVideoDurationSeconds|VideoResolution)|TestPreConsumeTokenQuotaSkipsTokenlessLoginBridge|^$'`：通过。
+- `go test ./... -run '^$'`：通过。
+
+### Notes
+- `controller/aigc_workshop.go`：将 AIGC 临时 token 初始化提前到提交路由的模型分组绑定中间件内，确保模型限权、分组计费和渠道分发在进入 relay 前看到正确上下文。
+- `progress.md`：追加本轮排查、修复、验证和回滚信息。
+- 回滚方式：使用版本控制恢复上述文件；如只撤销本轮，可回退 `AigcWorkshopModelBinding` 中提前初始化用户缓存和临时 token 的逻辑，然后重新运行后端编译检查。
