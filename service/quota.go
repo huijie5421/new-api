@@ -387,6 +387,9 @@ func PreConsumeTokenQuota(relayInfo *relaycommon.RelayInfo, quota int) error {
 	if relayInfo.IsPlayground {
 		return nil
 	}
+	if relayInfo.TokenId == 0 && strings.TrimSpace(relayInfo.TokenKey) == "" {
+		return nil
+	}
 	//if relayInfo.TokenUnlimited {
 	//	return nil
 	//}

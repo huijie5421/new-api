@@ -90,6 +90,9 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInf
 
 	inputPayload := make(map[string]any)
 	inputPayload["prompt"] = request.Prompt
+	if request.Seed != nil && *request.Seed >= 0 {
+		inputPayload["seed"] = *request.Seed
+	}
 
 	if size := strings.TrimSpace(request.Size); size != "" {
 		if aspect, width, height, ok := mapOpenAISizeToFlux(size); ok {

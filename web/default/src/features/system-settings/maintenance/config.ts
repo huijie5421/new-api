@@ -24,6 +24,7 @@ export type HeaderNavAccessConfig = {
 export type HeaderNavModulesConfig = {
   home: boolean
   console: boolean
+  aigc: HeaderNavAccessConfig
   pricing: HeaderNavAccessConfig
   rankings: HeaderNavAccessConfig
   docs: boolean
@@ -41,6 +42,10 @@ export type SidebarModulesAdminConfig = Record<string, SidebarSectionConfig>
 export const HEADER_NAV_DEFAULT: HeaderNavModulesConfig = {
   home: true,
   console: true,
+  aigc: {
+    enabled: true,
+    requireAuth: true,
+  },
   pricing: {
     enabled: true,
     requireAuth: false,
@@ -96,6 +101,7 @@ const toBoolean = (value: unknown, fallback: boolean): boolean => {
 
 const cloneHeaderNavDefault = (): HeaderNavModulesConfig => ({
   ...HEADER_NAV_DEFAULT,
+  aigc: { ...HEADER_NAV_DEFAULT.aigc },
   pricing: { ...HEADER_NAV_DEFAULT.pricing },
   rankings: { ...HEADER_NAV_DEFAULT.rankings },
 })
@@ -149,6 +155,10 @@ export function parseHeaderNavModules(
     }
 
     Object.entries(parsed).forEach(([key, raw]) => {
+      if (key === 'aigc') {
+        result.aigc = parseAccessModule(raw, base.aigc)
+        return
+      }
       if (key === 'pricing') {
         result.pricing = parseAccessModule(raw, base.pricing)
         return

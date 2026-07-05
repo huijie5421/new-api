@@ -64,6 +64,23 @@ func SetApiRouter(router *gin.Engine) {
 		// Universal secure verification routes
 		apiRouter.POST("/verify", middleware.UserAuth(), middleware.CriticalRateLimit(), controller.UniversalVerify)
 
+		aigcRoute := apiRouter.Group("/aigc")
+		aigcRoute.Use(middleware.UserAuth())
+		{
+			aigcSubmitRoute := aigcRoute.Group("")
+			aigcSubmitRoute.Use(middleware.SystemPerformanceCheck(), controller.AigcWorkshopModelBinding(), middleware.ModelRequestRateLimit(), middleware.Distribute())
+			{
+				aigcSubmitRoute.POST("/chat/completions", controller.AigcChatCompletions)
+				aigcSubmitRoute.POST("/images/generations", controller.AigcImageGenerations)
+				aigcSubmitRoute.POST("/video/generations", controller.AigcVideoGenerations)
+			}
+			aigcRoute.GET("/models", controller.GetAigcWorkshopModels)
+			aigcRoute.GET("/assets", controller.GetAigcAssets)
+			aigcRoute.POST("/assets/batch", controller.BatchManageAigcAssets)
+			aigcRoute.DELETE("/assets/:asset_id", controller.DeleteAigcAsset)
+			aigcRoute.GET("/video/generations/:task_id", controller.AigcVideoGenerationFetch)
+		}
+
 		userRoute := apiRouter.Group("/user")
 		{
 			userRoute.POST("/register", middleware.CriticalRateLimit(), anonymousRequestBodyLimit, middleware.TurnstileCheck(), controller.Register)

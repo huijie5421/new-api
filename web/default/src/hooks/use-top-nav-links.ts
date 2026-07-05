@@ -71,6 +71,13 @@ export function useTopNavLinks(): TopNavLink[] {
     links.push({ title: t('Console'), href: '/dashboard' })
   }
 
+  // AIGC Workshop
+  const aigc = modules?.aigc
+  if (aigc && typeof aigc === 'object' && aigc.enabled) {
+    const requiresAuth = aigc.requireAuth && !isAuthed
+    links.push({ title: t('AIGC工坊'), href: '/image', requiresAuth })
+  }
+
   // Pricing
   const pricing = modules?.pricing
   if (pricing && typeof pricing === 'object' && pricing.enabled) {

@@ -49,6 +49,8 @@ import {
 const headerNavSchema = z.object({
   home: z.boolean(),
   console: z.boolean(),
+  aigcEnabled: z.boolean(),
+  aigcRequireAuth: z.boolean(),
   pricingEnabled: z.boolean(),
   pricingRequireAuth: z.boolean(),
   rankingsEnabled: z.boolean(),
@@ -71,6 +73,14 @@ const toFormValues = (config: HeaderNavModulesConfig): HeaderNavFormValues => ({
     config.console === undefined
       ? HEADER_NAV_DEFAULT.console
       : Boolean(config.console),
+  aigcEnabled:
+    config.aigc?.enabled === undefined
+      ? HEADER_NAV_DEFAULT.aigc.enabled
+      : Boolean(config.aigc.enabled),
+  aigcRequireAuth:
+    config.aigc?.requireAuth === undefined
+      ? HEADER_NAV_DEFAULT.aigc.requireAuth
+      : Boolean(config.aigc.requireAuth),
   pricingEnabled:
     config.pricing?.enabled === undefined
       ? HEADER_NAV_DEFAULT.pricing.enabled
@@ -119,6 +129,11 @@ export function HeaderNavigationSection({
       console: values.console,
       docs: values.docs,
       about: values.about,
+      aigc: {
+        ...(config.aigc ?? HEADER_NAV_DEFAULT.aigc),
+        enabled: values.aigcEnabled,
+        requireAuth: values.aigcRequireAuth,
+      },
       pricing: {
         ...(config.pricing ?? HEADER_NAV_DEFAULT.pricing),
         enabled: values.pricingEnabled,
@@ -176,12 +191,23 @@ export function HeaderNavigationSection({
   const accessModules: Array<{
     enabledKey: keyof HeaderNavFormValues
     requireAuthKey: keyof HeaderNavFormValues
-    requireAuthDependsOn: 'pricingEnabled' | 'rankingsEnabled'
+    requireAuthDependsOn: 'aigcEnabled' | 'pricingEnabled' | 'rankingsEnabled'
     title: string
     description: string
     requireAuthTitle: string
     requireAuthDescription: string
   }> = [
+    {
+      enabledKey: 'aigcEnabled',
+      requireAuthKey: 'aigcRequireAuth',
+      requireAuthDependsOn: 'aigcEnabled',
+      title: t('AIGC Workshop'),
+      description: t('Unified creative workspace for images and videos.'),
+      requireAuthTitle: t('Require login to use AIGC Workshop'),
+      requireAuthDescription: t(
+        'Visitors must authenticate before opening the creative workspace.'
+      ),
+    },
     {
       enabledKey: 'pricingEnabled',
       requireAuthKey: 'pricingRequireAuth',

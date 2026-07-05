@@ -39,6 +39,10 @@ func oaiImage2AliImageRequest(info *relaycommon.RelayInfo, request dto.ImageRequ
 				Watermark: request.Watermark,
 			}
 		}
+		if request.Seed != nil && *request.Seed >= 0 && imageRequest.Parameters.Seed == nil {
+			seed := int(*request.Seed)
+			imageRequest.Parameters.Seed = &seed
+		}
 		if val, ok := request.Extra["input"]; ok {
 			err := common.Unmarshal(val, &imageRequest.Input)
 			if err != nil {

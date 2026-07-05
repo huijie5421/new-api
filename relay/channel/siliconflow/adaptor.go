@@ -58,6 +58,10 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInf
 			sfRequest.BatchSize = lo.FromPtr(request.N)
 		}
 	}
+	if request.Seed != nil && *request.Seed >= 0 && sfRequest.Seed == nil {
+		seed := uint64(*request.Seed)
+		sfRequest.Seed = &seed
+	}
 
 	return sfRequest, nil
 }

@@ -78,6 +78,7 @@ type Properties struct {
 	Input             string `json:"input"`
 	UpstreamModelName string `json:"upstream_model_name,omitempty"`
 	OriginModelName   string `json:"origin_model_name,omitempty"`
+	AigcHidden        bool   `json:"aigc_hidden,omitempty"`
 }
 
 func (m *Properties) Scan(val interface{}) error {

@@ -74,6 +74,9 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInf
 		ReqKey: request.Model,
 		Prompt: request.Prompt,
 	}
+	if request.Seed != nil && *request.Seed >= 0 {
+		payload.Seed = *request.Seed
+	}
 	if request.ResponseFormat == "" || request.ResponseFormat == "url" {
 		payload.ReturnURL = true // Default to returning image URLs
 	}
