@@ -8,6 +8,36 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func quotaToBillingAmount(quota int) float64 {
+	amount := float64(quota)
+	switch operation_setting.GetQuotaDisplayType() {
+	case operation_setting.QuotaDisplayTypeCNY:
+		return amount / common.QuotaPerUnit * operation_setting.USDExchangeRate
+	case operation_setting.QuotaDisplayTypeTokens:
+		return amount
+	default:
+		return amount / common.QuotaPerUnit
+	}
+}
+
+func buildCreditGrants(remainQuota, usedQuota int, unlimitedQuota bool) OpenAICreditGrants {
+	if unlimitedQuota {
+		return OpenAICreditGrants{
+			Object:         "credit_summary",
+			TotalGranted:   100000000,
+			TotalUsed:      quotaToBillingAmount(usedQuota),
+			TotalAvailable: 100000000,
+		}
+	}
+
+	return OpenAICreditGrants{
+		Object:         "credit_summary",
+		TotalGranted:   quotaToBillingAmount(remainQuota + usedQuota),
+		TotalUsed:      quotaToBillingAmount(usedQuota),
+		TotalAvailable: quotaToBillingAmount(remainQuota),
+	}
+}
+
 func GetSubscription(c *gin.Context) {
 	var remainQuota int
 	var usedQuota int
@@ -105,4 +135,41 @@ func GetUsage(c *gin.Context) {
 	}
 	c.JSON(200, usage)
 	return
+}
+
+// GetCreditGrants exposes the OpenAI-compatible credit summary for the
+// authenticated API token. Unlike OpenAI's organization Costs API, this is a
+// local wallet balance and therefore works with regular user API keys.
+func GetCreditGrants(c *gin.Context) {
+	var remainQuota int
+	var usedQuota int
+	var unlimitedQuota bool
+	var err error
+
+	if common.DisplayTokenStatEnabled {
+		token, tokenErr := model.GetTokenById(c.GetInt("token_id"))
+		if tokenErr != nil {
+			err = tokenErr
+		} else {
+			remainQuota = token.RemainQuota
+			usedQuota = token.UsedQuota
+			unlimitedQuota = token.UnlimitedQuota
+		}
+	} else {
+		remainQuota, err = model.GetUserQuota(c.GetInt("id"), false)
+		if err == nil {
+			usedQuota, err = model.GetUserUsedQuota(c.GetInt("id"))
+		}
+	}
+
+	if err != nil {
+		openAIError := types.OpenAIError{
+			Message: err.Error(),
+			Type:    "upstream_error",
+		}
+		c.JSON(200, gin.H{"error": openAIError})
+		return
+	}
+
+	c.JSON(200, buildCreditGrants(remainQuota, usedQuota, unlimitedQuota))
 }

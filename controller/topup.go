@@ -32,9 +32,27 @@ func GetTopUpInfo(c *gin.Context) {
 	complianceConfirmed := operation_setting.IsPaymentComplianceConfirmed()
 
 	// 获取支付方式
-	payMethods := operation_setting.PayMethods
-	if !complianceConfirmed {
-		payMethods = []map[string]string{}
+	payMethods := make([]map[string]string, 0, len(operation_setting.PayMethods)+len(operation_setting.GMPayPayMethods)+3)
+	if complianceConfirmed {
+		payMethods = append(payMethods, operation_setting.PayMethods...)
+	}
+
+	// GMPay methods use a gateway-prefixed type so they can coexist with
+	// Epay methods while the existing wallet request shape stays unchanged.
+	enableGMPay := isGMPayTopUpEnabled()
+	if enableGMPay {
+		methodTypes := make(map[string]struct{}, len(payMethods))
+		for _, method := range payMethods {
+			methodTypes[method["type"]] = struct{}{}
+		}
+		for _, method := range operation_setting.GetGMPayPayMethodsForClient() {
+			methodType := method["type"]
+			if _, exists := methodTypes[methodType]; exists {
+				continue
+			}
+			payMethods = append(payMethods, method)
+			methodTypes[methodType] = struct{}{}
+		}
 	}
 
 	// 如果启用了 Stripe 支付，添加到支付方法列表
@@ -104,6 +122,7 @@ func GetTopUpInfo(c *gin.Context) {
 
 	data := gin.H{
 		"enable_online_topup":              isEpayTopUpEnabled(),
+		"enable_gmpay_topup":               enableGMPay,
 		"enable_stripe_topup":              isStripeTopUpEnabled(),
 		"enable_creem_topup":               isCreemTopUpEnabled(),
 		"enable_waffo_topup":               enableWaffo,

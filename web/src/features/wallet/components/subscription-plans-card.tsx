@@ -118,7 +118,9 @@ export function SubscriptionPlansCard({
   const enableStripe = !!topupInfo?.enable_stripe_topup
   const enableCreem = !!topupInfo?.enable_creem_topup
   const enableWaffoPancake = !!topupInfo?.enable_waffo_pancake_topup
-  const enableOnlineTopUp = !!topupInfo?.enable_online_topup
+  const enableOnlineTopUp = !!(
+    topupInfo?.enable_online_topup || topupInfo?.enable_gmpay_topup
+  )
   const epayMethods = useMemo(
     () => getEpayMethods(topupInfo?.pay_methods),
     [topupInfo?.pay_methods]
