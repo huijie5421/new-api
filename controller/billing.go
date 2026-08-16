@@ -20,21 +20,32 @@ func quotaToBillingAmount(quota int) float64 {
 	}
 }
 
+// quotaToUSD converts new-api's internal quota units to the monetary unit
+// required by OpenAI-compatible billing responses. The site's display mode is
+// intentionally ignored here: API consumers expect these fields to be USD,
+// while the display mode only controls the web UI.
+func quotaToUSD(quota int) float64 {
+	if common.QuotaPerUnit <= 0 {
+		return 0
+	}
+	return float64(quota) / common.QuotaPerUnit
+}
+
 func buildCreditGrants(remainQuota, usedQuota int, unlimitedQuota bool) OpenAICreditGrants {
 	if unlimitedQuota {
 		return OpenAICreditGrants{
 			Object:         "credit_summary",
 			TotalGranted:   100000000,
-			TotalUsed:      quotaToBillingAmount(usedQuota),
+			TotalUsed:      quotaToUSD(usedQuota),
 			TotalAvailable: 100000000,
 		}
 	}
 
 	return OpenAICreditGrants{
 		Object:         "credit_summary",
-		TotalGranted:   quotaToBillingAmount(remainQuota + usedQuota),
-		TotalUsed:      quotaToBillingAmount(usedQuota),
-		TotalAvailable: quotaToBillingAmount(remainQuota),
+		TotalGranted:   quotaToUSD(remainQuota + usedQuota),
+		TotalUsed:      quotaToUSD(usedQuota),
+		TotalAvailable: quotaToUSD(remainQuota),
 	}
 }
 
