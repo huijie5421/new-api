@@ -80,6 +80,10 @@ func InitOptionMap() {
 	common.OptionMap["CustomCallbackAddress"] = ""
 	common.OptionMap["EpayId"] = ""
 	common.OptionMap["EpayKey"] = ""
+	common.OptionMap["GMPayAddress"] = operation_setting.GMPayAddress
+	common.OptionMap["GMPayId"] = operation_setting.GMPayId
+	common.OptionMap["GMPayKey"] = operation_setting.GMPayKey
+	common.OptionMap["GMPayPayMethods"] = operation_setting.GMPayPayMethods2JsonString()
 	common.OptionMap["Price"] = strconv.FormatFloat(operation_setting.Price, 'f', -1, 64)
 	common.OptionMap["USDExchangeRate"] = strconv.FormatFloat(operation_setting.USDExchangeRate, 'f', -1, 64)
 	common.OptionMap["MinTopUp"] = strconv.Itoa(operation_setting.MinTopUp)
@@ -428,6 +432,14 @@ func updateOptionMap(key string, value string) (err error) {
 		operation_setting.EpayId = value
 	case "EpayKey":
 		operation_setting.EpayKey = value
+	case "GMPayAddress":
+		operation_setting.GMPayAddress = value
+	case "GMPayId":
+		operation_setting.GMPayId = value
+	case "GMPayKey":
+		operation_setting.GMPayKey = value
+	case "GMPayPayMethods":
+		err = operation_setting.UpdateGMPayPayMethodsByJsonString(value)
 	case "Price":
 		operation_setting.Price, _ = strconv.ParseFloat(value, 64)
 	case "USDExchangeRate":
