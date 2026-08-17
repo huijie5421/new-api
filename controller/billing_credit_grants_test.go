@@ -33,6 +33,16 @@ func TestQuotaToUSD(t *testing.T) {
 	require.Equal(t, 2.5, quotaToUSD(int(2.5*common.QuotaPerUnit)))
 }
 
+func TestBuildUserBalanceUsesAccountUSDValues(t *testing.T) {
+	response := buildUserBalance(2*int(common.QuotaPerUnit), int(common.QuotaPerUnit))
+
+	require.Equal(t, 2.0, response["balance"])
+	require.Equal(t, 1.0, response["used_balance"])
+	require.Equal(t, 3.0, response["total_balance"])
+	require.Equal(t, "USD", response["currency"])
+	require.Equal(t, true, response["is_active"])
+}
+
 func TestBuildCreditGrantsUsesLargeSentinelForUnlimitedQuota(t *testing.T) {
 	response := buildCreditGrants(0, 0, true)
 

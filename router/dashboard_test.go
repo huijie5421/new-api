@@ -19,4 +19,6 @@ func TestDashboardRouterRegistersCreditGrantsCompatibilityPaths(t *testing.T) {
 
 	require.Contains(t, routes, "GET /dashboard/billing/credit_grants")
 	require.Contains(t, routes, "GET /v1/dashboard/billing/credit_grants")
+	require.Contains(t, routes, "GET /user/balance")
+	require.Contains(t, routes, "GET /v1/user/balance")
 }

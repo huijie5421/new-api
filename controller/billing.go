@@ -49,6 +49,42 @@ func buildCreditGrants(remainQuota, usedQuota int, unlimitedQuota bool) OpenAICr
 	}
 }
 
+func getAccountQuota(userID int) (remainQuota, usedQuota int, err error) {
+	remainQuota, err = model.GetUserQuota(userID, false)
+	if err != nil {
+		return 0, 0, err
+	}
+	usedQuota, err = model.GetUserUsedQuota(userID)
+	return remainQuota, usedQuota, err
+}
+
+func buildUserBalance(remainQuota, usedQuota int) gin.H {
+	return gin.H{
+		"balance":       quotaToUSD(remainQuota),
+		"currency":      "USD",
+		"is_active":     true,
+		"total_balance": quotaToUSD(remainQuota + usedQuota),
+		"used_balance":  quotaToUSD(usedQuota),
+	}
+}
+
+// GetUserBalance exposes the account-level balance shape used by CC Switch's
+// generic usage template. Unlike token-level usage, this is the wallet balance
+// for the authenticated user and is already normalized to USD.
+func GetUserBalance(c *gin.Context) {
+	remainQuota, usedQuota, err := getAccountQuota(c.GetInt("id"))
+	if err != nil {
+		openAIError := types.OpenAIError{
+			Message: err.Error(),
+			Type:    "upstream_error",
+		}
+		c.JSON(200, gin.H{"error": openAIError})
+		return
+	}
+
+	c.JSON(200, buildUserBalance(remainQuota, usedQuota))
+}
+
 func GetSubscription(c *gin.Context) {
 	var remainQuota int
 	var usedQuota int
@@ -152,26 +188,7 @@ func GetUsage(c *gin.Context) {
 // authenticated API token. Unlike OpenAI's organization Costs API, this is a
 // local wallet balance and therefore works with regular user API keys.
 func GetCreditGrants(c *gin.Context) {
-	var remainQuota int
-	var usedQuota int
-	var unlimitedQuota bool
-	var err error
-
-	if common.DisplayTokenStatEnabled {
-		token, tokenErr := model.GetTokenById(c.GetInt("token_id"))
-		if tokenErr != nil {
-			err = tokenErr
-		} else {
-			remainQuota = token.RemainQuota
-			usedQuota = token.UsedQuota
-			unlimitedQuota = token.UnlimitedQuota
-		}
-	} else {
-		remainQuota, err = model.GetUserQuota(c.GetInt("id"), false)
-		if err == nil {
-			usedQuota, err = model.GetUserUsedQuota(c.GetInt("id"))
-		}
-	}
+	remainQuota, usedQuota, err := getAccountQuota(c.GetInt("id"))
 
 	if err != nil {
 		openAIError := types.OpenAIError{
@@ -182,5 +199,5 @@ func GetCreditGrants(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, buildCreditGrants(remainQuota, usedQuota, unlimitedQuota))
+	c.JSON(200, buildCreditGrants(remainQuota, usedQuota, false))
 }
