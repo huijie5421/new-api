@@ -315,23 +315,25 @@ func RequestEpay(c *gin.Context) {
 		return
 	}
 
-	if !operation_setting.ContainsPayMethod(req.PaymentMethod) {
+	gatewayConfig, paymentMethod, ok := resolveEpayGateway(req.PaymentMethod)
+	if !ok {
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "支付方式不存在"})
 		return
 	}
+	storedPaymentMethod := gatewayConfig.storedPaymentMethod(req.PaymentMethod, paymentMethod)
 
 	callBackAddress := service.GetCallbackAddress()
 	returnUrl, _ := url.Parse(paymentReturnPath("/usage-logs"))
-	notifyUrl, _ := url.Parse(callBackAddress + "/api/user/epay/notify")
+	notifyUrl, _ := url.Parse(callBackAddress + gatewayConfig.TopUpNotifyPath)
 	tradeNo := fmt.Sprintf("%s%d", common.GetRandomString(6), time.Now().Unix())
 	tradeNo = fmt.Sprintf("USR%dNO%s", id, tradeNo)
-	client := GetEpayClient()
+	client := gatewayConfig.client()
 	if client == nil {
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "当前管理员未配置支付信息"})
 		return
 	}
 	uri, params, err := client.Purchase(&epay.PurchaseArgs{
-		Type:           req.PaymentMethod,
+		Type:           paymentMethod,
 		ServiceTradeNo: tradeNo,
 		Name:           fmt.Sprintf("TUC%d", req.Amount),
 		Money:          strconv.FormatFloat(payMoney, 'f', 2, 64),
@@ -340,7 +342,7 @@ func RequestEpay(c *gin.Context) {
 		ReturnUrl:      returnUrl,
 	})
 	if err != nil {
-		logger.LogError(c.Request.Context(), fmt.Sprintf("易支付 拉起支付失败 user_id=%d trade_no=%s payment_method=%s amount=%d error=%q", id, tradeNo, req.PaymentMethod, req.Amount, err.Error()))
+		logger.LogError(c.Request.Context(), fmt.Sprintf("%s 拉起支付失败 user_id=%d trade_no=%s payment_method=%s amount=%d error=%q", gatewayConfig.Name, id, tradeNo, paymentMethod, req.Amount, err.Error()))
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "拉起支付失败"})
 		return
 	}
@@ -355,24 +357,30 @@ func RequestEpay(c *gin.Context) {
 		Amount:          amount,
 		Money:           payMoney,
 		TradeNo:         tradeNo,
-		PaymentMethod:   req.PaymentMethod,
-		PaymentProvider: model.PaymentProviderEpay,
+		PaymentMethod:   storedPaymentMethod,
+		PaymentProvider: gatewayConfig.PaymentProvider,
 		CreateTime:      time.Now().Unix(),
 		Status:          common.TopUpStatusPending,
 	}
 	err = topUp.Insert()
 	if err != nil {
-		logger.LogError(c.Request.Context(), fmt.Sprintf("易支付 创建充值订单失败 user_id=%d trade_no=%s payment_method=%s amount=%d error=%q", id, tradeNo, req.PaymentMethod, req.Amount, err.Error()))
+		logger.LogError(c.Request.Context(), fmt.Sprintf("%s 创建充值订单失败 user_id=%d trade_no=%s payment_method=%s amount=%d error=%q", gatewayConfig.Name, id, tradeNo, paymentMethod, req.Amount, err.Error()))
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "创建订单失败"})
 		return
 	}
-	logger.LogInfo(c.Request.Context(), fmt.Sprintf("易支付 充值订单创建成功 user_id=%d trade_no=%s payment_method=%s amount=%d money=%.2f uri=%q params=%q", id, tradeNo, req.PaymentMethod, req.Amount, payMoney, uri, common.GetJsonString(params)))
+	logger.LogInfo(c.Request.Context(), fmt.Sprintf("%s 充值订单创建成功 user_id=%d trade_no=%s payment_method=%s amount=%d money=%.2f uri=%q params=%q", gatewayConfig.Name, id, tradeNo, storedPaymentMethod, req.Amount, payMoney, uri, common.GetJsonString(params)))
 
 	// 拼接 GET 形式的支付链接(uri + params)。旧前端仍可用 url+data 走表单跳转。
 	payURL := buildEpayPayURL(uri, params)
 
-	// 服务器端尝试解析扫码/付款链接。失败不影响下单,只返回空 qr_url 并保留旧跳转数据。
-	qrURL := tryParseEpayQRCode(c.Request.Context(), uri, params, payURL)
+	// GMPay's cashier creates a placeholder order when the payment network is
+	// left open for the payer. Prefetching it here would create that order before
+	// the browser submits the same form, causing an "order already exists" page.
+	qrURL := ""
+	if gatewayConfig.PaymentProvider != model.PaymentProviderGMPay {
+		// 服务器端尝试解析扫码/付款链接。失败不影响下单,只返回空 qr_url 并保留旧跳转数据。
+		qrURL = tryParseEpayQRCode(c.Request.Context(), uri, params, payURL)
+	}
 
 	// 兼容旧前端:data 必须仍为原始 params(旧前端 submitPaymentForm(url, data) 会把
 	// data 作为隐藏表单字段 POST 给支付网关)。结构化扫码信息单独放到顶层 payment 字段,
