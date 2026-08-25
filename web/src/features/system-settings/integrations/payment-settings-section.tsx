@@ -34,6 +34,7 @@ import {
   AlertTitle,
 } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Form,
   FormControl,
@@ -82,7 +83,9 @@ import {
 
 function isHttpOriginUrl(value: string) {
   const trimmed = value.trim()
-  if (!trimmed) return true
+  if (!trimmed) {
+    return true
+  }
 
   try {
     const url = new URL(trimmed)
@@ -97,11 +100,31 @@ function isHttpOriginUrl(value: string) {
 const paymentSchema = z.object({
   PayAddress: z.string().refine((value) => {
     const trimmed = value.trim()
-    if (!trimmed) return true
+    if (!trimmed) {
+      return true
+    }
     return /^https?:\/\//.test(trimmed)
   }, 'Provide a valid callback URL starting with http:// or https://'),
   EpayId: z.string(),
   EpayKey: z.string(),
+  GMPayAddress: z.string().refine((value) => {
+    const trimmed = value.trim()
+    if (!trimmed) {
+      return true
+    }
+    return /^https?:\/\//.test(trimmed)
+  }, 'Provide a valid GMPay endpoint starting with http:// or https://'),
+  GMPayId: z.string(),
+  GMPayKey: z.string(),
+  GMPayPayMethods: z.string().superRefine((value, ctx) => {
+    const error = getJsonError(value, (parsed) => Array.isArray(parsed))
+    if (error) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: error,
+      })
+    }
+  }),
   Price: z.coerce.number().min(0),
   MinTopUp: z.coerce.number().min(0),
   CustomCallbackAddress: z
@@ -239,6 +262,8 @@ export function PaymentSettingsSection({
   )
 
   const [payMethodsVisualMode, setPayMethodsVisualMode] = React.useState(true)
+  const [gmpayPayMethodsVisualMode, setGMPayPayMethodsVisualMode] =
+    React.useState(true)
   const [amountOptionsVisualMode, setAmountOptionsVisualMode] =
     React.useState(true)
   const [amountDiscountVisualMode, setAmountDiscountVisualMode] =
@@ -353,6 +378,7 @@ export function PaymentSettingsSection({
     defaultValues: {
       ...initialFormValues,
       PayMethods: formatJsonForEditor(initialFormValues.PayMethods),
+      GMPayPayMethods: formatJsonForEditor(initialFormValues.GMPayPayMethods),
       AmountOptions: formatJsonForEditor(initialFormValues.AmountOptions),
       AmountDiscount: formatJsonForEditor(initialFormValues.AmountDiscount),
       CreemProducts: formatJsonForEditor(initialFormValues.CreemProducts),
@@ -410,6 +436,7 @@ export function PaymentSettingsSection({
     form.reset({
       ...parsedDefaults,
       PayMethods: formatJsonForEditor(parsedDefaults.PayMethods),
+      GMPayPayMethods: formatJsonForEditor(parsedDefaults.GMPayPayMethods),
       AmountOptions: formatJsonForEditor(parsedDefaults.AmountOptions),
       AmountDiscount: formatJsonForEditor(parsedDefaults.AmountDiscount),
       CreemProducts: formatJsonForEditor(parsedDefaults.CreemProducts),
@@ -421,6 +448,10 @@ export function PaymentSettingsSection({
       PayAddress: removeTrailingSlash(values.PayAddress),
       EpayId: values.EpayId.trim(),
       EpayKey: values.EpayKey.trim(),
+      GMPayAddress: removeTrailingSlash(values.GMPayAddress),
+      GMPayId: values.GMPayId.trim(),
+      GMPayKey: values.GMPayKey.trim(),
+      GMPayPayMethods: values.GMPayPayMethods.trim(),
       Price: values.Price,
       MinTopUp: values.MinTopUp,
       CustomCallbackAddress: removeTrailingSlash(values.CustomCallbackAddress),
@@ -463,6 +494,10 @@ export function PaymentSettingsSection({
       PayAddress: removeTrailingSlash(initialRef.current.PayAddress),
       EpayId: initialRef.current.EpayId.trim(),
       EpayKey: initialRef.current.EpayKey.trim(),
+      GMPayAddress: removeTrailingSlash(initialRef.current.GMPayAddress),
+      GMPayId: initialRef.current.GMPayId.trim(),
+      GMPayKey: initialRef.current.GMPayKey.trim(),
+      GMPayPayMethods: initialRef.current.GMPayPayMethods.trim(),
       Price: initialRef.current.Price,
       MinTopUp: initialRef.current.MinTopUp,
       CustomCallbackAddress: removeTrailingSlash(
@@ -518,6 +553,28 @@ export function PaymentSettingsSection({
 
     if (sanitized.EpayKey && sanitized.EpayKey !== initial.EpayKey) {
       updates.push({ key: 'EpayKey', value: sanitized.EpayKey })
+    }
+
+    if (sanitized.GMPayAddress !== initial.GMPayAddress) {
+      updates.push({ key: 'GMPayAddress', value: sanitized.GMPayAddress })
+    }
+
+    if (sanitized.GMPayId !== initial.GMPayId) {
+      updates.push({ key: 'GMPayId', value: sanitized.GMPayId })
+    }
+
+    if (sanitized.GMPayKey && sanitized.GMPayKey !== initial.GMPayKey) {
+      updates.push({ key: 'GMPayKey', value: sanitized.GMPayKey })
+    }
+
+    if (
+      normalizeJsonForComparison(sanitized.GMPayPayMethods) !==
+      normalizeJsonForComparison(initial.GMPayPayMethods)
+    ) {
+      updates.push({
+        key: 'GMPayPayMethods',
+        value: sanitized.GMPayPayMethods,
+      })
     }
 
     if (sanitized.Price !== initial.Price) {
@@ -877,9 +934,10 @@ export function PaymentSettingsSection({
           />
           <Tabs defaultValue='general' className='min-w-0'>
             <div className='overflow-x-auto pb-1'>
-              <TabsList className='grid min-w-[44rem] grid-cols-6'>
+              <TabsList className='grid min-w-[50rem] grid-cols-7'>
                 <TabsTrigger value='general'>{t('General')}</TabsTrigger>
                 <TabsTrigger value='epay'>Epay</TabsTrigger>
+                <TabsTrigger value='gmpay'>GMPay</TabsTrigger>
                 <TabsTrigger value='stripe'>{t('Stripe')}</TabsTrigger>
                 <TabsTrigger value='creem'>Creem</TabsTrigger>
                 <TabsTrigger value='waffo-pancake'>Waffo Pancake</TabsTrigger>
@@ -1250,6 +1308,174 @@ export function PaymentSettingsSection({
                     )}
                   />
                 </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value='gmpay' className={paymentTabContentClassName}>
+              <div className='space-y-4'>
+                <div>
+                  <h3 className='text-lg font-medium'>{t('GMPay Gateway')}</h3>
+                  <p className='text-muted-foreground text-sm'>
+                    {t(
+                      'Independent GMPay configuration using its Epay-compatible endpoint'
+                    )}
+                  </p>
+                </div>
+
+                <Alert>
+                  <AlertTitle>{t('GMPay callback endpoints')}</AlertTitle>
+                  <AlertDescription className='space-y-1'>
+                    <p>
+                      <code className='text-xs'>
+                        {'<ServerAddress>/api/user/gmpay/notify'}
+                      </code>
+                    </p>
+                    <p>
+                      <code className='text-xs'>
+                        {'<ServerAddress>/api/subscription/gmpay/notify'}
+                      </code>
+                    </p>
+                  </AlertDescription>
+                </Alert>
+
+                <FormField
+                  control={form.control}
+                  name='GMPayAddress'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {t('GMPay Epay-compatible endpoint')}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder='https://pay.example.com/payments/epay/v1/order/create-transaction'
+                          {...field}
+                          onChange={(event) =>
+                            field.onChange(event.target.value)
+                          }
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {t(
+                          'Enter the endpoint base without /submit.php; New API appends it when creating an order.'
+                        )}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className='grid gap-6 md:grid-cols-2'>
+                  <FormField
+                    control={form.control}
+                    name='GMPayId'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('GMPay merchant PID')}</FormLabel>
+                        <FormControl>
+                          <Input
+                            inputMode='numeric'
+                            placeholder='10001'
+                            autoComplete='off'
+                            {...field}
+                            onChange={(event) =>
+                              field.onChange(event.target.value)
+                            }
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {t(
+                            'Use the numeric PID assigned to the GMPay API key.'
+                          )}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name='GMPayKey'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('GMPay secret key')}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type='password'
+                            placeholder={t('Enter new key to update')}
+                            autoComplete='new-password'
+                            {...field}
+                            onChange={(event) =>
+                              field.onChange(event.target.value)
+                            }
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {t('Leave blank unless rotating the secret')}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name='GMPayPayMethods'
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className='mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
+                        <FormLabel>{t('GMPay payment assets')}</FormLabel>
+                        <Button
+                          type='button'
+                          variant='outline'
+                          size='sm'
+                          onClick={() =>
+                            setGMPayPayMethodsVisualMode(
+                              !gmpayPayMethodsVisualMode
+                            )
+                          }
+                          className='w-full sm:w-auto'
+                        >
+                          {gmpayPayMethodsVisualMode ? (
+                            <>
+                              <Code2 className='mr-2 h-3 w-3' />
+                              {t('JSON Editor')}
+                            </>
+                          ) : (
+                            <>
+                              <Eye className='mr-2 h-3 w-3' />
+                              {t('Visual Editor')}
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      <FormControl>
+                        {gmpayPayMethodsVisualMode ? (
+                          <PaymentMethodsVisualEditor
+                            value={field.value}
+                            onChange={field.onChange}
+                          />
+                        ) : (
+                          <Textarea
+                            rows={8}
+                            placeholder='[{"name":"USDT-TRON","type":"usdt.tron","icon":"LuWalletCards"}]'
+                            {...field}
+                            onChange={(event) =>
+                              field.onChange(event.target.value)
+                            }
+                          />
+                        )}
+                      </FormControl>
+                      <FormDescription>
+                        {t(
+                          'Use enabled token.network selectors such as usdt.tron. The gmpay: prefix is added only in client responses.'
+                        )}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </TabsContent>
 
