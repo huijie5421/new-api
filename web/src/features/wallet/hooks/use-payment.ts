@@ -180,7 +180,7 @@ export function usePayment() {
         }
 
         return { kind: 'failed' }
-      } catch (_error) {
+      } catch {
         toast.error(i18next.t('Payment request failed'))
         return { kind: 'failed' }
       } finally {

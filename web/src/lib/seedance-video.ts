@@ -246,7 +246,7 @@ function seedanceReferenceLimitsForModel(modelKey: string) {
 }
 
 function normalizeModelConstraintKey(model: string) {
-  return model.trim().toLowerCase().replace(/\s+/g, ' ')
+  return model.trim().toLowerCase().replaceAll(/\s+/g, ' ')
 }
 
 export function isArkPlanBaseUrl(baseUrl: string) {
@@ -414,11 +414,13 @@ export function seedanceVideoReferenceError(
   for (let index = 0; index < videos.length; index += 1) {
     const video = videos[index]
     const label = seedanceReferenceLabel('video', index)
-    if (video.bytes && video.bytes > SEEDANCE_REFERENCE_LIMITS.videoMaxBytes)
+    if (video.bytes && video.bytes > SEEDANCE_REFERENCE_LIMITS.videoMaxBytes) {
       return `${label} 超过 50MB，请压缩后再上传`
+    }
     if (video.durationMs != null && Number.isFinite(video.durationMs)) {
-      if (video.durationMs < 2000 || video.durationMs > maxDurationMs)
+      if (video.durationMs < 2000 || video.durationMs > maxDurationMs) {
         return `${label} 时长需要在 2-${maxDurationSeconds} 秒之间`
+      }
       totalDurationMs += video.durationMs
     } else if (requireKnownDuration) {
       return `${label} 时长读取失败，请重新选择视频`
@@ -429,18 +431,22 @@ export function seedanceVideoReferenceError(
         video.width > 6000 ||
         video.height < 300 ||
         video.height > 6000
-      )
+      ) {
         return `${label} 宽高需要在 300-6000px 之间`
+      }
       const ratio = video.width / video.height
-      if (ratio < 0.4 || ratio > 2.5)
+      if (ratio < 0.4 || ratio > 2.5) {
         return `${label} 宽高比需要在 0.4-2.5 之间`
+      }
       const pixels = video.width * video.height
-      if (pixels < 640 * 640 || pixels > 2206 * 946)
+      if (pixels < 640 * 640 || pixels > 2206 * 946) {
         return `${label} 像素总量不符合 Seedance 要求，请转成 480p/720p/1080p 后再上传`
+      }
     }
   }
-  if (totalDurationMs > maxDurationMs)
+  if (totalDurationMs > maxDurationMs) {
     return `Seedance 参考视频总时长不能超过 ${maxDurationSeconds} 秒`
+  }
   return ''
 }
 
