@@ -287,6 +287,12 @@ func migrateDB() error {
 		&CustomOAuthProvider{},
 		&UserOAuthBinding{},
 		&PerfMetric{},
+		&ChannelMonitor{},
+		&ChannelMonitorHistory{},
+		&ChannelMonitorDailyRollup{},
+		&ChannelMonitorRequestTemplate{},
+		&ChannelMonitorAggregationWatermark{},
+		&AffiliateRebateRecord{},
 		&SystemInstance{},
 		&SystemTask{},
 		&SystemTaskLock{},
@@ -310,6 +316,9 @@ func migrateDB() error {
 		if err := DB.AutoMigrate(&SubscriptionPlan{}); err != nil {
 			return err
 		}
+	}
+	if err := SeedDefaultChannelMonitorTemplates(); err != nil {
+		common.SysLog("failed to seed default channel monitor templates: " + err.Error())
 	}
 	return nil
 }
@@ -350,6 +359,12 @@ func migrateDBFast() error {
 		{&CustomOAuthProvider{}, "CustomOAuthProvider"},
 		{&UserOAuthBinding{}, "UserOAuthBinding"},
 		{&PerfMetric{}, "PerfMetric"},
+		{&AffiliateRebateRecord{}, "AffiliateRebateRecord"},
+		{&ChannelMonitor{}, "ChannelMonitor"},
+		{&ChannelMonitorHistory{}, "ChannelMonitorHistory"},
+		{&ChannelMonitorDailyRollup{}, "ChannelMonitorDailyRollup"},
+		{&ChannelMonitorRequestTemplate{}, "ChannelMonitorRequestTemplate"},
+		{&ChannelMonitorAggregationWatermark{}, "ChannelMonitorAggregationWatermark"},
 		{&SystemInstance{}, "SystemInstance"},
 		{&SystemTask{}, "SystemTask"},
 		{&SystemTaskLock{}, "SystemTaskLock"},
@@ -391,6 +406,9 @@ func migrateDBFast() error {
 		if err := DB.AutoMigrate(&SubscriptionPlan{}); err != nil {
 			return err
 		}
+	}
+	if err := SeedDefaultChannelMonitorTemplates(); err != nil {
+		common.SysLog("failed to seed default channel monitor templates: " + err.Error())
 	}
 	common.SysLog("database migrated")
 	return nil

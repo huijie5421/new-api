@@ -1,0 +1,366 @@
+package model
+
+import (
+	"errors"
+	"time"
+
+	"gorm.io/gorm"
+)
+
+// ChannelMonitor represents a channel monitoring configuration
+type ChannelMonitor struct {
+	ID                  int       `json:"id" gorm:"primarykey"`
+	Name                string    `json:"name" gorm:"type:varchar(255);not null;index"`
+	Provider            string    `json:"provider" gorm:"type:varchar(50);not null;index"` // openai, anthropic, gemini
+	APIMode             string    `json:"api_mode" gorm:"type:varchar(50);not null"`       // chat_completions, responses (OpenAI-specific)
+	Endpoint            string    `json:"endpoint" gorm:"type:varchar(512);not null"`
+	APIKey              string    `json:"api_key" gorm:"type:text;not null"` // Encrypted
+	PrimaryModel        string    `json:"primary_model" gorm:"type:varchar(255);not null"`
+	ExtraModels         string    `json:"extra_models" gorm:"type:text"` // JSON array of additional models
+	Group               string    `json:"group" gorm:"type:varchar(64);default:'default';index"`
+	IntervalSeconds     int       `json:"interval_seconds" gorm:"not null;default:300"` // Default 5 minutes
+	TimeoutSeconds      int       `json:"timeout_seconds" gorm:"not null;default:10"`
+	Enabled             bool      `json:"enabled" gorm:"not null;default:true;index"`
+	Headers             string    `json:"headers" gorm:"type:text"`                       // JSON object of custom headers
+	Body                string    `json:"body" gorm:"type:text"`                          // JSON object, full request body snapshot
+	BodyMode            string    `json:"body_mode" gorm:"type:varchar(20)"`              // "auto", "minimal", "custom"
+	CCSpoofEnabled      bool      `json:"cc_spoof_enabled" gorm:"not null;default:false"` // 仅 anthropic：注入全局 Claude Code 伪装(头+system+metadata)
+	TemplateID          *int      `json:"template_id" gorm:"index"`                       // Optional reference to template
+	TemplateSnapshot    string    `json:"template_snapshot" gorm:"type:text"`             // JSON, copy of template at apply time
+	CreatedAt           time.Time `json:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at"`
+	LastCheckAt         *int64    `json:"last_check_at" gorm:"index"`          // Unix timestamp
+	LastStatus          string    `json:"last_status" gorm:"type:varchar(20)"` // "success", "failure", "unknown"
+	LastLatencyMs       *int      `json:"last_latency_ms"`
+	AvailabilityRate7d  *float64  `json:"availability_rate_7d"`  // 7-day rolling availability (0-1)
+	AvailabilityRate15d *float64  `json:"availability_rate_15d"` // 15-day rolling availability (0-1)
+	AvailabilityRate30d *float64  `json:"availability_rate_30d"` // 30-day rolling availability (0-1)
+}
+
+// ChannelMonitorHistory stores individual check results
+type ChannelMonitorHistory struct {
+	ID         int64     `json:"id" gorm:"primarykey"`
+	MonitorID  int       `json:"monitor_id" gorm:"not null;index:idx_monitor_time"`
+	Model      string    `json:"model" gorm:"type:varchar(255);not null;index:idx_model_time"`
+	Status     string    `json:"status" gorm:"type:varchar(20);not null"` // "success", "failure"
+	LatencyMs  int       `json:"latency_ms"`
+	ErrorMsg   string    `json:"error_msg" gorm:"type:text"`
+	CheckedAt  int64     `json:"checked_at" gorm:"not null;index:idx_monitor_time;index:idx_model_time"` // Unix timestamp
+	ResponseOK bool      `json:"response_ok" gorm:"not null"`                                            // Whether response validation passed
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// ChannelMonitorDailyRollup stores aggregated daily statistics
+type ChannelMonitorDailyRollup struct {
+	ID               int64     `json:"id" gorm:"primarykey"`
+	MonitorID        int       `json:"monitor_id" gorm:"not null;uniqueIndex:idx_monitor_model_date"`
+	Model            string    `json:"model" gorm:"type:varchar(255);not null;uniqueIndex:idx_monitor_model_date"`
+	BucketDate       string    `json:"bucket_date" gorm:"type:varchar(10);not null;uniqueIndex:idx_monitor_model_date;index"` // YYYY-MM-DD
+	TotalChecks      int       `json:"total_checks" gorm:"not null;default:0"`
+	SuccessChecks    int       `json:"success_checks" gorm:"not null;default:0"`
+	FailureChecks    int       `json:"failure_checks" gorm:"not null;default:0"`
+	AvgLatencyMs     int       `json:"avg_latency_ms" gorm:"not null;default:0"`
+	MinLatencyMs     int       `json:"min_latency_ms"`
+	MaxLatencyMs     int       `json:"max_latency_ms"`
+	P50LatencyMs     int       `json:"p50_latency_ms"`
+	P95LatencyMs     int       `json:"p95_latency_ms"`
+	P99LatencyMs     int       `json:"p99_latency_ms"`
+	AvailabilityRate float64   `json:"availability_rate" gorm:"not null;default:0"` // success_checks / total_checks
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+// ChannelMonitorRequestTemplate stores reusable request templates by provider
+type ChannelMonitorRequestTemplate struct {
+	ID          int       `json:"id" gorm:"primarykey"`
+	Provider    string    `json:"provider" gorm:"type:varchar(50);not null;uniqueIndex:idx_provider_name"`
+	Name        string    `json:"name" gorm:"type:varchar(255);not null;uniqueIndex:idx_provider_name"`
+	APIMode     string    `json:"api_mode" gorm:"type:varchar(50);not null"`
+	BodyMode    string    `json:"body_mode" gorm:"type:varchar(20);not null"` // "auto", "minimal", "custom"
+	Headers     string    `json:"headers" gorm:"type:text"`                   // JSON object
+	Body        string    `json:"body" gorm:"type:text"`                      // JSON object
+	Description string    `json:"description" gorm:"type:text"`
+	IsDefault   bool      `json:"is_default" gorm:"not null;default:false;index"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// ChannelMonitorAggregationWatermark tracks the last aggregated timestamp
+type ChannelMonitorAggregationWatermark struct {
+	ID               int       `json:"id" gorm:"primarykey"`
+	LastAggregatedAt int64     `json:"last_aggregated_at" gorm:"not null"` // Unix timestamp
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+func GetChannelMonitor(id int) (*ChannelMonitor, error) {
+	monitor := &ChannelMonitor{}
+	err := DB.First(monitor, id).Error
+	return monitor, err
+}
+
+func GetAllChannelMonitors(enabled *bool) ([]*ChannelMonitor, error) {
+	var monitors []*ChannelMonitor
+	query := DB.Order("id DESC")
+	if enabled != nil {
+		query = query.Where("enabled = ?", *enabled)
+	}
+	err := query.Find(&monitors).Error
+	return monitors, err
+}
+
+func CreateChannelMonitor(monitor *ChannelMonitor) error {
+	return DB.Create(monitor).Error
+}
+
+func UpdateChannelMonitor(monitor *ChannelMonitor) error {
+	return DB.Save(monitor).Error
+}
+
+func DeleteChannelMonitor(id int) error {
+	return DB.Transaction(func(tx *gorm.DB) error {
+		// Delete monitor
+		if err := tx.Delete(&ChannelMonitor{}, id).Error; err != nil {
+			return err
+		}
+		// Delete related history
+		if err := tx.Where("monitor_id = ?", id).Delete(&ChannelMonitorHistory{}).Error; err != nil {
+			return err
+		}
+		// Delete related rollups
+		if err := tx.Where("monitor_id = ?", id).Delete(&ChannelMonitorDailyRollup{}).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func GetChannelMonitorHistory(monitorID int, limit int, offset int) ([]*ChannelMonitorHistory, int64, error) {
+	var histories []*ChannelMonitorHistory
+	var total int64
+
+	query := DB.Where("monitor_id = ?", monitorID).Order("checked_at DESC")
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if err := query.Limit(limit).Offset(offset).Find(&histories).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return histories, total, nil
+}
+
+// GetRecentHistoryForModel returns the most recent check results for a specific
+// monitor+model, ordered ascending by checked_at, limited to `limit` rows.
+func GetRecentHistoryForModel(monitorID int, model string, limit int) ([]*ChannelMonitorHistory, error) {
+	var histories []*ChannelMonitorHistory
+	// Fetch the newest `limit` rows (desc), then reverse to ascending so the
+	// timeline shows the most recent window oldest->newest.
+	err := DB.Where("monitor_id = ? AND model = ?", monitorID, model).
+		Order("checked_at desc").
+		Limit(limit).
+		Find(&histories).Error
+	if err != nil {
+		return nil, err
+	}
+	for i, j := 0, len(histories)-1; i < j; i, j = i+1, j-1 {
+		histories[i], histories[j] = histories[j], histories[i]
+	}
+	return histories, nil
+}
+
+func GetChannelMonitorTemplate(id int) (*ChannelMonitorRequestTemplate, error) {
+	template := &ChannelMonitorRequestTemplate{}
+	err := DB.First(template, id).Error
+	return template, err
+}
+
+func GetAllChannelMonitorTemplates(provider string) ([]*ChannelMonitorRequestTemplate, error) {
+	var templates []*ChannelMonitorRequestTemplate
+	query := DB.Order("provider, name")
+	if provider != "" {
+		query = query.Where("provider = ?", provider)
+	}
+	err := query.Find(&templates).Error
+	return templates, err
+}
+
+func CreateChannelMonitorTemplate(template *ChannelMonitorRequestTemplate) error {
+	return DB.Create(template).Error
+}
+
+func UpdateChannelMonitorTemplate(template *ChannelMonitorRequestTemplate) error {
+	return DB.Save(template).Error
+}
+
+func DeleteChannelMonitorTemplate(id int) error {
+	return DB.Transaction(func(tx *gorm.DB) error {
+		// Clear template_id references in monitors
+		if err := tx.Model(&ChannelMonitor{}).Where("template_id = ?", id).Update("template_id", nil).Error; err != nil {
+			return err
+		}
+		// Delete template
+		return tx.Delete(&ChannelMonitorRequestTemplate{}, id).Error
+	})
+}
+
+func GetMonitorsByTemplateID(templateID int) ([]*ChannelMonitor, error) {
+	var monitors []*ChannelMonitor
+	err := DB.Where("template_id = ?", templateID).Find(&monitors).Error
+	return monitors, err
+}
+
+func GetAggregationWatermark() (*ChannelMonitorAggregationWatermark, error) {
+	watermark := &ChannelMonitorAggregationWatermark{}
+	err := DB.First(watermark).Error
+	if err == gorm.ErrRecordNotFound {
+		// Create initial watermark (30 days ago)
+		watermark.LastAggregatedAt = time.Now().AddDate(0, 0, -30).Unix()
+		if err := DB.Create(watermark).Error; err != nil {
+			return nil, err
+		}
+		return watermark, nil
+	}
+	return watermark, err
+}
+
+func UpdateAggregationWatermark(timestamp int64) error {
+	watermark := &ChannelMonitorAggregationWatermark{}
+	if err := DB.First(watermark).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			watermark.LastAggregatedAt = timestamp
+			return DB.Create(watermark).Error
+		}
+		return err
+	}
+	watermark.LastAggregatedAt = timestamp
+	return DB.Save(watermark).Error
+}
+
+// GetChannelMonitorRollups retrieves daily rollup data for a monitor within a time window
+func GetChannelMonitorRollups(monitorID int, model string, startDate string, endDate string) ([]*ChannelMonitorDailyRollup, error) {
+	var rollups []*ChannelMonitorDailyRollup
+	query := DB.Where("monitor_id = ? AND bucket_date >= ? AND bucket_date <= ?", monitorID, startDate, endDate)
+	if model != "" {
+		query = query.Where("model = ?", model)
+	}
+	err := query.Order("bucket_date ASC").Find(&rollups).Error
+	return rollups, err
+}
+
+// MonitorModelWindowStats holds availability + latency aggregates computed
+// directly from raw history rows for a monitor+model over a time window.
+type MonitorModelWindowStats struct {
+	TotalChecks   int
+	SuccessChecks int
+	AvgLatencyMs  int
+}
+
+// GetMonitorModelWindowStats computes availability/latency for a monitor+model
+// from history rows with checked_at >= since. Unlike daily rollups this
+// includes the current (incomplete) day, so freshly-created monitors and
+// today's checks are reflected immediately. History is retained for 30 days,
+// which covers the 7/15/30-day windows.
+func GetMonitorModelWindowStats(monitorID int, modelName string, since int64) (*MonitorModelWindowStats, error) {
+	var histories []*ChannelMonitorHistory
+	err := DB.Select("status", "latency_ms").
+		Where("monitor_id = ? AND model = ? AND checked_at >= ?", monitorID, modelName, since).
+		Find(&histories).Error
+	if err != nil {
+		return nil, err
+	}
+
+	stats := &MonitorModelWindowStats{}
+	totalLatency := 0
+	latencyCount := 0
+	for _, h := range histories {
+		stats.TotalChecks++
+		if h.Status == "success" {
+			stats.SuccessChecks++
+		}
+		if h.LatencyMs > 0 {
+			totalLatency += h.LatencyMs
+			latencyCount++
+		}
+	}
+	if latencyCount > 0 {
+		stats.AvgLatencyMs = totalLatency / latencyCount
+	}
+	return stats, nil
+}
+
+// SeedDefaultChannelMonitorTemplates inserts the built-in default request templates
+// (one per provider/API mode) if they do not already exist. Idempotent: safe to run
+// on every startup. Uses literal strings (not service consts) to avoid an import cycle.
+func SeedDefaultChannelMonitorTemplates() error {
+	defaults := []ChannelMonitorRequestTemplate{
+		{
+			Provider:    "openai",
+			Name:        "OpenAI Chat Completions (Default)",
+			APIMode:     "chat_completions",
+			BodyMode:    "auto",
+			Headers:     "{}",
+			Body:        `{"max_tokens":100,"temperature":0.7}`,
+			Description: "Default health-check template for OpenAI Chat Completions API.",
+			IsDefault:   true,
+		},
+		{
+			Provider:    "openai",
+			Name:        "OpenAI Responses (Default)",
+			APIMode:     "responses",
+			BodyMode:    "auto",
+			Headers:     "{}",
+			Body:        `{"max_tokens":100,"temperature":0.7}`,
+			Description: "Default health-check template for OpenAI Responses API.",
+			IsDefault:   true,
+		},
+		{
+			Provider:    "anthropic",
+			Name:        "Anthropic Messages (Default)",
+			APIMode:     "",
+			BodyMode:    "auto",
+			Headers:     "{}",
+			Body:        `{"max_tokens":100,"temperature":0.7}`,
+			Description: "Default health-check template for Anthropic Messages API.",
+			IsDefault:   true,
+		},
+		{
+			Provider:    "gemini",
+			Name:        "Gemini generateContent (Default)",
+			APIMode:     "",
+			BodyMode:    "auto",
+			Headers:     "{}",
+			Body:        `{"generationConfig":{"maxOutputTokens":100,"temperature":0.7}}`,
+			Description: "Default health-check template for Gemini generateContent API.",
+			IsDefault:   true,
+		},
+		{
+			Provider: "anthropic",
+			Name:     "Claude Code 伪装",
+			APIMode:  "",
+			BodyMode: "auto",
+			// 头：UA + X-App + anthropic-beta + anthropic-version + 直连标记，
+			// 与 setting/operation_setting/claude_code_spoof_setting.go 的全局默认值对齐。
+			Headers: `{"User-Agent":"claude-cli/2.1.161 (external, cli)","X-App":"cli","anthropic-version":"2023-06-01","anthropic-beta":"claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2025-05-14,prompt-caching-scope-2026-01-05,effort-2025-11-24,context-management-2025-06-27,extended-cache-ttl-2025-04-11","Anthropic-Dangerous-Direct-Browser-Access":"true"}`,
+			// body：system 数组首项 + metadata.user_id，被 checker 合并进默认请求体。
+			Body:        `{"max_tokens":100,"system":[{"type":"text","text":"You are Claude Code, Anthropic's official CLI for Claude."}],"metadata":{"user_id":"user_0000000000000000000000000000000000000000000000000000000000000000_account_00000000-0000-0000-0000-000000000000_session_00000000-0000-0000-0000-000000000000"}}`,
+			Description: "完整模拟官方 Claude Code CLI：UA + anthropic-beta + system + metadata.user_id 全部对齐，绕过 Anthropic 上游 'Claude Code only' 限制（如 Max 套餐）。也可改用线路监控的「Claude Code 伪装」开关引用全局配置。",
+			IsDefault:   true,
+		},
+	}
+
+	for i := range defaults {
+		tpl := defaults[i]
+		var existing ChannelMonitorRequestTemplate
+		err := DB.Where("provider = ? AND name = ?", tpl.Provider, tpl.Name).First(&existing).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			if err := DB.Create(&tpl).Error; err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		}
+	}
+	return nil
+}

@@ -105,6 +105,12 @@ func main() {
 	// endpoint inference can read cached route settings on first request.
 	model.GetPricing()
 
+	// Channel detection V1: restore active probes and daily retention tasks.
+	if err := service.GetChannelMonitorRunner().Start(); err != nil {
+		common.SysError("failed to start channel monitor runner: " + err.Error())
+	}
+	service.StartChannelMonitorMaintenanceTask()
+
 	// 热更新配置
 	go model.SyncOptions(common.SyncFrequency)
 
