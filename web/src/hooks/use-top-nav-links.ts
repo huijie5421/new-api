@@ -97,8 +97,20 @@ export function useTopNavLinks(): TopNavLink[] {
 
   // About
   if (modules?.about !== false) {
-    links.push({ title: t('About'), href: '/about' })
+    links.push({
+      title: t('Contact Us'),
+      href: 'https://api.aizzz.xyz/about',
+      external: true,
+    })
   }
+
+  // Retained custom tabs. Keep these as external links so a slim build does
+  // not need to migrate or recreate the original content pages.
+  links.push({
+    title: '轮椅配置教程',
+    href: 'https://api.aizzz.xyz/setup-guide',
+    external: true,
+  })
 
   return links
 }
