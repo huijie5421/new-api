@@ -37,9 +37,13 @@ type Channel struct {
 	Balance            float64 `json:"balance"` // in USD
 	BalanceUpdatedTime int64   `json:"balance_updated_time" gorm:"bigint"`
 	Models             string  `json:"models"`
-	Group              string  `json:"group" gorm:"type:varchar(64);default:'default'"`
-	UsedQuota          int64   `json:"used_quota" gorm:"bigint;default:0"`
-	ModelMapping       *string `json:"model_mapping" gorm:"type:text"`
+	// Keep the historical 255-character width. Existing installations may use
+	// comma-separated group lists (including custom labels) longer than the
+	// upstream 64-character default; narrowing this column during AutoMigrate
+	// would truncate live channel configuration and abort startup.
+	Group        string  `json:"group" gorm:"type:varchar(255);default:'default'"`
+	UsedQuota    int64   `json:"used_quota" gorm:"bigint;default:0"`
+	ModelMapping *string `json:"model_mapping" gorm:"type:text"`
 	//MaxInputTokens     *int    `json:"max_input_tokens" gorm:"default:0"`
 	StatusCodeMapping *string `json:"status_code_mapping" gorm:"type:varchar(1024);default:''"`
 	Priority          *int64  `json:"priority" gorm:"bigint;default:0"`

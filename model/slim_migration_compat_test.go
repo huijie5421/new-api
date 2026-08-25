@@ -1,13 +1,23 @@
 package model
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
+
+func TestChannelGroupKeepsLegacyWidth(t *testing.T) {
+	parsed, err := schema.Parse(&Channel{}, &sync.Map{}, schema.NamingStrategy{})
+	require.NoError(t, err)
+	group := parsed.FieldsByDBName["group"]
+	require.NotNil(t, group)
+	require.Equal(t, "varchar(255)", group.TagSettings["TYPE"])
+}
 
 // This fixture models a running instance being upgraded in place: existing
 // options are written before startup migration and must remain byte-for-byte
