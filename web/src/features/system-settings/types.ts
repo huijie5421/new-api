@@ -290,6 +290,10 @@ export type BillingSettings = {
   PayAddress: string
   EpayId: string
   EpayKey: string
+  GMPayAddress: string
+  GMPayId: string
+  GMPayKey: string
+  GMPayPayMethods: string
   Price: number
   MinTopUp: number
   CustomCallbackAddress: string
