@@ -78,7 +78,8 @@
     "vaul": "^1.1.2",
     "yace": "^1.1.0",
     "zod": "^4.4.3",
-    "zustand": "^5.0.14"
+    "zustand": "^5.0.14",
+    "fflate": "^0.8.3"
   },
   "devDependencies": {
     "@rsbuild/core": "^2.1.4",
