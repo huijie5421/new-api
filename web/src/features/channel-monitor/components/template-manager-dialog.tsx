@@ -49,6 +49,7 @@ const PROVIDERS: { value: Provider; label: string }[] = [
   { value: 'openai', label: 'OpenAI' },
   { value: 'anthropic', label: 'Anthropic' },
   { value: 'gemini', label: 'Gemini' },
+  { value: 'grok', label: 'Grok' },
 ]
 
 const BODY_MODE_BADGE: Record<string, string> = {
@@ -88,7 +89,8 @@ function TemplateCard({
 }) {
   const { t } = useTranslation()
   const headerCount = countHeaders(template.headers)
-  const isOpenAI = template.provider === 'openai'
+  const isOpenAI =
+    template.provider === 'openai' || template.provider === 'grok'
 
   return (
     <div className='border-border bg-card hover:border-border/80 space-y-3 rounded-xl border p-4 transition-colors'>

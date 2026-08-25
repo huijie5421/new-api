@@ -88,8 +88,7 @@ export default function ChannelStatusView() {
       try {
         const data = await channelStatusAPI.getAll()
         setMonitors(data)
-      } catch (error) {
-        console.error('Failed to load channel status:', error)
+      } catch {
         toast.error(t('Failed to load channel status'))
       } finally {
         setLoading(false)
@@ -149,8 +148,7 @@ export default function ChannelStatusView() {
     try {
       const data = await channelStatusAPI.getStatus(monitor.id)
       setDetail(data)
-    } catch (error) {
-      console.error('Failed to load channel detail:', error)
+    } catch {
       setDetail(null)
     } finally {
       setDetailLoading(false)

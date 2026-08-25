@@ -75,6 +75,7 @@ const PROVIDER_FILTERS: { value: string; label: string }[] = [
   { value: 'openai', label: 'OpenAI' },
   { value: 'anthropic', label: 'Anthropic' },
   { value: 'gemini', label: 'Gemini' },
+  { value: 'grok', label: 'Grok' },
 ]
 
 const ENABLED_FILTERS: { value: string; label: string }[] = [
@@ -87,12 +88,14 @@ const PROVIDER_BADGE: Record<string, string> = {
   openai: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
   anthropic: 'bg-orange-500/15 text-orange-600 dark:text-orange-400',
   gemini: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
+  grok: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-300',
 }
 
 const PROVIDER_LABEL: Record<string, string> = {
   openai: 'OpenAI',
   anthropic: 'Anthropic',
   gemini: 'Gemini',
+  grok: 'Grok',
 }
 
 function formatAvailability(rate: number | null): string {

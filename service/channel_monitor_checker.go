@@ -378,7 +378,7 @@ func (a *GeminiAdapter) ValidateResponse(statusCode int, responseBody []byte, ch
 // GetProviderAdapter returns the appropriate adapter for a provider/api_mode
 func GetProviderAdapter(provider string, apiMode string) (ProviderAdapter, error) {
 	switch provider {
-	case ProviderOpenAI:
+	case ProviderOpenAI, ProviderGrok:
 		if apiMode == APIModeResponses {
 			return &OpenAIResponsesAdapter{}, nil
 		}

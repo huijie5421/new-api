@@ -24,6 +24,7 @@ export const PROVIDER_GRADIENTS: Record<string, string> = {
   openai: 'from-emerald-500 to-teal-600',
   anthropic: 'from-orange-500 to-amber-600',
   gemini: 'from-blue-500 to-indigo-600',
+  grok: 'from-zinc-600 to-neutral-900',
   azure: 'from-sky-500 to-cyan-600',
   default: 'from-slate-500 to-slate-700',
 }

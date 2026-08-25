@@ -417,7 +417,9 @@ func SetApiRouter(router *gin.Engine) {
 		channelMonitorAdminRoute := apiRouter.Group("/admin/channel-monitors")
 		channelMonitorAdminRoute.Use(middleware.AdminAuth())
 		{
+			channelMonitorAdminRoute.GET("", controller.GetAllChannelMonitors)
 			channelMonitorAdminRoute.GET("/", controller.GetAllChannelMonitors)
+			channelMonitorAdminRoute.POST("", controller.CreateChannelMonitor)
 			channelMonitorAdminRoute.POST("/", controller.CreateChannelMonitor)
 			channelMonitorAdminRoute.GET("/templates", controller.GetAllChannelMonitorTemplates)
 			channelMonitorAdminRoute.GET("/templates/:id", controller.GetChannelMonitorTemplate)
@@ -434,6 +436,7 @@ func SetApiRouter(router *gin.Engine) {
 		}
 		channelMonitorUserRoute := apiRouter.Group("/channel-monitors")
 		{
+			channelMonitorUserRoute.GET("", controller.GetChannelMonitorStatusList)
 			channelMonitorUserRoute.GET("/", controller.GetChannelMonitorStatusList)
 			channelMonitorUserRoute.GET("/:id", controller.GetChannelMonitorStatus)
 		}

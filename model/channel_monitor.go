@@ -11,7 +11,7 @@ import (
 type ChannelMonitor struct {
 	ID                  int       `json:"id" gorm:"primarykey"`
 	Name                string    `json:"name" gorm:"type:varchar(255);not null;index"`
-	Provider            string    `json:"provider" gorm:"type:varchar(50);not null;index"` // openai, anthropic, gemini
+	Provider            string    `json:"provider" gorm:"type:varchar(50);not null;index"` // openai, anthropic, gemini, grok
 	APIMode             string    `json:"api_mode" gorm:"type:varchar(50);not null"`       // chat_completions, responses (OpenAI-specific)
 	Endpoint            string    `json:"endpoint" gorm:"type:varchar(512);not null"`
 	APIKey              string    `json:"api_key" gorm:"type:text;not null"` // Encrypted

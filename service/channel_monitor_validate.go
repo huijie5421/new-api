@@ -9,14 +9,14 @@ import (
 // ValidateMonitorConfig validates monitor configuration
 func ValidateMonitorConfig(provider string, apiMode string, endpoint string, apiKey string, primaryModel string, intervalSeconds int, timeoutSeconds int) error {
 	// Validate provider
-	if provider != ProviderOpenAI && provider != ProviderAnthropic && provider != ProviderGemini {
-		return fmt.Errorf("invalid provider: %s (must be openai, anthropic, or gemini)", provider)
+	if provider != ProviderOpenAI && provider != ProviderAnthropic && provider != ProviderGemini && provider != ProviderGrok {
+		return fmt.Errorf("invalid provider: %s (must be openai, anthropic, gemini, or grok)", provider)
 	}
 
 	// Validate API mode for OpenAI
-	if provider == ProviderOpenAI {
+	if provider == ProviderOpenAI || provider == ProviderGrok {
 		if apiMode != APIModeChat && apiMode != APIModeResponses {
-			return fmt.Errorf("invalid api_mode for OpenAI: %s (must be chat_completions or responses)", apiMode)
+			return fmt.Errorf("invalid api_mode for %s: %s (must be chat_completions or responses)", provider, apiMode)
 		}
 	}
 
@@ -71,7 +71,7 @@ func ValidateMonitorConfig(provider string, apiMode string, endpoint string, api
 // ValidateTemplateConfig validates template configuration
 func ValidateTemplateConfig(provider string, name string, bodyMode string) error {
 	// Validate provider
-	if provider != ProviderOpenAI && provider != ProviderAnthropic && provider != ProviderGemini {
+	if provider != ProviderOpenAI && provider != ProviderAnthropic && provider != ProviderGemini && provider != ProviderGrok {
 		return fmt.Errorf("invalid provider: %s", provider)
 	}
 

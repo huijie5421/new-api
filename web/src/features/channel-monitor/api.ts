@@ -8,7 +8,7 @@ import type {
   TemplateApplyRequest,
 } from './types'
 
-const API_BASE = '/api/admin/channel-monitors'
+const API_BASE = '/api/admin/channel-monitors/'
 
 export const channelMonitorAPI = {
   // Monitors
@@ -23,7 +23,7 @@ export const channelMonitorAPI = {
 
   getOne: async (id: number) => {
     const response = await api.get<{ success: boolean; data: ChannelMonitor }>(
-      `${API_BASE}/${id}`
+      `${API_BASE}${id}`
     )
     return response.data.data
   },
@@ -38,21 +38,21 @@ export const channelMonitorAPI = {
 
   update: async (id: number, monitor: Partial<ChannelMonitor>) => {
     const response = await api.put<{ success: boolean; data: ChannelMonitor }>(
-      `${API_BASE}/${id}`,
+      `${API_BASE}${id}`,
       monitor
     )
     return response.data.data
   },
 
   delete: async (id: number) => {
-    await api.delete(`${API_BASE}/${id}`)
+    await api.delete(`${API_BASE}${id}`)
   },
 
   runNow: async (id: number) => {
     const response = await api.post<{
       success: boolean
       data: MonitorRunResult
-    }>(`${API_BASE}/${id}/run`)
+    }>(`${API_BASE}${id}/run`)
     return response.data.data
   },
 
@@ -62,7 +62,7 @@ export const channelMonitorAPI = {
       data: ChannelMonitorHistory[]
       total: number
       page: number
-    }>(`${API_BASE}/${id}/history`, {
+    }>(`${API_BASE}${id}/history`, {
       params: { page, page_size: pageSize },
     })
     return response.data
@@ -74,7 +74,7 @@ export const channelMonitorAPI = {
     const response = await api.get<{
       success: boolean
       data: ChannelMonitorTemplate[]
-    }>(`${API_BASE}/templates`, { params })
+    }>(`${API_BASE}templates`, { params })
     return response.data.data
   },
 
@@ -82,7 +82,7 @@ export const channelMonitorAPI = {
     const response = await api.get<{
       success: boolean
       data: ChannelMonitorTemplate
-    }>(`${API_BASE}/templates/${id}`)
+    }>(`${API_BASE}templates/${id}`)
     return response.data.data
   },
 
@@ -90,7 +90,7 @@ export const channelMonitorAPI = {
     const response = await api.post<{
       success: boolean
       data: ChannelMonitorTemplate
-    }>(`${API_BASE}/templates`, template)
+    }>(`${API_BASE}templates`, template)
     return response.data.data
   },
 
@@ -101,23 +101,23 @@ export const channelMonitorAPI = {
     const response = await api.put<{
       success: boolean
       data: ChannelMonitorTemplate
-    }>(`${API_BASE}/templates/${id}`, template)
+    }>(`${API_BASE}templates/${id}`, template)
     return response.data.data
   },
 
   deleteTemplate: async (id: number) => {
-    await api.delete(`${API_BASE}/templates/${id}`)
+    await api.delete(`${API_BASE}templates/${id}`)
   },
 
   getTemplateMonitors: async (id: number) => {
     const response = await api.get<{
       success: boolean
       data: ChannelMonitor[]
-    }>(`${API_BASE}/templates/${id}/monitors`)
+    }>(`${API_BASE}templates/${id}/monitors`)
     return response.data.data
   },
 
   applyTemplate: async (request: TemplateApplyRequest) => {
-    await api.post(`${API_BASE}/templates/apply`, request)
+    await api.post(`${API_BASE}templates/apply`, request)
   },
 }

@@ -1,3 +1,5 @@
+import { useLocation } from '@tanstack/react-router'
+
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -33,21 +35,27 @@ type AuthenticatedLayoutProps = {
 
 export function AuthenticatedLayout(props: AuthenticatedLayoutProps) {
   const defaultOpen = getCookie('sidebar_state') !== 'false'
+  const location = useLocation()
+  const isAigcWorkshop =
+    location.pathname === '/image' || location.pathname.startsWith('/image/')
 
   return (
     <LayoutProvider>
       <SearchProvider>
         <SidebarProvider defaultOpen={defaultOpen} className='flex-col'>
           <SkipToMain />
-          <AppHeader />
+          {!isAigcWorkshop && <AppHeader />}
           <div className='flex min-h-0 w-full flex-1'>
-            <AppSidebar />
+            {!isAigcWorkshop && <AppSidebar />}
             <SidebarInset
               className={cn(
                 '@container/content',
-                'h-[calc(100svh-var(--app-header-height,0px))]',
+                isAigcWorkshop
+                  ? 'h-[100svh] w-full'
+                  : 'h-[calc(100svh-var(--app-header-height,0px))]',
                 'min-h-0 overflow-hidden',
-                'peer-data-[variant=inset]:h-[calc(100svh-var(--app-header-height,0px)-(var(--spacing)*4))]'
+                !isAigcWorkshop &&
+                  'peer-data-[variant=inset]:h-[calc(100svh-var(--app-header-height,0px)-(var(--spacing)*4))]'
               )}
             >
               {props.children ?? <AnimatedOutlet />}

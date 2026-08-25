@@ -53,6 +53,14 @@ export function StatusCard({ monitor, timeWindow, onSelect }: StatusCardProps) {
   const color = availabilityHsl(availability)
   const isUp = monitor.last_status === 'success'
   const isDown = monitor.last_status === 'failure'
+  const providerLabels: Record<string, string> = {
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+    gemini: 'Gemini',
+    grok: 'Grok',
+  }
+  const providerName =
+    providerLabels[monitor.provider] ?? monitor.provider ?? t('Unknown')
 
   return (
     <Card
@@ -78,7 +86,7 @@ export function StatusCard({ monitor, timeWindow, onSelect }: StatusCardProps) {
             </h3>
             <div className='mt-1 flex flex-wrap items-center gap-1.5'>
               <Badge variant='secondary' className='capitalize'>
-                {monitor.provider || t('Unknown')}
+                {providerName}
               </Badge>
               <span
                 className='text-muted-foreground max-w-[10rem] truncate font-mono text-[11px]'

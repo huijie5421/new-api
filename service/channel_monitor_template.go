@@ -61,7 +61,7 @@ func BuildRequestBodyFromMode(provider string, bodyMode string, customBody strin
 	var body map[string]interface{}
 
 	switch provider {
-	case ProviderOpenAI:
+	case ProviderOpenAI, ProviderGrok:
 		if bodyMode == BodyModeMinimal {
 			body = map[string]interface{}{
 				"max_tokens": 100,

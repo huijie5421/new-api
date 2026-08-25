@@ -63,6 +63,7 @@ const PROVIDERS: { value: Provider; label: string }[] = [
   { value: 'openai', label: 'OpenAI' },
   { value: 'anthropic', label: 'Anthropic' },
   { value: 'gemini', label: 'Gemini' },
+  { value: 'grok', label: 'Grok' },
 ]
 
 const API_MODES: { value: APIMode; label: string }[] = [
@@ -120,7 +121,7 @@ export function TemplateFormDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, template])
 
-  const showApiMode = provider === 'openai'
+  const showApiMode = provider === 'openai' || provider === 'grok'
 
   const validateBodyJson = (raw: string): boolean => {
     if (!raw.trim()) {

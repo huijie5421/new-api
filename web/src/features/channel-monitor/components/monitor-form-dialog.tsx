@@ -58,6 +58,7 @@ const PROVIDERS: { value: Provider; label: string }[] = [
   { value: 'openai', label: 'OpenAI' },
   { value: 'anthropic', label: 'Anthropic' },
   { value: 'gemini', label: 'Gemini' },
+  { value: 'grok', label: 'Grok' },
 ]
 
 const API_MODES: { value: APIMode; label: string }[] = [
@@ -179,7 +180,7 @@ export function MonitorFormDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, monitor])
 
-  const showApiMode = provider === 'openai'
+  const showApiMode = provider === 'openai' || provider === 'grok'
 
   const commitExtraModelInput = () => {
     const parts = extraModelInput

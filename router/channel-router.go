@@ -37,6 +37,9 @@ func registerChannelRoutes(apiRouter *gin.RouterGroup) {
 }
 
 var channelPermissionRoutes = []permissionRoute{
+	// Keep the slashless form because axios/fetch clients do not always follow
+	// Gin's trailing-slash redirect for authenticated API requests.
+	{method: http.MethodGet, path: "", permission: authz.ChannelRead, handler: controller.GetAllChannels},
 	{method: http.MethodGet, path: "/", permission: authz.ChannelRead, handler: controller.GetAllChannels},
 	{method: http.MethodGet, path: "/search", permission: authz.ChannelRead, handler: controller.SearchChannels},
 	{method: http.MethodGet, path: "/models", permission: authz.ChannelRead, handler: controller.ChannelListModels},

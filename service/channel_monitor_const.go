@@ -5,6 +5,7 @@ const (
 	ProviderOpenAI    = "openai"
 	ProviderAnthropic = "anthropic"
 	ProviderGemini    = "gemini"
+	ProviderGrok      = "grok"
 
 	// API modes (OpenAI-specific)
 	APIModeChat      = "chat_completions"
@@ -41,6 +42,11 @@ const (
 // Provider-specific paths
 var ProviderPaths = map[string]map[string]string{
 	ProviderOpenAI: {
+		APIModeChat:      "/v1/chat/completions",
+		APIModeResponses: "/v1/responses",
+	},
+	// Grok exposes an OpenAI-compatible Chat Completions/Responses API.
+	ProviderGrok: {
 		APIModeChat:      "/v1/chat/completions",
 		APIModeResponses: "/v1/responses",
 	},

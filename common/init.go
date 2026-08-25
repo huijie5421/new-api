@@ -22,7 +22,9 @@ var (
 	LogDir       = flag.String("log-dir", "./logs", "specify the log directory")
 	// SourceBase is exposed by /api/status so deployments can be traced back to
 	// the upstream snapshot they were rebuilt from.
-	SourceBase = "official-main-2d8e50bf"
+	// The slim branch is maintained from the official rc.25 release commit.
+	// The parent main snapshot is retained in parentheses for reproducibility.
+	SourceBase = "official-v1.0.0-rc.25-f116414 (main-2d8e50bf)"
 )
 
 func printHelp() {
