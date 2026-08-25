@@ -21,6 +21,7 @@ import { Database } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import {
+  StatusBadge,
   dotColorMap,
   textColorMap,
   type StatusVariant,
@@ -40,6 +41,7 @@ import { cn } from '@/lib/utils'
 
 import { LOG_TYPE_ENUM } from '../constants'
 import type { UsageLog } from '../data/schema'
+import { cacheHitRateVariant, getLogCacheHitRate } from '../lib/cache-hit-rate'
 import { parseLogOther } from '../lib/format'
 import {
   getLogTypeConfig,
@@ -208,9 +210,11 @@ function MobileTokensField({ log }: { log: UsageLog }) {
   const cacheWrite5m = other?.cache_creation_tokens_5m || 0
   const cacheWrite1h = other?.cache_creation_tokens_1h || 0
   const hasSplitCache = cacheWrite5m > 0 || cacheWrite1h > 0
-  const cacheWriteTokens = hasSplitCache
-    ? cacheWrite5m + cacheWrite1h
-    : other?.cache_creation_tokens || 0
+  const cacheWriteTokens =
+    other?.cache_write_tokens ??
+    (hasSplitCache
+      ? cacheWrite5m + cacheWrite1h
+      : other?.cache_creation_tokens || 0)
   const showCache = cacheReadTokens > 0 || cacheWriteTokens > 0
 
   return (
@@ -236,6 +240,30 @@ function MobileTokensField({ log }: { log: UsageLog }) {
           </span>
         )}
       </div>
+    </div>
+  )
+}
+
+function MobileCacheHitRateField({ log }: { log: UsageLog }) {
+  const { t } = useTranslation()
+  if (!isDisplayableLogType(log.type)) return null
+  const rate = getLogCacheHitRate(log, parseLogOther(log.other))
+  return (
+    <div className='bg-muted/20 min-w-0 rounded-md px-2 py-1.5'>
+      <div className='text-muted-foreground mb-1 text-[11px]'>
+        {t('Cache Hit Rate')}
+      </div>
+      {rate == null ? (
+        <span className='text-muted-foreground text-xs'>-</span>
+      ) : (
+        <StatusBadge
+          label={`${rate.toFixed(2)}%`}
+          variant={cacheHitRateVariant(rate)}
+          size='sm'
+          copyable={false}
+          className='font-mono tabular-nums'
+        />
+      )}
     </div>
   )
 }
@@ -359,6 +387,7 @@ function CommonLogsCard<TData>({
         ) : (
           <SummaryField cell={cells.get('prompt_tokens')} />
         )}
+        {rowData && <MobileCacheHitRateField log={rowData} />}
         <SummaryField
           label={t('Details')}
           cell={cells.get('content')}

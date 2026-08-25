@@ -27,7 +27,7 @@ export function safeDivide(
   precision: number = 3
 ): number {
   const result = value / divisor
-  if (isNaN(result) || !isFinite(result)) return 0
+  if (Number.isNaN(result) || !Number.isFinite(result)) return 0
   const factor = Math.pow(10, precision)
   return Math.round(result * factor) / factor
 }
@@ -36,12 +36,34 @@ export function safeDivide(
  * Calculate aggregated statistics from quota data
  */
 export function calculateDashboardStats(data: QuotaDataItem[]) {
-  return data.reduce(
+  const totals = data.reduce(
     (acc, item) => ({
       totalQuota: acc.totalQuota + (Number(item.quota) || 0),
       totalCount: acc.totalCount + (Number(item.count) || 0),
       totalTokens: acc.totalTokens + (Number(item.token_used) || 0),
+      totalInputTokens: acc.totalInputTokens + (Number(item.input_tokens) || 0),
+      totalCacheWriteTokens:
+        acc.totalCacheWriteTokens + (Number(item.cache_write_tokens) || 0),
+      totalCacheReadTokens:
+        acc.totalCacheReadTokens + (Number(item.cache_read_tokens) || 0),
     }),
-    { totalQuota: 0, totalCount: 0, totalTokens: 0 }
+    {
+      totalQuota: 0,
+      totalCount: 0,
+      totalTokens: 0,
+      totalInputTokens: 0,
+      totalCacheWriteTokens: 0,
+      totalCacheReadTokens: 0,
+    }
   )
+
+  const denominator =
+    totals.totalInputTokens +
+    totals.totalCacheReadTokens +
+    totals.totalCacheWriteTokens
+  const cacheHitRate =
+    denominator > 0
+      ? safeDivide(totals.totalCacheReadTokens * 100, denominator, 2)
+      : 0
+  return { ...totals, cacheHitRate }
 }

@@ -34,6 +34,10 @@ const legacyConsoleRoutes: Record<string, string> = {
   '/console/task': '/usage-logs/task',
 }
 
+const legacyStandaloneRoutes: Record<string, string> = {
+  '/channel': '/channels',
+}
+
 const legacySettingsTabs: Record<string, string> = {
   operation: '/system-settings/operations/behavior',
   dashboard: '/system-settings/content/dashboard',
@@ -99,6 +103,9 @@ export function resolveLegacyRoute(rawHref: string): string | null {
   if (pathname.startsWith('/console/')) {
     return buildTargetHref('/dashboard', source)
   }
+
+  const standaloneTarget = legacyStandaloneRoutes[pathname]
+  if (standaloneTarget) return buildTargetHref(standaloneTarget, source)
 
   return null
 }

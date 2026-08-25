@@ -20,6 +20,9 @@ var (
 	PrintVersion = flag.Bool("version", false, "print version and exit")
 	PrintHelp    = flag.Bool("help", false, "print help and exit")
 	LogDir       = flag.String("log-dir", "./logs", "specify the log directory")
+	// SourceBase is exposed by /api/status so deployments can be traced back to
+	// the upstream snapshot they were rebuilt from.
+	SourceBase = "official-main-2d8e50bf"
 )
 
 func printHelp() {
@@ -35,6 +38,9 @@ func InitEnv() {
 	envVersion := os.Getenv("VERSION")
 	if envVersion != "" {
 		Version = envVersion
+	}
+	if envSourceBase := strings.TrimSpace(os.Getenv("SOURCE_BASE")); envSourceBase != "" {
+		SourceBase = envSourceBase
 	}
 
 	if *PrintVersion {

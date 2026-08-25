@@ -31,7 +31,6 @@ import {
   ServerCog,
   Settings,
   SignalHigh,
-  Sparkles,
   Ticket,
   User,
   Users,
@@ -111,11 +110,6 @@ export function useSidebarData(): SidebarData {
         id: 'personal',
         title: t('Personal'),
         items: [
-          {
-            title: t('AIGC工坊'),
-            url: '/image',
-            icon: Sparkles,
-          },
           {
             title: t('Wallet'),
             url: '/wallet',

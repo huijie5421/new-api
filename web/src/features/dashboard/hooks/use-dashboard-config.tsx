@@ -22,6 +22,9 @@ import {
   Layers,
   Gauge,
   Zap,
+  ArrowUpFromLine,
+  ArrowDownToLine,
+  Percent,
   Flame,
   TrendingUp,
   Activity,
@@ -37,6 +40,7 @@ interface StatCardConfig {
   title: string
   description: string
   icon: LucideIcon
+  format?: 'number' | 'quota' | 'percent'
   iconTone: IconBadgeTone
   getValue: (stat: Record<string, number>, days?: number) => number
 }
@@ -58,16 +62,42 @@ export function useModelStatCardsConfig(): StatCardConfig[] {
       title: t('Total Quota'),
       description: t('Statistical quota'),
       icon: Coins,
+      format: 'quota',
       iconTone: 'success',
       getValue: (stat) => stat?.quota ?? 0,
     },
     {
       key: 'tokens',
       title: t('Total Tokens'),
-      description: t('Statistical tokens'),
+      description: t('Includes cache write & cache read'),
       icon: Layers,
       iconTone: 'chart-4',
       getValue: (stat) => stat?.tpm ?? 0,
+    },
+    {
+      key: 'cacheWrite',
+      title: t('Cache Write'),
+      description: t('Cache creation tokens'),
+      icon: ArrowUpFromLine,
+      iconTone: 'info',
+      getValue: (stat) => stat?.cacheWrite ?? 0,
+    },
+    {
+      key: 'cacheRead',
+      title: t('Cache Read'),
+      description: t('Cache hit tokens'),
+      icon: ArrowDownToLine,
+      iconTone: 'success',
+      getValue: (stat) => stat?.cacheRead ?? 0,
+    },
+    {
+      key: 'cacheHitRate',
+      title: t('Cache Hit Rate'),
+      description: t('Cache read share of input'),
+      icon: Percent,
+      format: 'percent',
+      iconTone: 'chart-2',
+      getValue: (stat) => stat?.cacheHitRate ?? 0,
     },
     {
       key: 'avgRpm',

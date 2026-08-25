@@ -523,6 +523,18 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 
 	attachQuotaSaturation(ctx, relayInfo, other)
 
+	// Keep the dashboard and per-request logs on one cache-aware token basis.
+	// Claude input is already pure input; OpenAI-compatible prompt tokens include
+	// cache read/write subsets and must be reduced before aggregation.
+	cacheReadTokens := summary.CacheTokens
+	inputTokens := summary.PromptTokens
+	if !summary.IsClaudeUsageSemantic && !isLegacyClaudeDerivedOpenAIUsage(relayInfo, usage) {
+		inputTokens -= cacheReadTokens + cacheWriteTokens
+		if inputTokens < 0 {
+			inputTokens = 0
+		}
+	}
+
 	model.RecordConsumeLog(ctx, relayInfo.UserId, model.RecordConsumeLogParams{
 		ChannelId:        relayInfo.ChannelId,
 		PromptTokens:     summary.PromptTokens,
@@ -536,6 +548,9 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 		IsStream:         relayInfo.IsStream,
 		Group:            relayInfo.UsingGroup,
 		Other:            other,
+		InputTokens:      inputTokens,
+		CacheReadTokens:  cacheReadTokens,
+		CacheWriteTokens: cacheWriteTokens,
 	})
 	gopool.Go(func() {
 		perfmetrics.RecordRelaySample(relayInfo, true, int64(summary.CompletionTokens))

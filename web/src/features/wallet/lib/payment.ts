@@ -29,16 +29,6 @@ import type { PaymentMethod, PresetAmount, TopupInfo } from '../types'
 // ============================================================================
 
 /**
- * Check if browser is Safari
- */
-function isSafariBrowser(): boolean {
-  return (
-    navigator.userAgent.includes('Safari') &&
-    !navigator.userAgent.includes('Chrome')
-  )
-}
-
-/**
  * Submit payment form (for non-Stripe payments)
  */
 export function submitPaymentForm(
@@ -49,10 +39,11 @@ export function submitPaymentForm(
   form.action = url
   form.method = 'POST'
 
-  // Don't open in new tab for Safari
-  if (!isSafariBrowser()) {
-    form.target = '_blank'
-  }
+  // The form is submitted after an async order request. Opening a new tab at
+  // that point is commonly blocked by browser popup protection, which leaves
+  // Alipay/GMPay orders created but the payer on the wallet page. Keep the
+  // payment navigation in the current tab for a reliable hand-off.
+  form.target = '_self'
 
   // Add form parameters
   Object.entries(params).forEach(([key, value]) => {

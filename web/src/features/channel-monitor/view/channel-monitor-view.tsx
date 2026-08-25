@@ -32,7 +32,8 @@ For commercial licensing, please contact support@quantumnous.com
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+
+import { Dialog } from '@/components/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -60,13 +61,14 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { Dialog } from '@/components/dialog'
+import { cn } from '@/lib/utils'
+
 import { channelMonitorAPI } from '../api'
-import type { ChannelMonitor, MonitorRunResult } from '../types'
 import { MonitorFormDialog } from '../components/monitor-form-dialog'
 import { MonitorHistoryDialog } from '../components/monitor-history-dialog'
 import { RunResultDialog } from '../components/run-result-dialog'
 import { TemplateManagerDialog } from '../components/template-manager-dialog'
+import type { ChannelMonitor, MonitorRunResult } from '../types'
 
 const PROVIDER_FILTERS: { value: string; label: string }[] = [
   { value: 'all', label: 'All providers' },
@@ -87,6 +89,12 @@ const PROVIDER_BADGE: Record<string, string> = {
   gemini: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
 }
 
+const PROVIDER_LABEL: Record<string, string> = {
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  gemini: 'Gemini',
+}
+
 function formatAvailability(rate: number | null): string {
   if (rate === null || rate === undefined) {
     return '—'
@@ -97,9 +105,7 @@ function formatAvailability(rate: number | null): string {
 function StatusBadge({ status }: { status: string }) {
   const { t } = useTranslation()
   if (status === 'success') {
-    return (
-      <Badge className='bg-success/15 text-success'>{t('Success')}</Badge>
-    )
+    return <Badge className='bg-success/15 text-success'>{t('Success')}</Badge>
   }
   if (status === 'failure') {
     return (
@@ -180,8 +186,9 @@ export default function ChannelMonitorView() {
     const q = search.trim().toLowerCase()
     return monitors.filter((m) => {
       if (q && !m.name.toLowerCase().includes(q)) return false
-      if (providerFilter !== 'all' && m.provider !== providerFilter)
+      if (providerFilter !== 'all' && m.provider !== providerFilter) {
         return false
+      }
       return true
     })
   }, [monitors, search, providerFilter])
@@ -190,9 +197,7 @@ export default function ChannelMonitorView() {
     setTogglingId(monitor.id)
     // optimistic update
     setMonitors((prev) =>
-      prev.map((m) =>
-        m.id === monitor.id ? { ...m, enabled: !m.enabled } : m
-      )
+      prev.map((m) => (m.id === monitor.id ? { ...m, enabled: !m.enabled } : m))
     )
     try {
       await channelMonitorAPI.update(monitor.id, {
@@ -229,9 +234,7 @@ export default function ChannelMonitorView() {
       if (total > 0 && ok === total) {
         toast.success(t('All {{total}} checks passed', { total }))
       } else if (total > 0) {
-        toast.warning(
-          t('{{ok}} of {{total}} checks passed', { ok, total })
-        )
+        toast.warning(t('{{ok}} of {{total}} checks passed', { ok, total }))
       }
       loadMonitors({ silent: true })
     } catch {
@@ -279,16 +282,21 @@ export default function ChannelMonitorView() {
           <div className='absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.12),transparent_55%)]' />
           <CardContent className='relative flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between'>
             <div className='flex items-center gap-3'>
-              <div className='bg-gradient-to-br from-blue-500 to-indigo-600 flex size-11 items-center justify-center rounded-xl shadow-lg'>
+              <div className='flex size-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg'>
                 <Activity className='size-5 text-white' />
               </div>
               <div>
                 <h1 className='text-xl font-bold'>{t('Channel Monitors')}</h1>
-                <p className='text-muted-foreground text-sm'>
-                  {t(
-                    'Track upstream channel availability and latency over time.'
-                  )}
-                </p>
+                <div className='mt-1 flex flex-wrap items-center gap-2'>
+                  <Badge variant='outline' className='text-xs'>
+                    {t('V1 Active Probe')}
+                  </Badge>
+                  <p className='text-muted-foreground text-sm'>
+                    {t(
+                      'Track upstream channel availability and latency over time.'
+                    )}
+                  </p>
+                </div>
               </div>
             </div>
             <div className='flex items-center gap-2'>
@@ -302,7 +310,7 @@ export default function ChannelMonitorView() {
               </Button>
               <Button
                 onClick={openCreate}
-                className='bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md'
+                className='bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md hover:from-blue-700 hover:to-indigo-700'
               >
                 <Plus className='size-4' />
                 {t('Create Monitor')}
@@ -313,7 +321,7 @@ export default function ChannelMonitorView() {
       </Card>
 
       {/* Filters */}
-      <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap'>
+      <div className='flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center'>
         <div className='relative w-full sm:max-w-xs'>
           <Search className='text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2' />
           <Input
@@ -381,9 +389,7 @@ export default function ChannelMonitorView() {
               />
             }
           >
-            <RefreshCw
-              className={cn('size-4', refreshing && 'animate-spin')}
-            />
+            <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} />
           </TooltipTrigger>
           <TooltipContent>{t('Refresh')}</TooltipContent>
         </Tooltip>
@@ -407,17 +413,26 @@ export default function ChannelMonitorView() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={`sk-${i}`}>
-                  {Array.from({ length: columnCount }).map((__, j) => (
-                    <TableCell key={`sk-${i}-${j}`}>
+            {loading &&
+              ['one', 'two', 'three', 'four', 'five'].map((rowKey) => (
+                <TableRow key={`sk-${rowKey}`}>
+                  {[
+                    'name',
+                    'provider',
+                    'model',
+                    'status',
+                    'latency',
+                    'availability',
+                    'enabled',
+                    'actions',
+                  ].map((columnKey) => (
+                    <TableCell key={`sk-${rowKey}-${columnKey}`}>
                       <Skeleton className='h-5 w-full' />
                     </TableCell>
                   ))}
                 </TableRow>
-              ))
-            ) : filtered.length === 0 ? (
+              ))}
+            {!loading && filtered.length === 0 && (
               <TableRow className='hover:bg-transparent'>
                 <TableCell colSpan={columnCount} className='py-0'>
                   <div className='text-muted-foreground flex flex-col items-center justify-center gap-3 py-14 text-center'>
@@ -445,7 +460,9 @@ export default function ChannelMonitorView() {
                   </div>
                 </TableCell>
               </TableRow>
-            ) : (
+            )}
+            {!loading &&
+              filtered.length > 0 &&
               filtered.map((monitor) => {
                 const decryptFailed = Boolean(
                   (monitor as { api_key_decrypt_failed?: boolean })
@@ -485,7 +502,12 @@ export default function ChannelMonitorView() {
                             'bg-muted text-muted-foreground'
                         )}
                       >
-                        {monitor.provider || '—'}
+                        {monitor.provider
+                          ? t(
+                              PROVIDER_LABEL[monitor.provider] ??
+                                monitor.provider
+                            )
+                          : '—'}
                       </Badge>
                     </TableCell>
                     <TableCell className='font-mono text-xs'>
@@ -582,8 +604,7 @@ export default function ChannelMonitorView() {
                     </TableCell>
                   </TableRow>
                 )
-              })
-            )}
+              })}
           </TableBody>
         </Table>
       </Card>

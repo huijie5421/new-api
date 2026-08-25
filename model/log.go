@@ -338,6 +338,12 @@ type RecordConsumeLogParams struct {
 	IsStream         bool                   `json:"is_stream"`
 	Group            string                 `json:"group"`
 	Other            map[string]interface{} `json:"other"`
+	// InputTokens is pure input after removing cache read/write tokens.
+	InputTokens int `json:"input_tokens"`
+	// CacheReadTokens is cache read/hit usage.
+	CacheReadTokens int `json:"cache_read_tokens"`
+	// CacheWriteTokens is cache creation/write usage.
+	CacheWriteTokens int `json:"cache_write_tokens"`
 }
 
 func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams) {
@@ -388,17 +394,25 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 		logger.LogError(c, "failed to record log: "+err.Error())
 	}
 	if common.DataExportEnabled {
+		inputTokens := params.InputTokens
+		if inputTokens == 0 && params.CacheReadTokens == 0 && params.CacheWriteTokens == 0 {
+			inputTokens = params.PromptTokens
+		}
+		totalTokens := inputTokens + params.CompletionTokens + params.CacheWriteTokens + params.CacheReadTokens
 		LogQuotaData(QuotaDataLogParams{
-			UserID:    userId,
-			Username:  username,
-			ModelName: params.ModelName,
-			Quota:     params.Quota,
-			CreatedAt: createdAt,
-			TokenUsed: params.PromptTokens + params.CompletionTokens,
-			UseGroup:  params.Group,
-			TokenID:   params.TokenId,
-			ChannelID: params.ChannelId,
-			NodeName:  common.NodeName,
+			UserID:           userId,
+			Username:         username,
+			ModelName:        params.ModelName,
+			Quota:            params.Quota,
+			CreatedAt:        createdAt,
+			TokenUsed:        totalTokens,
+			InputTokens:      inputTokens,
+			CacheWriteTokens: params.CacheWriteTokens,
+			CacheReadTokens:  params.CacheReadTokens,
+			UseGroup:         params.Group,
+			TokenID:          params.TokenId,
+			ChannelID:        params.ChannelId,
+			NodeName:         common.NodeName,
 		})
 	}
 }

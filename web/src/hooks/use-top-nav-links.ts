@@ -72,6 +72,19 @@ export function useTopNavLinks(): TopNavLink[] {
     links.push({ title: t('Console'), href: '/dashboard' })
   }
 
+  // AIGC Workshop belongs in the primary navigation. Treat an omitted
+  // legacy flag as enabled so the feature is not accidentally hidden after a
+  // slim migration; an explicit { enabled: false } still hides it.
+  const aigc = modules?.aigc
+  const aigcEnabled =
+    aigc === undefined ||
+    (typeof aigc === 'object' ? aigc.enabled !== false : aigc !== false)
+  if (aigcEnabled) {
+    const requiresAuth =
+      typeof aigc === 'object' && aigc.requireAuth === true && !isAuthed
+    links.push({ title: t('AIGC工坊'), href: '/image', requiresAuth })
+  }
+
   // Pricing
   const pricing = modules?.pricing
   if (pricing && typeof pricing === 'object' && pricing.enabled) {
@@ -99,17 +112,15 @@ export function useTopNavLinks(): TopNavLink[] {
   if (modules?.about !== false) {
     links.push({
       title: t('Contact Us'),
-      href: 'https://api.aizzz.xyz/about',
-      external: true,
+      href: '/about',
     })
   }
 
-  // Retained custom tabs. Keep these as external links so a slim build does
-  // not need to migrate or recreate the original content pages.
+  // Retained custom tab is an internal route so it stays in the SPA and does
+  // not open a second window or depend on an external host route.
   links.push({
     title: '轮椅配置教程',
-    href: 'https://api.aizzz.xyz/setup-guide',
-    external: true,
+    href: '/setup-guide',
   })
 
   return links

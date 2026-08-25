@@ -43,6 +43,10 @@ import { cn } from '@/lib/utils'
 import { LOG_TYPE_ALL_VALUE } from '../../constants'
 import type { UsageLog } from '../../data/schema'
 import {
+  cacheHitRateVariant,
+  getLogCacheHitRate,
+} from '../../lib/cache-hit-rate'
+import {
   formatModelName,
   getTieredBillingSummary,
   hasAnyCacheTokens,
@@ -644,7 +648,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
     },
     {
       accessorKey: 'prompt_tokens',
-      header: 'Tokens',
+      header: t('Tokens'),
       cell: ({ row }) => {
         const log = row.original
         if (!isDisplayableLogType(log.type)) return null
@@ -661,9 +665,11 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
         const cacheWrite5m = other?.cache_creation_tokens_5m || 0
         const cacheWrite1h = other?.cache_creation_tokens_1h || 0
         const hasSplitCache = cacheWrite5m > 0 || cacheWrite1h > 0
-        const cacheWriteTokens = hasSplitCache
-          ? cacheWrite5m + cacheWrite1h
-          : other?.cache_creation_tokens || 0
+        const cacheWriteTokens =
+          other?.cache_write_tokens ??
+          (hasSplitCache
+            ? cacheWrite5m + cacheWrite1h
+            : other?.cache_creation_tokens || 0)
 
         return (
           <div className='flex flex-col gap-0.5'>
@@ -688,6 +694,28 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
           </div>
         )
       },
+    },
+    {
+      id: 'cache_hit_rate',
+      header: t('Cache Hit Rate'),
+      cell: ({ row }) => {
+        const log = row.original
+        if (!isDisplayableLogType(log.type)) return null
+        const rate = getLogCacheHitRate(log, parseLogOther(log.other))
+        if (rate == null) {
+          return <span className='text-muted-foreground text-xs'>-</span>
+        }
+        return (
+          <StatusBadge
+            label={`${rate.toFixed(2)}%`}
+            variant={cacheHitRateVariant(rate)}
+            size='sm'
+            copyable={false}
+            className='font-mono tabular-nums'
+          />
+        )
+      },
+      meta: { label: t('Cache Hit Rate') },
     },
     {
       accessorKey: 'quota',

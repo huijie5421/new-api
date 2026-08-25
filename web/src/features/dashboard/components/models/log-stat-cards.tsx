@@ -67,6 +67,10 @@ export function LogStatCards(props: LogStatCardsProps) {
     totalQuota: number
     totalCount: number
     totalTokens: number
+    totalInputTokens: number
+    totalCacheWriteTokens: number
+    totalCacheReadTokens: number
+    cacheHitRate: number
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -119,18 +123,28 @@ export function LogStatCards(props: LogStatCardsProps) {
     rpm: stats?.totalCount ?? 0,
     quota: stats?.totalQuota ?? 0,
     tpm: stats?.totalTokens ?? 0,
+    cacheWrite: stats?.totalCacheWriteTokens ?? 0,
+    cacheRead: stats?.totalCacheReadTokens ?? 0,
+    cacheHitRate: stats?.cacheHitRate ?? 0,
   }
 
   const items = statCardsConfig.map((config) => {
     const rawValue = config.getValue(adaptedStats, timeRangeMinutes)
     const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
-    const formatted =
-      config.key === 'quota'
-        ? {
-            displayValue: formatQuota(rawValue),
-            fullValue: formatQuota(rawValue),
-          }
-        : formatStatNumber(rawValue, locale)
+    let formatted: { displayValue: string; fullValue: string }
+    if (config.format === 'quota') {
+      formatted = {
+        displayValue: formatQuota(rawValue),
+        fullValue: formatQuota(rawValue),
+      }
+    } else if (config.format === 'percent') {
+      formatted = {
+        displayValue: `${rawValue.toFixed(1)}%`,
+        fullValue: `${rawValue.toFixed(1)}%`,
+      }
+    } else {
+      formatted = formatStatNumber(rawValue, locale)
+    }
 
     return {
       title: config.title,
@@ -144,7 +158,7 @@ export function LogStatCards(props: LogStatCardsProps) {
 
   return (
     <div className='overflow-hidden rounded-lg border'>
-      <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-5'>
+      <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-4 2xl:grid-cols-8'>
         {items.map((it, idx) => {
           const Icon = it.icon
           let valueContent
