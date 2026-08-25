@@ -34,6 +34,7 @@ const (
 
 const (
 	PaymentProviderEpay         = "epay"
+	PaymentProviderGMPay        = "gmpay"
 	PaymentProviderStripe       = "stripe"
 	PaymentProviderCreem        = "creem"
 	PaymentProviderWaffo        = "waffo"
