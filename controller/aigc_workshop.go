@@ -833,11 +833,7 @@ func prepareAigcWorkshopRelay(c *gin.Context, tokenName string) bool {
 	common.SetContextKey(c, constant.ContextKeyUsingGroup, usingGroup)
 	common.SetContextKey(c, constant.ContextKeyTokenGroup, usingGroup)
 
-	tempToken := &model.Token{
-		UserId: userId,
-		Name:   fmt.Sprintf("%s-%s", tokenName, usingGroup),
-		Group:  usingGroup,
-	}
+	tempToken := newAigcWorkshopToken(userId, tokenName, usingGroup)
 	if err = middleware.SetupContextForToken(c, tempToken); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{
 			"error": types.NewError(
@@ -849,6 +845,15 @@ func prepareAigcWorkshopRelay(c *gin.Context, tokenName string) bool {
 		return false
 	}
 	return true
+}
+
+func newAigcWorkshopToken(userID int, tokenName string, usingGroup string) *model.Token {
+	return &model.Token{
+		UserId:         userID,
+		Name:           fmt.Sprintf("%s-%s", tokenName, usingGroup),
+		Group:          usingGroup,
+		UnlimitedQuota: true,
+	}
 }
 
 func aigcWorkshopKindFromPath(path string) (aigcWorkshopKind, bool) {

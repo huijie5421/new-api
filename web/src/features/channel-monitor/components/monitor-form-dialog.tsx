@@ -431,7 +431,7 @@ export function MonitorFormDialog({
               <Select
                 items={API_MODES.map((m) => ({
                   value: m.value,
-                  label: m.label,
+                  label: t(m.label),
                 }))}
                 value={apiMode}
                 onValueChange={(v) => setApiMode(v as APIMode)}
@@ -443,7 +443,7 @@ export function MonitorFormDialog({
                   <SelectGroup>
                     {API_MODES.map((m) => (
                       <SelectItem key={m.value} value={m.value}>
-                        {m.label}
+                        {t(m.label)}
                       </SelectItem>
                     ))}
                   </SelectGroup>

@@ -5476,6 +5476,18 @@
     "{{ok}}/{{total}} healthy": "{{ok}}/{{total}} 正常",
     "… monitors": "… 个监控项",
     "Chat Completions": "对话补全",
-    "Responses": "响应接口"
+    "Responses": "响应接口",
+    "Auto builds the request body; Minimal sends a tiny probe; Custom uses the JSON below.": "自动模式会构建请求体；最小模式发送精简探测；自定义模式使用下方 JSON。",
+    "Configure an upstream channel health check for a provider model.": "为供应商模型配置上游渠道健康检查。",
+    "Inject the global Claude Code identity (User-Agent, anthropic-beta, system prompt, metadata.user_id) so upstreams that require the official CLI accept the probe.": "注入全局 Claude Code 标识（User-Agent、anthropic-beta、系统提示词和 metadata.user_id），使要求官方 CLI 的上游接受探测请求。",
+    "Interval must be between {{min}} and {{max}} seconds": "检查间隔必须在 {{min}} 到 {{max}} 秒之间",
+    "Manage reusable request configurations and apply them to monitors.": "管理可复用的请求配置，并将其应用到监控项。",
+    "Once an administrator enables channel monitoring, live availability will appear here.": "管理员启用渠道监控后，实时可用性将显示在这里。",
+    "Overwrite the request configuration of the selected {{provider}} monitors with \"{{name}}\".": "使用“{{name}}”覆盖所选 {{provider}} 监控项的请求配置。",
+    "Pick one of your own enabled API keys to use for this monitor.": "选择一个已启用的自有 API Key 用于此监控项。",
+    "Reusable request configuration that can be applied to monitors of the same provider.": "可应用于同一供应商监控项的可复用请求配置。",
+    "This will permanently remove the template \"{{name}}\". Monitors already using it keep their current settings.": "这将永久删除模板“{{name}}”。已经使用该模板的监控项会保留当前设置。",
+    "Too many key requests, please wait a moment and retry, or paste the key manually": "API Key 请求过于频繁，请稍后重试，或手动粘贴 Key。",
+    "Channel Monitor": "渠道监控"
   }
 }

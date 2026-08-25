@@ -44,14 +44,14 @@ export function AuthenticatedLayout(props: AuthenticatedLayoutProps) {
       <SearchProvider>
         <SidebarProvider defaultOpen={defaultOpen} className='flex-col'>
           <SkipToMain />
-          {!isAigcWorkshop && <AppHeader />}
+          <AppHeader />
           <div className='flex min-h-0 w-full flex-1'>
             {!isAigcWorkshop && <AppSidebar />}
             <SidebarInset
               className={cn(
                 '@container/content',
                 isAigcWorkshop
-                  ? 'h-[100svh] w-full'
+                  ? 'h-[calc(100svh-var(--app-header-height,0px))] w-full'
                   : 'h-[calc(100svh-var(--app-header-height,0px))]',
                 'min-h-0 overflow-hidden',
                 !isAigcWorkshop &&
