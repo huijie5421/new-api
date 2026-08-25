@@ -172,3 +172,10 @@ func GetTaskAdaptor(platform constant.TaskPlatform) channel.TaskAdaptor {
 	}
 	return nil
 }
+
+// GetTaskAdaptorForChannel keeps task protocol selection aligned with the
+// channel's stored API type. Both the Jimeng and video-model groups on the
+// CLMM endpoint use the OpenAI/Sora /v1/videos contract when stored as type 55.
+func GetTaskAdaptorForChannel(platform constant.TaskPlatform, channelID int) channel.TaskAdaptor {
+	return GetTaskAdaptor(platform)
+}

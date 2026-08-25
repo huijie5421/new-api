@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -37,6 +38,23 @@ type TaskPollingAdaptor interface {
 // GetTaskAdaptorFunc 由 main 包注入，用于获取指定平台的任务适配器。
 // 打破 service -> relay -> relay/channel -> service 的循环依赖。
 var GetTaskAdaptorFunc func(platform constant.TaskPlatform) TaskPollingAdaptor
+
+// GetTaskAdaptorForChannelFunc preserves provider protocol when a channel's
+// database type is shared by another adaptor (for example channel 129/type
+// 55 uses Jimeng-compatible async video calls).
+var GetTaskAdaptorForChannelFunc func(platform constant.TaskPlatform, channelID int) TaskPollingAdaptor
+
+func getTaskAdaptorForChannel(platform constant.TaskPlatform, channelID int) TaskPollingAdaptor {
+	if GetTaskAdaptorForChannelFunc != nil {
+		if adaptor := GetTaskAdaptorForChannelFunc(platform, channelID); adaptor != nil {
+			return adaptor
+		}
+	}
+	if GetTaskAdaptorFunc == nil {
+		return nil
+	}
+	return GetTaskAdaptorFunc(platform)
+}
 
 // sweepTimedOutTasks 在主轮询之前独立清理超时任务。
 // 每次最多处理 100 条，剩余的下个周期继续处理。
@@ -379,6 +397,24 @@ func UpdateVideoTasks(ctx context.Context, platform constant.TaskPlatform, taskC
 	return nil
 }
 
+// aigcVideoPollingPlatform prefers the protocol captured when the task was
+// submitted. Channels can be edited after submission, so using only the
+// channel's current type can select the wrong adaptor for an in-flight task.
+// The model fallback keeps pre-snapshot Minimax tasks pollable after a channel
+// was changed to the generic OpenAI type.
+func aigcVideoPollingPlatform(task *model.Task, channelType int) constant.TaskPlatform {
+	if task != nil && task.Properties.ChannelType > 0 {
+		return constant.TaskPlatform(strconv.Itoa(task.Properties.ChannelType))
+	}
+	if channelType == constant.ChannelTypeOpenAI && task != nil {
+		modelName := strings.ToLower(task.Properties.OriginModelName + " " + task.Properties.UpstreamModelName)
+		if strings.Contains(modelName, "minimax-h") || strings.Contains(modelName, "minimax hailuo") {
+			return constant.TaskPlatform(strconv.Itoa(constant.ChannelTypeMiniMax))
+		}
+	}
+	return constant.TaskPlatform(strconv.Itoa(channelType))
+}
+
 func updateVideoTasks(ctx context.Context, platform constant.TaskPlatform, channelId int, taskIds []string, taskM map[string]*model.Task) error {
 	logger.LogInfo(ctx, fmt.Sprintf("Channel #%d pending video tasks: %d", channelId, len(taskIds)))
 	if ctx.Err() != nil {
@@ -406,21 +442,25 @@ func updateVideoTasks(ctx context.Context, platform constant.TaskPlatform, chann
 		}
 		return fmt.Errorf("CacheGetChannel failed: %w", err)
 	}
-	adaptor := GetTaskAdaptorFunc(platform)
-	if adaptor == nil {
-		return fmt.Errorf("video adaptor not found")
-	}
 	info := &relaycommon.RelayInfo{}
 	info.ChannelMeta = &relaycommon.ChannelMeta{
 		ChannelBaseUrl: cacheGetChannel.GetBaseURL(),
 	}
 	info.ApiKey = cacheGetChannel.Key
-	adaptor.Init(info)
 	disablePollingSleep := cacheGetChannel.GetOtherSettings().DisableTaskPollingSleep
 	for i, taskId := range taskIds {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
+		pollingPlatform := platform
+		if platform == constant.TaskPlatformAigcVideo {
+			pollingPlatform = aigcVideoPollingPlatform(taskM[taskId], cacheGetChannel.Type)
+		}
+		adaptor := getTaskAdaptorForChannel(pollingPlatform, channelId)
+		if adaptor == nil {
+			return fmt.Errorf("video adaptor not found for platform %s", pollingPlatform)
+		}
+		adaptor.Init(info)
 		if err := updateVideoSingleTask(ctx, adaptor, cacheGetChannel, taskId, taskM); err != nil {
 			logger.LogError(ctx, fmt.Sprintf("Failed to update video task %s: %s", taskId, err.Error()))
 		}
@@ -566,7 +606,7 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 	default:
 		return fmt.Errorf("unknown task status %s for task %s", taskResult.Status, task.TaskID)
 	}
-	if taskResult.Progress != "" {
+	if taskResult.Progress != "" && task.Status != model.TaskStatusSuccess && task.Status != model.TaskStatusFailure {
 		task.Progress = taskResult.Progress
 	}
 

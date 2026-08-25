@@ -191,6 +191,38 @@ func GetPreferredModelOwnerChannelTypes(modelNames []string, groups []string) (m
 	return result, nil
 }
 
+// GetPreferredModelOwnerChannelIDs returns the highest-priority enabled
+// channel ID for each model.
+func GetPreferredModelOwnerChannelIDs(modelNames []string, groups []string) (map[string]int, error) {
+	result := make(map[string]int)
+	modelNames = normalizeLookupValues(modelNames)
+	if len(modelNames) == 0 {
+		return result, nil
+	}
+	type row struct {
+		Model     string
+		ChannelID int
+	}
+	query := DB.Table("abilities").Select("abilities.model as model, abilities.channel_id as channel_id").
+		Joins("JOIN channels ON abilities.channel_id = channels.id").
+		Where("abilities.model IN ? AND abilities.enabled = ? AND channels.status = ?", modelNames, true, common.ChannelStatusEnabled).
+		Order("COALESCE(abilities.priority, 0) DESC").Order("abilities.weight DESC").Order("abilities.channel_id ASC")
+	groups = normalizeLookupValues(groups)
+	if len(groups) > 0 {
+		query = query.Where("abilities."+commonGroupCol+" IN ?", groups)
+	}
+	var rows []row
+	if err := query.Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	for _, item := range rows {
+		if _, exists := result[item.Model]; !exists {
+			result[item.Model] = item.ChannelID
+		}
+	}
+	return result, nil
+}
+
 func SearchModels(keyword string, vendor string, status string, syncOfficial string, offset int, limit int) ([]*Model, int64, error) {
 	var models []*Model
 	db := DB.Model(&Model{})

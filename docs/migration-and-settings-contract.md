@@ -19,6 +19,12 @@ All existing `options` rows remain in place. The runtime option loader must keep
 
 No option defaults overwrite a row that already exists.
 
+The retained custom top tabs stay external and do not require page/table
+migration:
+
+- Contact: `https://api.aizzz.xyz/about`
+- Wheelchair setup guide: `https://api.aizzz.xyz/setup-guide`
+
 ## Retained tables
 
 ### Upstream tables

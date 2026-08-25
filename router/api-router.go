@@ -55,6 +55,30 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/oauth/:provider", middleware.CriticalRateLimit(), middleware.DisableCache(), middleware.TryUserAuth(), controller.HandleOAuth)
 		apiRouter.GET("/ratio_config", middleware.CriticalRateLimit(), controller.GetRatioConfig)
 
+		// AIGC Workshop: image/video generation, reference media, estimates and assets.
+		aigcMediaRoute := apiRouter.Group("/aigc")
+		aigcMediaRoute.Use(middleware.UserAuth())
+		{
+			aigcSubmitRoute := aigcMediaRoute.Group("")
+			aigcSubmitRoute.Use(middleware.SystemPerformanceCheck(), controller.AigcWorkshopModelBinding(), middleware.ModelRequestRateLimit(), middleware.Distribute())
+			{
+				aigcSubmitRoute.POST("/images/generations", controller.AigcImageGenerations)
+				aigcSubmitRoute.POST("/video/generations", controller.AigcVideoGenerations)
+			}
+			aigcMediaRoute.POST("/estimate", controller.AigcEstimate)
+			aigcMediaRoute.GET("/models", controller.GetAigcWorkshopModels)
+			aigcMediaRoute.POST("/reference-assets", middleware.UploadRateLimit(), controller.UploadAigcReferenceAsset)
+			aigcMediaRoute.GET("/assets", controller.GetAigcAssets)
+			aigcMediaRoute.POST("/assets/batch", controller.BatchManageAigcAssets)
+			aigcMediaRoute.DELETE("/assets/:asset_id", controller.DeleteAigcAsset)
+			aigcMediaRoute.GET("/images/generations/:task_id", controller.AigcImageGenerationFetch)
+			aigcMediaRoute.GET("/video/generations/:task_id", controller.AigcVideoGenerationFetch)
+		}
+		apiRouter.GET("/aigc/reference-assets/:asset_id", middleware.UserAuth(), controller.GetAigcReferenceAsset)
+		apiRouter.HEAD("/aigc/reference-assets/:asset_id", middleware.UserAuth(), controller.GetAigcReferenceAsset)
+		apiRouter.GET("/aigc/assets/:asset_id/content", middleware.UserAuth(), controller.GetAigcImageAssetContent)
+		apiRouter.GET("/aigc/videos/:task_id/content", middleware.UserAuth(), controller.VideoProxy)
+
 		apiRouter.POST("/stripe/webhook", anonymousRequestBodyLimit, controller.StripeWebhook)
 		apiRouter.POST("/creem/webhook", anonymousRequestBodyLimit, controller.CreemWebhook)
 		apiRouter.POST("/waffo/webhook", anonymousRequestBodyLimit, controller.WaffoWebhook)

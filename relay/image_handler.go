@@ -11,6 +11,7 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relay/helper"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
@@ -46,7 +47,7 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 
 	var requestBody io.Reader
 
-	if model_setting.GetGlobalSettings().PassThroughRequestEnabled || info.ChannelSetting.PassThroughBodyEnabled {
+	if shouldPassThroughImageRequest(c, info) {
 		storage, err := common.GetBodyStorage(c)
 		if err != nil {
 			return types.NewErrorWithStatusCode(err, types.ErrorCodeReadRequestBodyFailed, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
@@ -148,4 +149,21 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 
 	service.PostTextConsumeQuota(c, info, usage.(*dto.Usage), logContent)
 	return nil
+}
+
+func shouldPassThroughImageRequest(c *gin.Context, info *relaycommon.RelayInfo) bool {
+	if info == nil {
+		return false
+	}
+	channelPassThrough := info.ChannelMeta != nil && info.ChannelSetting.PassThroughBodyEnabled
+	if !model_setting.GetGlobalSettings().PassThroughRequestEnabled && !channelPassThrough {
+		return false
+	}
+	if info.RelayMode == relayconstant.RelayModeImagesEdits &&
+		c != nil && c.Request != nil &&
+		c.GetString("aigc_model_kind") == "image" &&
+		strings.HasPrefix(strings.ToLower(strings.TrimSpace(c.Request.Header.Get("Content-Type"))), "application/json") {
+		return false
+	}
+	return true
 }

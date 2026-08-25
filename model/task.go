@@ -82,6 +82,8 @@ type Properties struct {
 	Input             string `json:"input"`
 	UpstreamModelName string `json:"upstream_model_name,omitempty"`
 	OriginModelName   string `json:"origin_model_name,omitempty"`
+	ChannelType       int    `json:"channel_type,omitempty"`
+	AigcHidden        bool   `json:"aigc_hidden,omitempty"`
 }
 
 func (m *Properties) Scan(val interface{}) error {
@@ -188,6 +190,7 @@ func InitTask(platform constant.TaskPlatform, relayInfo *commonRelay.RelayInfo) 
 		if relayInfo.OriginModelName != "" {
 			properties.OriginModelName = relayInfo.OriginModelName
 		}
+		properties.ChannelType = relayInfo.ChannelMeta.ChannelType
 	}
 
 	// 使用预生成的公开 ID（如果有），否则新生成
