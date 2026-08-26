@@ -2,6 +2,8 @@ package controller
 
 import (
 	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -229,6 +231,105 @@ func GetAigcReferenceAsset(c *gin.Context) {
 	c.Header("Content-Type", mimeType)
 	c.Header("X-Content-Type-Options", "nosniff")
 	c.File(assetPath)
+}
+
+// materializeAigcWorkshopImageReferences converts references uploaded to this
+// service into data URLs before the request is sent to an upstream provider.
+// The public reference endpoint is intentionally protected by UserAuth, so an
+// upstream provider cannot fetch that URL itself. Keeping the conversion on
+// the server also makes the exact bytes used for billing and generation
+// observable in the worker request.
+func materializeAigcWorkshopImageReferences(body []byte) ([]byte, error) {
+	var payload map[string]json.RawMessage
+	if err := common.Unmarshal(body, &payload); err != nil {
+		return nil, err
+	}
+	for _, field := range []string{"image", "images", "mask"} {
+		raw, ok := payload[field]
+		if !ok {
+			continue
+		}
+		rewritten, err := materializeAigcReferenceValue(raw)
+		if err != nil {
+			return nil, err
+		}
+		payload[field] = rewritten
+	}
+	return common.Marshal(payload)
+}
+
+func materializeAigcReferenceValue(raw json.RawMessage) (json.RawMessage, error) {
+	value := bytes.TrimSpace(raw)
+	if len(value) == 0 || string(value) == "null" {
+		return raw, nil
+	}
+	if value[0] == '"' {
+		var reference string
+		if err := common.Unmarshal(value, &reference); err != nil {
+			return nil, errors.New("image references must be strings")
+		}
+		materialized, err := materializeAigcReferenceURL(reference)
+		if err != nil {
+			return nil, err
+		}
+		return common.Marshal(materialized)
+	}
+	if value[0] != '[' {
+		return raw, nil
+	}
+	var references []string
+	if err := common.Unmarshal(value, &references); err != nil {
+		return nil, errors.New("image references must be strings")
+	}
+	for index, reference := range references {
+		materialized, err := materializeAigcReferenceURL(reference)
+		if err != nil {
+			return nil, err
+		}
+		references[index] = materialized
+	}
+	return common.Marshal(references)
+}
+
+func materializeAigcReferenceURL(reference string) (string, error) {
+	reference = strings.TrimSpace(reference)
+	if reference == "" || strings.HasPrefix(strings.ToLower(reference), "data:") {
+		return reference, nil
+	}
+
+	parsed, err := url.Parse(reference)
+	if err != nil || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return reference, nil
+	}
+	base, err := url.Parse(strings.TrimSpace(system_setting.ServerAddress))
+	if err != nil || base.Host == "" || parsed.Scheme == "" || parsed.Host == "" ||
+		!strings.EqualFold(parsed.Scheme, base.Scheme) || !strings.EqualFold(parsed.Host, base.Host) {
+		return reference, nil
+	}
+
+	basePath := strings.TrimRight(base.Path, "/")
+	prefix := basePath + "/api/aigc/reference-assets/"
+	if !strings.HasPrefix(parsed.Path, prefix) {
+		return reference, nil
+	}
+	assetID, err := url.PathUnescape(strings.TrimPrefix(parsed.Path, prefix))
+	if err != nil || !aigcReferenceAssetIDPattern.MatchString(strings.ToLower(assetID)) {
+		return reference, nil
+	}
+	assetID = strings.ToLower(assetID)
+	assetPath := filepath.Join(aigcReferenceAssetDirectory, assetID)
+	if filepath.Dir(assetPath) != filepath.Clean(aigcReferenceAssetDirectory) {
+		return reference, nil
+	}
+	assetBytes, err := os.ReadFile(assetPath)
+	if err != nil {
+		return "", fmt.Errorf("reference asset %s is unavailable", assetID)
+	}
+	mimeType := aigcReferenceAssetMIMETypes[strings.ToLower(filepath.Ext(assetID))]
+	if mimeType == "" {
+		return "", errors.New("unsupported reference asset type")
+	}
+	return "data:" + mimeType + ";base64," + base64.StdEncoding.EncodeToString(assetBytes), nil
 }
 
 func aigcReferenceAssetType(kind aigcReferenceAssetKind, declared string, prefix []byte) (string, string, error) {

@@ -284,10 +284,17 @@ func relayAigcImageGeneration(c *gin.Context) *captureResponseWriter {
 	c.Writer = capture
 	if aigcImageRequestUsesEdit(c) {
 		c.Request.URL.Path = "/v1/images/edits"
+		restoreRequest, err := installAigcWorkshopImageEditMultipart(c)
+		if err != nil {
+			abortAigcWorkshopOpenAIError(c, http.StatusBadRequest, err)
+			return capture
+		}
+		Relay(c, types.RelayFormatOpenAIImage)
+		restoreRequest()
 	} else {
 		c.Request.URL.Path = "/v1/images/generations"
+		Relay(c, types.RelayFormatOpenAIImage)
 	}
-	Relay(c, types.RelayFormatOpenAIImage)
 	if c.Writer.Status() < http.StatusBadRequest {
 		logID := attachAigcImageAssetsToLog(c, capture.body.Bytes())
 		if logID > 0 {

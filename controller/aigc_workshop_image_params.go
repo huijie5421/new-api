@@ -133,7 +133,11 @@ func normalizeAigcWorkshopImageRequest(body []byte) ([]byte, error) {
 		}
 		payload["images"] = encoded
 	}
-	return common.Marshal(payload)
+	normalized, err := common.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	return materializeAigcWorkshopImageReferences(normalized)
 }
 
 func parseAigcReferenceImages(fields ...json.RawMessage) ([]string, error) {
