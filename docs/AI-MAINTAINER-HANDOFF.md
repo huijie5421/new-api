@@ -10,19 +10,21 @@ linked rather than duplicated where possible.
 | --- | --- |
 | Source repository | `/home/huiji/code/Api/new-api-slim-aigc-v1-20260825` |
 | Branch | `codex/slim-aigc-v1` |
-| Latest functional source commit | `080b678e` (Home removal and console default) |
-| Production runtime source commit | `080b678e` |
-| Production release | `aizzz-gateway-slim-20260825.08` |
+| Latest functional source commit | `f5a0c48a` (Apple-style UI refresh with split sign-in branding) |
+| Production runtime source commit | `f5a0c48a` |
+| Production release | `aizzz-gateway-slim-20260825.09` |
 | Official base | `v1.0.0-rc.25`, commit `f116414284162ad15d8925f7bca494c109b83e93` |
 | Runtime base marker | `official-v1.0.0-rc.25-f116414 (main-2d8e50bf)` |
-| Production binary SHA-256 | `a56407328aee76bfe3fd0d9cb958224987f3ca0e802f0fb1a79b04167e38602d` |
-| Deployment timestamp | `20260826T065012Z` UTC |
-| Next release label | `.09` unless the operator specifies another label |
+| Production binary SHA-256 | `0c04ec25804fab2cd2fa9a105b189abd604039d56dfb831cc090f4968bb9ae00` |
+| Deployment timestamp | `20260826T081803Z` UTC |
+| Next release label | `.10` unless the operator specifies another label |
 
-The executable code deployed in `.08` is `080b678e`; later commits may only add
+The executable code deployed in `.09` is `f5a0c48a`; later commits may only add
 handoff or operational documentation. Always verify the actual branch tip with
 `git rev-parse --short HEAD`. The working tree was clean when this handoff was
-written.
+written. Source-level rollback reference tags:
+`rollback/aizzz-gateway-slim-20260825.08` (`080b678e`) and
+`release/aizzz-gateway-slim-20260825.09` (`f5a0c48a`).
 
 ## Source of truth
 
@@ -73,6 +75,8 @@ read-only before assuming that a recorded deployment is still current.
 
 ## Important recent fixes
 
+- `f5a0c48a`: Apple-style UI refresh — split sign-in with business branding,
+  upgraded default design tokens, model plaza cards, frosted console header.
 - `080b678e`: removed Home navigation and made `/` default to the console.
 - `c90f0670`: materialized owned reference assets and converted AIGC image-edit
   references to replayable multipart files.
@@ -97,29 +101,29 @@ documents.
 Current release path:
 
 ```text
-/opt/new-api/releases/aizzz-gateway-slim-20260825-08-080b678e/new-api
+/opt/new-api/releases/aizzz-gateway-slim-20260825-09-f5a0c48a/new-api
 ```
 
-One-click rollback to `.07`:
+One-click rollback to `.08`:
 
 ```bash
-ssh sever '/backup/newapi/deployments/20260826T065012Z-before-aizzz-gateway-slim-20260825-08/rollback.sh'
+ssh sever '/backup/newapi/deployments/20260826T081803Z-before-aizzz-gateway-slim-20260825-09/rollback.sh'
 ```
 
 Core database snapshot:
 
 ```text
-/backup/newapi/deployments/20260826T065012Z-before-aizzz-gateway-slim-20260825-08/newapi.sql.zst
+/backup/newapi/deployments/20260826T081803Z-before-aizzz-gateway-slim-20260825-09/newapi.sql.zst
 ```
 
 Deployment script:
 
 ```text
-/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-08.sh
+/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-09.sh
 ```
 
-The `.08` deployment did not refresh or revoke sessions. Its deployment-time
-snapshot recorded 76 active login sessions and 2789 API tokens unchanged; these
+The `.09` deployment did not refresh or revoke sessions. Its deployment-time
+snapshot recorded 137 active login sessions and 2794 API tokens unchanged; these
 counts are historical evidence, not future expected constants.
 
 ## First-session checklist
