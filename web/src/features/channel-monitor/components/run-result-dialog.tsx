@@ -123,11 +123,19 @@ export function RunResultDialog({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {results.map((r, idx) => {
+                {results.map((r) => {
                   const tone = statusTone(r.status, r.latency_ms, apiMode)
                   const ok = tone === 'success' || tone === 'warning'
+                  let label = t('Failure')
+                  if (tone === 'warning') {
+                    label = t('Slow')
+                  } else if (ok) {
+                    label = t('Success')
+                  }
                   return (
-                    <TableRow key={`${r.model}-${idx}`}>
+                    <TableRow
+                      key={`${r.model}-${r.status}-${r.latency_ms}-${r.error_msg}`}
+                    >
                       <TableCell className='font-medium'>{r.model}</TableCell>
                       <TableCell>
                         <Badge
@@ -145,11 +153,7 @@ export function RunResultDialog({
                           ) : (
                             <XCircle className='size-3' />
                           )}
-                          {tone === 'warning'
-                            ? t('Slow')
-                            : ok
-                              ? t('Success')
-                              : t('Failure')}
+                          {label}
                         </Badge>
                       </TableCell>
                       <TableCell className='text-right tabular-nums'>

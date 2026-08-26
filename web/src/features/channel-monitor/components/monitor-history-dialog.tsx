@@ -199,6 +199,12 @@ export function MonitorHistoryDialog({
                   monitor?.api_mode ?? ''
                 )
                 const ok = tone === 'success' || tone === 'warning'
+                let label = t('Failure')
+                if (tone === 'warning') {
+                  label = t('Slow')
+                } else if (ok) {
+                  label = t('Success')
+                }
                 return (
                   <TableRow key={row.id}>
                     <TableCell className='font-mono text-xs'>
@@ -220,11 +226,7 @@ export function MonitorHistoryDialog({
                         ) : (
                           <XCircle className='size-3' />
                         )}
-                        {tone === 'warning'
-                          ? t('Slow')
-                          : ok
-                            ? t('Success')
-                            : t('Failure')}
+                        {label}
                       </Badge>
                     </TableCell>
                     <TableCell className='text-right tabular-nums'>

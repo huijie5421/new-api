@@ -133,7 +133,7 @@ export function TemplateApplyPickerDialog({
     try {
       await channelMonitorAPI.applyTemplate({
         template_id: template.id,
-        monitor_ids: Array.from(selected),
+        monitor_ids: [...selected],
       })
       toast.success(
         t('Template applied to {{count}} monitor(s)', { count: selected.size })

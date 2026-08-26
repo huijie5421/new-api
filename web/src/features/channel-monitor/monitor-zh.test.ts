@@ -2,7 +2,9 @@ import { describe, expect, test } from 'vitest'
 
 import zh from '@/i18n/locales/zh.json'
 
+// oxlint-disable-next-line import/default -- Vite raw imports expose source as default text.
 import monitorFormSource from './components/monitor-form-dialog.tsx?raw'
+// oxlint-disable-next-line import/default -- Vite raw imports expose source as default text.
 import templateFormSource from './components/template-form-dialog.tsx?raw'
 
 const ADMIN_MONITOR_KEYS = [

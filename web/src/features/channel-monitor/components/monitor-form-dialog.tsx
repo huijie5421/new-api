@@ -320,15 +320,15 @@ export function MonitorFormDialog({
     }
 
     const pendingExtra = extraModelInput.trim()
-      ? Array.from(
-          new Set([
+      ? [
+          ...new Set([
             ...extraModels,
             ...extraModelInput
               .split(',')
               .map((s) => s.trim())
               .filter(Boolean),
-          ])
-        )
+          ]),
+        ]
       : extraModels
 
     const payload: Partial<ChannelMonitor> = {
@@ -609,7 +609,7 @@ export function MonitorFormDialog({
                   !extraModelInput &&
                   extraModels.length
                 ) {
-                  removeExtraModel(extraModels[extraModels.length - 1])
+                  removeExtraModel(extraModels.at(-1) ?? '')
                 }
               }}
               onBlur={commitExtraModelInput}

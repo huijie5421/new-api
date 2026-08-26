@@ -45,6 +45,9 @@ export function StatusTimeline({ points, apiMode = '' }: StatusTimelineProps) {
 
   const recent = points.length > MAX_BARS ? points.slice(-MAX_BARS) : points
   const placeholders = Math.max(0, MAX_BARS - recent.length)
+  const placeholderItems = Array.from({ length: placeholders }, (_, index) => ({
+    id: `placeholder-${index}`,
+  }))
   const upCount = recent.filter((p) => p.status === 'success').length
   const uptime = recent.length > 0 ? (upCount / recent.length) * 100 : null
   let uptimeClassName = 'text-rose-600 dark:text-rose-400'
@@ -73,15 +76,15 @@ export function StatusTimeline({ points, apiMode = '' }: StatusTimelineProps) {
       </div>
       <TooltipProvider delay={100}>
         <div className='flex h-9 items-stretch gap-[2px]'>
-          {Array.from({ length: placeholders }).map((_, i) => (
+          {placeholderItems.map((placeholder) => (
             <div
-              key={`ph-${i}`}
+              key={placeholder.id}
               className='bg-muted/50 min-w-[2px] flex-1 rounded-[2px]'
             />
           ))}
-          {recent.map((point, i) => (
+          {recent.map((point) => (
             <TimelineBar
-              key={`${point.checked_at}-${i}`}
+              key={point.checked_at}
               point={point}
               apiMode={apiMode}
             />
