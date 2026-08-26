@@ -5488,6 +5488,11 @@
     "Reusable request configuration that can be applied to monitors of the same provider.": "可应用于同一供应商监控项的可复用请求配置。",
     "This will permanently remove the template \"{{name}}\". Monitors already using it keep their current settings.": "这将永久删除模板“{{name}}”。已经使用该模板的监控项会保留当前设置。",
     "Too many key requests, please wait a moment and retry, or paste the key manually": "API Key 请求过于频繁，请稍后重试，或手动粘贴 Key。",
-    "Channel Monitor": "渠道监控"
+    "Channel Monitor": "渠道监控",
+    "Buy redemption codes": "购买兑换码",
+    "Browse products here, then redeem your code below": "在这里浏览商品，购买后使用下方兑换码充值",
+    "Click to maximize": "点击最大化",
+    "Loading shop": "商城加载中",
+    "The shop did not load here. Continue in a new tab.": "商城暂时未能载入，可在新标签页继续购买"
   }
 }

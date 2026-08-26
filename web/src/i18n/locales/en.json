@@ -5483,6 +5483,11 @@
     "Reusable request configuration that can be applied to monitors of the same provider.": "Reusable request configuration that can be applied to monitors of the same provider.",
     "This will permanently remove the template \"{{name}}\". Monitors already using it keep their current settings.": "This will permanently remove the template \"{{name}}\". Monitors already using it keep their current settings.",
     "Too many key requests, please wait a moment and retry, or paste the key manually": "Too many key requests, please wait a moment and retry, or paste the key manually",
-    "Channel Monitor": "Channel Monitor"
+    "Channel Monitor": "Channel Monitor",
+    "Buy redemption codes": "Buy redemption codes",
+    "Browse products here, then redeem your code below": "Browse products here, then redeem your code below",
+    "Click to maximize": "Click to maximize",
+    "Loading shop": "Loading shop",
+    "The shop did not load here. Continue in a new tab.": "The shop did not load here. Continue in a new tab."
   }
 }

@@ -33,7 +33,7 @@
 
 新增 `RedeemCodeShopCard`：
 
-- 当 `TopUpLink` 配置为有效的 `https://catfk.com/shop/...` 地址时显示。
+- 当 `TopUpLink` 配置为有效的 `https://catfk.com/shop/...` 地址时使用该地址；配置为空时回退到固定的 `https://catfk.com/shop/WWADEZ6N`。
 - 位于现有充值区域同一内容网格中，不建立新的页面主题或顶层页签。
 - 充值卡与商城卡使用现有 `TitledCard`、`Button`、CSS 主题变量和 Tailwind 响应式断点。
 - 大屏布局延续钱包当前双列结构；商城卡占右侧卡片区域。
@@ -68,7 +68,7 @@
 
 - 复用现有 `TopUpLink` 管理员设置和 `/api/user/topup/info` 返回的 `topup_link` 字段。
 - 前端只接受 HTTPS 链接。
-- 本次生产配置指向 `https://catfk.com/shop/WWADEZ6N`。
+- 本次不写入数据库；前端默认指向 `https://catfk.com/shop/WWADEZ6N`，生产已有的 `TopUpLink` 配置若为空也能直接显示。
 - 外部打开使用 `noopener noreferrer`，避免新页面获得钱包页面的 `window.opener`。
 - iframe 使用明确的 `title`，并采用满足商城付款流程所需的最小权限属性。
 - 不向商城 URL 拼接用户 ID、访问令牌、余额、邮箱或其他账户数据。
