@@ -101,8 +101,16 @@ Use `git show <commit>` instead of reconstructing these fixes from summaries.
 - New task defaults are interval `300s` and timeout `90s`; image timeout can be edited from `1–180s`, while text probes retain the existing `60s/10s` defaults and `60s` cap. Custom image fields such as prompt, n, size, quality, and response_format remain editable; model is always taken from the task.
 - Image status presentation: success latency `<60,000ms` is green, success latency `>=60,000ms` is amber/yellow, and every failure is red. Text mode colors and availability calculations remain unchanged.
 - Admin forms, template manager, apply picker, run result, history, public status cards, and public timeline all expose/localize the new mode. Existing templates are not overwritten; OpenAI/Grok image defaults are seeded idempotently.
-- Verification completed: targeted Go tests, `go test ./... -count=1`, `go build -buildvcs=false`, frontend typecheck, production build, full Vitest suite (53 files / 244 tests), changed-file formatting/lint, and `git diff --check`. The repository-wide format check still lists unrelated pre-existing files; no new test failure occurred in the focused suite.
-- This change is source-only. No production binary, database, service restart, login-session refresh, or token mutation was performed. Production remains `.08` until a separate deployment decision.
+- Verification completed: targeted Go tests, `go test ./... -count=1`, `go build -buildvcs=false`, frontend typecheck, production build, full Vitest suite (51 files / 234 tests after reverting the rejected UI), changed-file formatting/lint, and `git diff --check`. The repository-wide format check still lists unrelated pre-existing files; no new test failure occurred in the focused suite.
+- Release `.10` was deployed after the source-only verification. Production now runs `aizzz-gateway-slim-20260825.10`; the `.08` binary is preserved as the one-click rollback target. The deployment created a MySQL snapshot and did not refresh/revoke login sessions or mutate API tokens.
+
+### `.10` deployment evidence (2026-08-26T16:40:05Z)
+
+- Release binary: `/opt/new-api/releases/aizzz-gateway-slim-20260825-10-b5016156/new-api`, 131674377 bytes, SHA-256 `798aa1eede998d2689bc0423b1e003258495198311eabff215759eb3598ef330`.
+- Production `/api/status` and public status both report `aizzz-gateway-slim-20260825.10` and the official rc.25 source marker. Service is `active`, `Result=success`, `NRestarts=0`, failed units `0`, and post-start critical-log scan is clean.
+- Public main JS/CSS assets were hash-verified; OpenAI/Grok image-generation templates exist in the live database with `{"n":1,"size":"1024x1024"}`.
+- One-click rollback: `/backup/newapi/deployments/20260826T164005Z-before-aizzz-gateway-slim-20260825-10/rollback.sh` (run with `bash` because `/backup` is mounted no-exec). Rollback binary SHA-256 `a56407328aee76bfe3fd0d9cb958224987f3ca0e802f0fb1a79b04167e38602d`; database backup is `newapi.sql.zst` in the same directory and passed `zstd -t`/SHA verification.
+- Session/token counts remained unchanged: 310 active sessions and 2810 API tokens before and after deployment.
 
 ## Production and rollback
 
@@ -110,18 +118,19 @@ Production access uses the existing SSH alias `sever`. Do not place passwords,
 API keys, cookies, merchant secrets, or private keys in commits or handoff
 documents.
 
-Current release path (production runs the restored `.08` binary at
-`/opt/new-api/current/new-api`; the rolled-back `.09` release remains at):
+Current release path (production runs `.10` at `/opt/new-api/current/new-api`;
+the `.08` rollback target and rolled-back `.09` release remain at):
 
 ```text
+/opt/new-api/releases/aizzz-gateway-slim-20260825-10-b5016156/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-08-080b678e/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-09-f5a0c48a/new-api  (rolled back, do not reuse without operator approval)
 ```
 
-One-click rollback to `.07` (from the running `.08`):
+One-click rollback to `.08` (from the running `.10`):
 
 ```bash
-ssh sever '/backup/newapi/deployments/20260826T065012Z-before-aizzz-gateway-slim-20260825-08/rollback.sh'
+ssh sever 'bash /backup/newapi/deployments/20260826T164005Z-before-aizzz-gateway-slim-20260825-10/rollback.sh'
 ```
 
 Core database snapshots:
@@ -129,6 +138,7 @@ Core database snapshots:
 ```text
 /backup/newapi/deployments/20260826T065012Z-before-aizzz-gateway-slim-20260825-08/newapi.sql.zst
 /backup/newapi/deployments/20260826T081803Z-before-aizzz-gateway-slim-20260825-09/newapi.sql.zst
+/backup/newapi/deployments/20260826T164005Z-before-aizzz-gateway-slim-20260825-10/newapi.sql.zst
 ```
 
 Deployment scripts:
@@ -136,6 +146,7 @@ Deployment scripts:
 ```text
 /home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-08.sh
 /home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-09.sh  (deployed then rolled back)
+/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-10.sh
 ```
 
 Neither the `.09` deployment nor its rollback refreshed or revoked sessions;
