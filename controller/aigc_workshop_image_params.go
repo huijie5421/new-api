@@ -19,6 +19,7 @@ const (
 )
 
 type aigcWorkshopImageParameters struct {
+	Model             string          `json:"model,omitempty"`
 	N                 *uint           `json:"n,omitempty"`
 	Size              string          `json:"size,omitempty"`
 	Quality           string          `json:"quality,omitempty"`
@@ -112,6 +113,10 @@ func normalizeAigcWorkshopImageRequest(body []byte) ([]byte, error) {
 	var payload map[string]json.RawMessage
 	if err := common.Unmarshal(body, &payload); err != nil {
 		return nil, err
+	}
+	normalizedModel := strings.ToLower(strings.TrimSpace(request.Model))
+	if normalizedModel == "image-2" || normalizedModel == "gpt-image-2" || strings.HasPrefix(normalizedModel, "gpt-image-2-") {
+		delete(payload, "input_fidelity")
 	}
 	delete(payload, "image")
 	delete(payload, "images")

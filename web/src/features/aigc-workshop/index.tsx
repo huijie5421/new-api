@@ -136,7 +136,6 @@ import type {
   ImageBackground,
   ImageGenerationPayload,
   ImageGenerationResponse,
-  ImageInputFidelity,
   ImageModeration,
   ImageOutputFormat,
   ImageQuality,
@@ -701,8 +700,6 @@ export function AigcWorkshop(props: AigcWorkshopProps) {
   const [imageOutputFormat, setImageOutputFormat] =
     useState<ImageOutputFormat>('png')
   const [imageOutputCompression, setImageOutputCompression] = useState(100)
-  const [imageInputFidelity, setImageInputFidelity] =
-    useState<ImageInputFidelity>('low')
   const [videoSeconds, setVideoSeconds] = useState(5)
   const [videoCount, setVideoCount] = useState(1)
   const [videoAspectRatio, setVideoAspectRatio] =
@@ -1720,7 +1717,6 @@ export function AigcWorkshop(props: AigcWorkshopProps) {
       )
     }
     if (imageReferences.length > 0) {
-      payload.input_fidelity = imageInputFidelity
       if (imageMask) {
         payload.mask = await resolveReferenceMediaUrl(imageMask.url)
       }
@@ -2379,7 +2375,6 @@ export function AigcWorkshop(props: AigcWorkshopProps) {
         imageModeration={imageModeration}
         imageOutputFormat={imageOutputFormat}
         imageOutputCompression={imageOutputCompression}
-        imageInputFidelity={imageInputFidelity}
         computedImageSize={computedImageSize}
         videoSeconds={selectedVideoEffectiveSeconds}
         videoCount={videoCount}
@@ -2436,7 +2431,6 @@ export function AigcWorkshop(props: AigcWorkshopProps) {
         onImageModerationChange={setImageModeration}
         onImageOutputFormatChange={handleImageOutputFormatChange}
         onImageOutputCompressionChange={setImageOutputCompression}
-        onImageInputFidelityChange={setImageInputFidelity}
         onVideoSecondsChange={setVideoSeconds}
         onVideoCountChange={setVideoCount}
         onVideoAspectRatioChange={setVideoAspectRatio}
@@ -2606,7 +2600,6 @@ type OriginImageStudioProps = {
   imageModeration: ImageModeration
   imageOutputFormat: ImageOutputFormat
   imageOutputCompression: number
-  imageInputFidelity: ImageInputFidelity
   computedImageSize: string
   videoSeconds: number
   videoCount: number
@@ -2651,7 +2644,6 @@ type OriginImageStudioProps = {
   onImageModerationChange: (value: ImageModeration) => void
   onImageOutputFormatChange: (value: ImageOutputFormat) => void
   onImageOutputCompressionChange: (value: number) => void
-  onImageInputFidelityChange: (value: ImageInputFidelity) => void
   onVideoSecondsChange: (value: number) => void
   onVideoCountChange: (value: number) => void
   onVideoAspectRatioChange: (value: VideoAspectRatio) => void
@@ -3485,20 +3477,6 @@ function OriginImageStudio(props: OriginImageStudioProps) {
                       onChange={(value) =>
                         props.onImageOutputFormatChange(
                           value as ImageOutputFormat
-                        )
-                      }
-                    />
-                    <ChipSelect
-                      label={t('参考保真度')}
-                      value={props.imageInputFidelity}
-                      disabled={props.imageReferences.length === 0}
-                      options={[
-                        { value: 'low', label: t('低') },
-                        { value: 'high', label: t('高') },
-                      ]}
-                      onChange={(value) =>
-                        props.onImageInputFidelityChange(
-                          value as ImageInputFidelity
                         )
                       }
                     />

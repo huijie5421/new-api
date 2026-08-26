@@ -26,7 +26,6 @@ export type ImageQuality = 'auto' | 'low' | 'medium' | 'high'
 export type ImageBackground = 'auto' | 'transparent' | 'opaque'
 export type ImageModeration = 'auto' | 'low'
 export type ImageOutputFormat = 'png' | 'jpeg' | 'webp'
-export type ImageInputFidelity = 'low' | 'high'
 
 export type WorkshopResult = {
   id: string
@@ -50,7 +49,6 @@ export type ImageGenerationPayload = {
   moderation?: ImageModeration
   output_format?: ImageOutputFormat
   output_compression?: number
-  input_fidelity?: ImageInputFidelity
   image?: string
   images?: string[]
   mask?: string
