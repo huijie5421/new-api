@@ -47,6 +47,12 @@
 **Files:**
 - Modify: `progress.md` and `SERVER-OPS.md` after deployment approval/verification.
 
-- [ ] Run `bun run typecheck`, focused Vitest tests, `bun run test`, `bun run build`, `bun run format:check`, and `git diff --check`.
-- [ ] Build a `.08` candidate labeled from the current source commit and verify its `/api/status` marker locally before deployment.
-- [ ] Preserve a one-click rollback to `.07`; do not refresh sessions unless separately requested.
+- [x] Run `bun run typecheck`, focused Vitest tests, `bun run test`, `bun run build`, targeted lint/format checks, and `git diff --check`. The repository-wide format check still reports pre-existing unrelated files.
+- [x] Build and verify the `.08` candidate from source commit `080b678e`; the candidate reports `aizzz-gateway-slim-20260825.08` and has SHA-256 `a56407328aee76bfe3fd0d9cb958224987f3ca0e802f0fb1a79b04167e38602d`.
+- [x] Deploy with a one-click rollback to `.07`; login sessions and API tokens were unchanged.
+
+### Result
+
+- Production `/` and `/home` now enter the console route; unauthenticated users are handled by the existing official authentication guard and returned to `/dashboard` after sign-in.
+- The Home top-navigation switch and emitted link are removed. Legacy persisted `home: true` values are accepted for shape compatibility but forced off.
+- Release `aizzz-gateway-slim-20260825.08` is active in production with rollback at `/backup/newapi/deployments/20260826T065012Z-before-aizzz-gateway-slim-20260825-08/rollback.sh`.
