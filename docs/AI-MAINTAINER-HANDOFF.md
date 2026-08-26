@@ -93,6 +93,17 @@ read-only before assuming that a recorded deployment is still current.
 
 Use `git show <commit>` instead of reconstructing these fixes from summaries.
 
+## 2026-08-26 - V1 独立渠道监控生图检测（源码未部署）
+
+- Source commits: `3cc1d544` (Go API mode, validation, templates, OpenAI/Grok image adapter) and `08c28de8` (rebuilds system-managed request bodies when an API mode changes), followed by `1100bbda`/`33f2b9ef` (frontend timing, status colors, boundary tests).
+- The official rc.25 database schema remains compatible; `ChannelMonitor.APIMode` already uses a varchar field, so no migration is required.
+- New mode: `image_generation`, available for OpenAI and Grok independent monitor tasks. It POSTs to `/v1/images/generations`, validates a 2xx JSON response with a non-empty `data[0].url` or `data[0].b64_json`, and never downloads the image.
+- New task defaults are interval `300s` and timeout `90s`; image timeout can be edited from `1–180s`, while text probes retain the existing `60s/10s` defaults and `60s` cap. Custom image fields such as prompt, n, size, quality, and response_format remain editable; model is always taken from the task.
+- Image status presentation: success latency `<60,000ms` is green, success latency `>=60,000ms` is amber/yellow, and every failure is red. Text mode colors and availability calculations remain unchanged.
+- Admin forms, template manager, apply picker, run result, history, public status cards, and public timeline all expose/localize the new mode. Existing templates are not overwritten; OpenAI/Grok image defaults are seeded idempotently.
+- Verification completed: targeted Go tests, `go test ./... -count=1`, frontend typecheck, 28 focused frontend tests, changed-file formatting, and `git diff --check`. The repository-wide Bun test command still reports the known jsdom/`vi.hoisted` environment failures in unrelated existing tests; no new test failure occurred in the focused suite.
+- This change is source-only. No production binary, database, service restart, login-session refresh, or token mutation was performed. Production remains `.08` until a separate deployment decision.
+
 ## Production and rollback
 
 Production access uses the existing SSH alias `sever`. Do not place passwords,
