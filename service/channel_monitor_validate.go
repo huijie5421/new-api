@@ -13,11 +13,13 @@ func ValidateMonitorConfig(provider string, apiMode string, endpoint string, api
 		return fmt.Errorf("invalid provider: %s (must be openai, anthropic, gemini, or grok)", provider)
 	}
 
-	// Validate API mode for OpenAI
+	// Validate API mode for OpenAI-compatible providers.
 	if provider == ProviderOpenAI || provider == ProviderGrok {
-		if apiMode != APIModeChat && apiMode != APIModeResponses {
-			return fmt.Errorf("invalid api_mode for %s: %s (must be chat_completions or responses)", provider, apiMode)
+		if apiMode != APIModeChat && apiMode != APIModeResponses && apiMode != APIModeImageGeneration {
+			return fmt.Errorf("invalid api_mode for %s: %s (must be chat_completions, responses, or image_generation)", provider, apiMode)
 		}
+	} else if apiMode == APIModeImageGeneration {
+		return fmt.Errorf("invalid api_mode for %s: image_generation is only supported by openai-compatible providers", provider)
 	}
 
 	// Validate endpoint
@@ -58,8 +60,12 @@ func ValidateMonitorConfig(provider string, apiMode string, endpoint string, api
 	if timeoutSeconds < 1 {
 		return fmt.Errorf("timeout_seconds must be at least 1 second")
 	}
-	if timeoutSeconds > MaxCheckTimeout {
-		return fmt.Errorf("timeout_seconds must not exceed %d seconds", MaxCheckTimeout)
+	maxTimeout := MaxCheckTimeout
+	if apiMode == APIModeImageGeneration {
+		maxTimeout = MaxImageCheckTimeout
+	}
+	if timeoutSeconds > maxTimeout {
+		return fmt.Errorf("timeout_seconds must not exceed %d seconds", maxTimeout)
 	}
 	if timeoutSeconds >= intervalSeconds {
 		return fmt.Errorf("timeout_seconds must be less than interval_seconds")
@@ -69,10 +75,17 @@ func ValidateMonitorConfig(provider string, apiMode string, endpoint string, api
 }
 
 // ValidateTemplateConfig validates template configuration
-func ValidateTemplateConfig(provider string, name string, bodyMode string) error {
+func ValidateTemplateConfig(provider string, apiMode string, name string, bodyMode string) error {
 	// Validate provider
 	if provider != ProviderOpenAI && provider != ProviderAnthropic && provider != ProviderGemini && provider != ProviderGrok {
 		return fmt.Errorf("invalid provider: %s", provider)
+	}
+	if provider == ProviderOpenAI || provider == ProviderGrok {
+		if apiMode != APIModeChat && apiMode != APIModeResponses && apiMode != APIModeImageGeneration {
+			return fmt.Errorf("invalid api_mode for %s: %s", provider, apiMode)
+		}
+	} else if apiMode == APIModeImageGeneration {
+		return fmt.Errorf("invalid api_mode for %s: image_generation is only supported by openai-compatible providers", provider)
 	}
 
 	// Validate name

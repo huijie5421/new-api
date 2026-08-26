@@ -97,7 +97,7 @@ func CreateChannelMonitor(c *gin.Context) {
 
 	// Build default body if not provided
 	if monitor.Body == "" && monitor.BodyMode != "" {
-		body, err := service.BuildRequestBodyFromMode(monitor.Provider, monitor.BodyMode, "")
+		body, err := service.BuildRequestBodyFromMode(monitor.Provider, monitor.APIMode, monitor.BodyMode, "")
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -372,7 +372,7 @@ func CreateChannelMonitorTemplate(c *gin.Context) {
 	}
 
 	// Validate configuration
-	if err := service.ValidateTemplateConfig(template.Provider, template.Name, template.BodyMode); err != nil {
+	if err := service.ValidateTemplateConfig(template.Provider, template.APIMode, template.Name, template.BodyMode); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -413,7 +413,7 @@ func UpdateChannelMonitorTemplate(c *gin.Context) {
 	}
 
 	// Validate configuration
-	if err := service.ValidateTemplateConfig(template.Provider, template.Name, template.BodyMode); err != nil {
+	if err := service.ValidateTemplateConfig(template.Provider, template.APIMode, template.Name, template.BodyMode); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"message": err.Error(),

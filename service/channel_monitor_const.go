@@ -7,9 +7,10 @@ const (
 	ProviderGemini    = "gemini"
 	ProviderGrok      = "grok"
 
-	// API modes (OpenAI-specific)
-	APIModeChat      = "chat_completions"
-	APIModeResponses = "responses"
+	// API modes (OpenAI-compatible providers)
+	APIModeChat            = "chat_completions"
+	APIModeResponses       = "responses"
+	APIModeImageGeneration = "image_generation"
 
 	// Body modes
 	BodyModeAuto    = "auto"
@@ -22,10 +23,14 @@ const (
 	StatusUnknown = "unknown"
 
 	// Timeouts
-	DefaultCheckTimeout = 10   // seconds
-	MaxCheckTimeout     = 60   // seconds
-	MinCheckInterval    = 60   // seconds
-	MaxCheckInterval    = 3600 // 1 hour
+	DefaultCheckTimeout       = 10  // seconds
+	MaxCheckTimeout           = 60  // seconds (text probes)
+	DefaultImageCheckInterval = 300 // seconds
+	DefaultImageCheckTimeout  = 90  // seconds
+	MaxImageCheckTimeout      = 180 // seconds
+	ImageSlowLatencyMs        = 60000
+	MinCheckInterval          = 60   // seconds
+	MaxCheckInterval          = 3600 // 1 hour
 
 	// Aggregation
 	AggregationRetentionDays = 30
@@ -42,13 +47,15 @@ const (
 // Provider-specific paths
 var ProviderPaths = map[string]map[string]string{
 	ProviderOpenAI: {
-		APIModeChat:      "/v1/chat/completions",
-		APIModeResponses: "/v1/responses",
+		APIModeChat:            "/v1/chat/completions",
+		APIModeResponses:       "/v1/responses",
+		APIModeImageGeneration: "/v1/images/generations",
 	},
-	// Grok exposes an OpenAI-compatible Chat Completions/Responses API.
+	// Grok exposes OpenAI-compatible text and image APIs.
 	ProviderGrok: {
-		APIModeChat:      "/v1/chat/completions",
-		APIModeResponses: "/v1/responses",
+		APIModeChat:            "/v1/chat/completions",
+		APIModeResponses:       "/v1/responses",
+		APIModeImageGeneration: "/v1/images/generations",
 	},
 	ProviderAnthropic: {
 		"default": "/v1/messages",

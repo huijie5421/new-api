@@ -12,7 +12,7 @@ type ChannelMonitor struct {
 	ID                  int       `json:"id" gorm:"primarykey"`
 	Name                string    `json:"name" gorm:"type:varchar(255);not null;index"`
 	Provider            string    `json:"provider" gorm:"type:varchar(50);not null;index"` // openai, anthropic, gemini, grok
-	APIMode             string    `json:"api_mode" gorm:"type:varchar(50);not null"`       // chat_completions, responses (OpenAI-specific)
+	APIMode             string    `json:"api_mode" gorm:"type:varchar(50);not null"`       // chat_completions, responses, image_generation (OpenAI-compatible)
 	Endpoint            string    `json:"endpoint" gorm:"type:varchar(512);not null"`
 	APIKey              string    `json:"api_key" gorm:"type:text;not null"` // Encrypted
 	PrimaryModel        string    `json:"primary_model" gorm:"type:varchar(255);not null"`
@@ -313,6 +313,26 @@ func SeedDefaultChannelMonitorTemplates() error {
 			Headers:     "{}",
 			Body:        `{"max_tokens":100,"temperature":0.7}`,
 			Description: "Default health-check template for OpenAI Responses API.",
+			IsDefault:   true,
+		},
+		{
+			Provider:    "openai",
+			Name:        "OpenAI Image Generations (Default)",
+			APIMode:     "image_generation",
+			BodyMode:    "auto",
+			Headers:     "{}",
+			Body:        `{"n":1,"size":"1024x1024"}`,
+			Description: "Default health-check template for OpenAI Image Generations API.",
+			IsDefault:   true,
+		},
+		{
+			Provider:    "grok",
+			Name:        "Grok Image Generations (Default)",
+			APIMode:     "image_generation",
+			BodyMode:    "auto",
+			Headers:     "{}",
+			Body:        `{"n":1,"size":"1024x1024"}`,
+			Description: "Default health-check template for Grok Image Generations API.",
 			IsDefault:   true,
 		},
 		{

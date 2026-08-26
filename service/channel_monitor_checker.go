@@ -227,6 +227,82 @@ func (a *OpenAIResponsesAdapter) ValidateResponse(statusCode int, responseBody [
 	return true, ""
 }
 
+// OpenAIImageAdapter implements the OpenAI-compatible image generations API.
+// Image probes deliberately validate the response contract without downloading
+// the generated asset.
+type OpenAIImageAdapter struct{}
+
+func buildOpenAIImageURL(endpoint string) string {
+	base := strings.TrimRight(endpoint, "/")
+	const imagePath = "/v1/images/generations"
+	if strings.HasSuffix(base, imagePath) {
+		return base
+	}
+	if strings.HasSuffix(base, "/v1") {
+		return base + "/images/generations"
+	}
+	return base + imagePath
+}
+
+func (a *OpenAIImageAdapter) BuildRequest(endpoint string, apiKey string, model string, headers map[string]string, body map[string]interface{}, challenge *Challenge) (string, map[string]string, []byte, error) {
+	reqHeaders := map[string]string{
+		"Content-Type":  "application/json",
+		"Authorization": "Bearer " + apiKey,
+	}
+	for k, v := range headers {
+		reqHeaders[k] = v
+	}
+
+	reqBody := map[string]interface{}{
+		"model":  model,
+		"prompt": "a cute cat",
+		"n":      1,
+		"size":   "1024x1024",
+	}
+	for k, v := range body {
+		if k == "model" {
+			continue
+		}
+		reqBody[k] = v
+	}
+
+	bodyBytes, err := common.Marshal(reqBody)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("failed to marshal request body: %w", err)
+	}
+	return buildOpenAIImageURL(endpoint), reqHeaders, bodyBytes, nil
+}
+
+func (a *OpenAIImageAdapter) ValidateResponse(statusCode int, responseBody []byte, challenge *Challenge) (bool, string) {
+	if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
+		return false, fmt.Sprintf("HTTP %d", statusCode)
+	}
+
+	var resp struct {
+		Data []struct {
+			URL     string `json:"url"`
+			B64JSON string `json:"b64_json"`
+		} `json:"data"`
+		Error *struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := common.Unmarshal(responseBody, &resp); err != nil {
+		return false, "invalid JSON response"
+	}
+	if resp.Error != nil && strings.TrimSpace(resp.Error.Message) != "" {
+		return false, resp.Error.Message
+	}
+	if len(resp.Data) == 0 {
+		return false, "no image data in response"
+	}
+	first := resp.Data[0]
+	if strings.TrimSpace(first.URL) == "" && strings.TrimSpace(first.B64JSON) == "" {
+		return false, "image data has neither url nor b64_json"
+	}
+	return true, ""
+}
+
 // AnthropicAdapter implements ProviderAdapter for Anthropic
 type AnthropicAdapter struct{}
 
@@ -379,10 +455,16 @@ func (a *GeminiAdapter) ValidateResponse(statusCode int, responseBody []byte, ch
 func GetProviderAdapter(provider string, apiMode string) (ProviderAdapter, error) {
 	switch provider {
 	case ProviderOpenAI, ProviderGrok:
-		if apiMode == APIModeResponses {
+		switch apiMode {
+		case APIModeResponses:
 			return &OpenAIResponsesAdapter{}, nil
+		case APIModeImageGeneration:
+			return &OpenAIImageAdapter{}, nil
+		case APIModeChat:
+			return &OpenAIChatAdapter{}, nil
+		default:
+			return nil, fmt.Errorf("unsupported api_mode for %s: %s", provider, apiMode)
 		}
-		return &OpenAIChatAdapter{}, nil
 	case ProviderAnthropic:
 		return &AnthropicAdapter{}, nil
 	case ProviderGemini:
@@ -521,7 +603,7 @@ func performCheckOnce(ctx context.Context, monitor *model.ChannelMonitor, modelN
 
 	// Streaming (SSE) 200 responses: a channel returning a valid event stream is
 	// serving requests — treat as healthy without JSON-validating each chunk.
-	if resp.StatusCode == http.StatusOK && isSSEStream(responseBody) {
+	if monitor.APIMode != APIModeImageGeneration && resp.StatusCode == http.StatusOK && isSSEStream(responseBody) {
 		result.ResponseOK = true
 		result.Status = StatusSuccess
 		result.ErrorMsg = ""

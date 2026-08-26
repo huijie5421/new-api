@@ -40,7 +40,7 @@ Content-Type: application/json
 }
 ```
 
-高级 custom 模式允许管理员调整生图供应商支持的参数（例如 `size`、`quality`、`response_format`），但系统始终注入任务模型和健康检查 prompt，并将 `n` 限制为 1，避免一次检测产生多张图片和不可控费用。模板内容存储在现有渠道监控模板表中，无新增表。
+高级 custom 模式允许管理员调整生图供应商支持的参数（例如 `prompt`、`n`、`size`、`quality`、`response_format`）；系统只始终注入当前任务模型，prompt/n/size 等值均以任务模板中的可编辑值为准，缺省时才使用默认值。模板内容存储在现有渠道监控模板表中，无新增表。
 
 ### 响应校验
 

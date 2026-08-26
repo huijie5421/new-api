@@ -157,7 +157,7 @@ git commit -m "feat: add image generation monitor mode"
 - endpoint `https://api.example.com/v1` 生成 `https://api.example.com/v1/images/generations`，不重复 `/v1`；
 - headers 含 `Authorization: Bearer sk-test` 和 `Content-Type: application/json`；
 - 默认 body 含任务模型、`prompt:"a cute cat"`、`n:1`、`size:"1024x1024"`；
-- custom body 的 `n:4` 最终仍为 `n:1`，模型和 prompt 不能被覆盖；
+- custom body 的 `n:4`、自定义 prompt 和 size 会保留，模型始终使用任务模型；
 - `ValidateResponse` 对 200 + `data[0].url`、200 + `data[0].b64_json` 返回成功，对空 data、缺 url/base64、非 JSON、非 2xx 返回失败原因。
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -178,7 +178,7 @@ Expected: FAIL because the image adapter and mode dispatch do not exist。
 type OpenAIImageAdapter struct{}
 ```
 
-`BuildRequest` 使用 endpoint helper：根 endpoint 拼接 `/v1/images/generations`，已以 `/v1` 结尾时拼接 `/images/generations`，已以完整图片路径结尾时不重复；设置 Bearer 鉴权和 JSON content type。请求体先放入 `model`、固定 `prompt:"a cute cat"`、`n:1`、`size:"1024x1024"`，再合并 body 中除 `model`、`prompt`、`n` 外的字段，最后强制 `n=1`。
+`BuildRequest` 使用 endpoint helper：根 endpoint 拼接 `/v1/images/generations`，已以 `/v1` 结尾时拼接 `/images/generations`，已以完整图片路径结尾时不重复；设置 Bearer 鉴权和 JSON content type。请求体先放入任务模型和默认 `prompt:"a cute cat"`、`n:1`、`size:"1024x1024"`，再合并模板 body；模板中的 `prompt`、`n`、`size`、`quality` 等字段可覆盖这些默认值，但 `model` 始终由任务主模型提供。
 
 `ValidateResponse` 要求 2xx、合法 JSON、非空 `data` 数组，并检查首项 `url` 或 `b64_json` 是非空字符串；错误信息只返回状态/契约原因，不回显 API key。
 

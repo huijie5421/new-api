@@ -51,7 +51,7 @@ func ApplyTemplateToMonitors(templateID int, monitorIDs []int) error {
 }
 
 // BuildRequestBodyFromMode builds the request body based on body mode
-func BuildRequestBodyFromMode(provider string, bodyMode string, customBody string) (string, error) {
+func BuildRequestBodyFromMode(provider string, apiMode string, bodyMode string, customBody string) (string, error) {
 	if bodyMode == BodyModeCustom {
 		// Use custom body as-is
 		return customBody, nil
@@ -59,6 +59,20 @@ func BuildRequestBodyFromMode(provider string, bodyMode string, customBody strin
 
 	// Build minimal or auto body
 	var body map[string]interface{}
+	if apiMode == APIModeImageGeneration {
+		if provider != ProviderOpenAI && provider != ProviderGrok {
+			return "", fmt.Errorf("image_generation is unsupported for provider: %s", provider)
+		}
+		body = map[string]interface{}{
+			"n":    1,
+			"size": "1024x1024",
+		}
+		bodyBytes, err := common.Marshal(body)
+		if err != nil {
+			return "", err
+		}
+		return string(bodyBytes), nil
+	}
 
 	switch provider {
 	case ProviderOpenAI, ProviderGrok:
