@@ -120,3 +120,13 @@ func BuildRequestBodyFromMode(provider string, apiMode string, bodyMode string, 
 
 	return string(bodyBytes), nil
 }
+
+// NormalizeMonitorRequestBody preserves explicitly custom JSON and rebuilds
+// system-managed bodies from the current provider/API mode. Rebuilding avoids
+// retaining chat-only fields when an existing monitor switches to image mode.
+func NormalizeMonitorRequestBody(provider string, apiMode string, bodyMode string, currentBody string) (string, error) {
+	if bodyMode == BodyModeCustom {
+		return currentBody, nil
+	}
+	return BuildRequestBodyFromMode(provider, apiMode, bodyMode, "")
+}

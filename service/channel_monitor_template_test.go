@@ -51,3 +51,41 @@ func TestBuildRequestBodyFromModeKeepsCustomImageBody(t *testing.T) {
 		t.Fatalf("body = %q, want custom body unchanged", body)
 	}
 }
+
+func TestNormalizeMonitorRequestBodyRebuildsNonCustomBodyAfterModeChange(t *testing.T) {
+	body, err := NormalizeMonitorRequestBody(
+		ProviderOpenAI,
+		APIModeImageGeneration,
+		BodyModeAuto,
+		`{"max_tokens":100}`,
+	)
+	if err != nil {
+		t.Fatalf("NormalizeMonitorRequestBody() error = %v", err)
+	}
+	var decoded map[string]interface{}
+	if err := common.Unmarshal([]byte(body), &decoded); err != nil {
+		t.Fatalf("invalid JSON body: %v", err)
+	}
+	if _, exists := decoded["max_tokens"]; exists {
+		t.Fatalf("stale text field remains in image body: %#v", decoded)
+	}
+	if decoded["n"] != float64(1) || decoded["size"] != "1024x1024" {
+		t.Fatalf("image defaults missing: %#v", decoded)
+	}
+}
+
+func TestNormalizeMonitorRequestBodyPreservesCustomBody(t *testing.T) {
+	const custom = `{"prompt":"custom","n":2}`
+	body, err := NormalizeMonitorRequestBody(
+		ProviderOpenAI,
+		APIModeImageGeneration,
+		BodyModeCustom,
+		custom,
+	)
+	if err != nil {
+		t.Fatalf("NormalizeMonitorRequestBody() error = %v", err)
+	}
+	if body != custom {
+		t.Fatalf("body = %q, want %q", body, custom)
+	}
+}

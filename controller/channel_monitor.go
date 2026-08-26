@@ -95,9 +95,10 @@ func CreateChannelMonitor(c *gin.Context) {
 	// For now, store as-is. In production, use common crypto functions
 	// monitor.APIKey = encryptAPIKey(monitor.APIKey)
 
-	// Build default body if not provided
-	if monitor.Body == "" && monitor.BodyMode != "" {
-		body, err := service.BuildRequestBodyFromMode(monitor.Provider, monitor.APIMode, monitor.BodyMode, "")
+	// Build system-managed bodies from the selected API mode. Custom JSON stays
+	// exactly as submitted.
+	if monitor.BodyMode != "" {
+		body, err := service.NormalizeMonitorRequestBody(monitor.Provider, monitor.APIMode, monitor.BodyMode, monitor.Body)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -178,6 +179,18 @@ func UpdateChannelMonitor(c *gin.Context) {
 			"message": err.Error(),
 		})
 		return
+	}
+
+	if payload.BodyMode != "" {
+		body, err := service.NormalizeMonitorRequestBody(payload.Provider, payload.APIMode, payload.BodyMode, payload.Body)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"message": fmt.Sprintf("Failed to build body: %v", err),
+			})
+			return
+		}
+		payload.Body = body
 	}
 
 	// Apply editable fields onto the existing record; statistics columns stay
@@ -379,6 +392,14 @@ func CreateChannelMonitorTemplate(c *gin.Context) {
 		})
 		return
 	}
+	if template.BodyMode != "" {
+		body, err := service.NormalizeMonitorRequestBody(template.Provider, template.APIMode, template.BodyMode, template.Body)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": err.Error()})
+			return
+		}
+		template.Body = body
+	}
 
 	if err := model.CreateChannelMonitorTemplate(&template); err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "duplicate") {
@@ -419,6 +440,14 @@ func UpdateChannelMonitorTemplate(c *gin.Context) {
 			"message": err.Error(),
 		})
 		return
+	}
+	if template.BodyMode != "" {
+		body, err := service.NormalizeMonitorRequestBody(template.Provider, template.APIMode, template.BodyMode, template.Body)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": err.Error()})
+			return
+		}
+		template.Body = body
 	}
 
 	if err := model.UpdateChannelMonitorTemplate(&template); err != nil {
