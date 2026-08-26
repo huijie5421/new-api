@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { statusTone } from '../../channel-monitor/lib/status'
 import type { TimeWindow, UserMonitorSummary } from '../types'
 
 // Per-provider gradient + glow used for the card icon tile. Falls back to a
@@ -87,8 +88,19 @@ export const SLOW_LATENCY_MS = 6000
 //   failure/unknown -> rose
 export function timelineBar(
   status: string,
-  latencyMs: number
+  latencyMs: number,
+  apiMode = ''
 ): { colorClass: string } {
+  if (apiMode === 'image_generation') {
+    const tone = statusTone(status, latencyMs, apiMode)
+    if (tone === 'warning') {
+      return { colorClass: 'bg-amber-400 dark:bg-amber-500' }
+    }
+    if (tone === 'success') {
+      return { colorClass: 'bg-emerald-500 dark:bg-emerald-400' }
+    }
+    return { colorClass: 'bg-rose-500 dark:bg-rose-400' }
+  }
   if (status === 'success') {
     if (latencyMs >= SLOW_LATENCY_MS) {
       return { colorClass: 'bg-amber-400 dark:bg-amber-500' }

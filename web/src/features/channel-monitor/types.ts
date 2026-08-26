@@ -11,7 +11,7 @@
 // Do not rename the exported types below — the api.ts files import them by name.
 
 export type Provider = 'openai' | 'anthropic' | 'gemini' | 'grok'
-export type APIMode = 'chat_completions' | 'responses'
+export type APIMode = 'chat_completions' | 'responses' | 'image_generation'
 export type BodyMode = 'auto' | 'minimal' | 'custom'
 export type MonitorStatus = 'success' | 'failure' | 'unknown'
 

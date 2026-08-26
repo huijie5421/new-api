@@ -58,6 +58,12 @@ const BODY_MODE_BADGE: Record<string, string> = {
   custom: 'bg-purple-500/15 text-purple-600 dark:text-purple-400',
 }
 
+const API_MODE_LABEL: Record<string, string> = {
+  chat_completions: 'Chat Completions',
+  responses: 'Responses',
+  image_generation: 'Image Generations',
+}
+
 // Count the keys in a JSON object string; 0 on empty/invalid input.
 function countHeaders(headers: string): number {
   if (!headers || !headers.trim()) {
@@ -125,7 +131,9 @@ function TemplateCard({
           {t('Body: {{mode}}', { mode: template.body_mode || 'auto' })}
         </Badge>
         {isOpenAI && template.api_mode && (
-          <Badge variant='outline'>{template.api_mode}</Badge>
+          <Badge variant='outline'>
+            {t(API_MODE_LABEL[template.api_mode] ?? template.api_mode)}
+          </Badge>
         )}
         <Badge variant='secondary'>
           {t('{{count}} header(s)', { count: headerCount })}

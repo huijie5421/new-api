@@ -32,12 +32,14 @@ import {
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
+import { statusTone } from '../lib/status'
 import type { MonitorRunResult } from '../types'
 
 interface RunResultDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   monitorName?: string
+  apiMode?: string
   result: MonitorRunResult | null
 }
 
@@ -45,6 +47,7 @@ export function RunResultDialog({
   open,
   onOpenChange,
   monitorName,
+  apiMode = '',
   result,
 }: RunResultDialogProps) {
   const { t } = useTranslation()
@@ -52,9 +55,12 @@ export function RunResultDialog({
   const results = result?.results ?? []
   const successCount = results.filter((r) => r.status === 'success').length
   const total = results.length
+  const slowCount = results.filter(
+    (r) => statusTone(r.status, r.latency_ms, apiMode) === 'warning'
+  ).length
 
   let healthClassName = 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-  if (successCount === total) {
+  if (successCount === total && slowCount === 0) {
     healthClassName = 'bg-success/15 text-success'
   } else if (successCount === 0) {
     healthClassName = 'bg-destructive/15 text-destructive'
@@ -118,7 +124,8 @@ export function RunResultDialog({
               </TableHeader>
               <TableBody>
                 {results.map((r, idx) => {
-                  const ok = r.status === 'success'
+                  const tone = statusTone(r.status, r.latency_ms, apiMode)
+                  const ok = tone === 'success' || tone === 'warning'
                   return (
                     <TableRow key={`${r.model}-${idx}`}>
                       <TableCell className='font-medium'>{r.model}</TableCell>
@@ -126,9 +133,11 @@ export function RunResultDialog({
                         <Badge
                           className={cn(
                             'gap-1',
-                            ok
-                              ? 'bg-success/15 text-success'
-                              : 'bg-destructive/15 text-destructive'
+                            tone === 'success' && 'bg-success/15 text-success',
+                            tone === 'warning' &&
+                              'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+                            tone === 'failure' &&
+                              'bg-destructive/15 text-destructive'
                           )}
                         >
                           {ok ? (
@@ -136,7 +145,11 @@ export function RunResultDialog({
                           ) : (
                             <XCircle className='size-3' />
                           )}
-                          {ok ? t('Success') : t('Failure')}
+                          {tone === 'warning'
+                            ? t('Slow')
+                            : ok
+                              ? t('Success')
+                              : t('Failure')}
                         </Badge>
                       </TableCell>
                       <TableCell className='text-right tabular-nums'>

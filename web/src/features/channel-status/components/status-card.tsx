@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
+import { statusTone } from '../../channel-monitor/lib/status'
 import type { TimeWindow, UserMonitorSummary } from '../types'
 import {
   availabilityForWindow,
@@ -53,6 +54,12 @@ export function StatusCard({ monitor, timeWindow, onSelect }: StatusCardProps) {
   const color = availabilityHsl(availability)
   const isUp = monitor.last_status === 'success'
   const isDown = monitor.last_status === 'failure'
+  const isSlow =
+    statusTone(
+      monitor.last_status,
+      monitor.last_latency_ms,
+      monitor.api_mode
+    ) === 'warning'
   const providerLabels: Record<string, string> = {
     openai: 'OpenAI',
     anthropic: 'Anthropic',
@@ -96,7 +103,7 @@ export function StatusCard({ monitor, timeWindow, onSelect }: StatusCardProps) {
               </span>
             </div>
           </div>
-          <StatusChip up={isUp} down={isDown} />
+          <StatusChip up={isUp} down={isDown} slow={isSlow} />
         </div>
 
         {/* Big availability number */}
@@ -125,7 +132,10 @@ export function StatusCard({ monitor, timeWindow, onSelect }: StatusCardProps) {
         </div>
 
         {/* Check timeline (primary model, last 60 checks) */}
-        <StatusTimeline points={monitor.timeline ?? []} />
+        <StatusTimeline
+          points={monitor.timeline ?? []}
+          apiMode={monitor.api_mode}
+        />
 
         {/* Metrics row */}
         <div className='grid grid-cols-2 gap-3'>
@@ -155,9 +165,25 @@ export function StatusCard({ monitor, timeWindow, onSelect }: StatusCardProps) {
   )
 }
 
-function StatusChip({ up, down }: { up: boolean; down: boolean }) {
+function StatusChip({
+  up,
+  down,
+  slow,
+}: {
+  up: boolean
+  down: boolean
+  slow: boolean
+}) {
   const { t } = useTranslation()
 
+  if (slow) {
+    return (
+      <span className='inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400'>
+        <CheckCircle2 className='size-3' />
+        {t('Slow')}
+      </span>
+    )
+  }
   if (up) {
     return (
       <span className='inline-flex shrink-0 items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-600 dark:text-green-400'>

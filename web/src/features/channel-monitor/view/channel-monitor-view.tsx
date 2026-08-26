@@ -68,6 +68,7 @@ import { MonitorFormDialog } from '../components/monitor-form-dialog'
 import { MonitorHistoryDialog } from '../components/monitor-history-dialog'
 import { RunResultDialog } from '../components/run-result-dialog'
 import { TemplateManagerDialog } from '../components/template-manager-dialog'
+import { statusTone } from '../lib/status'
 import type { ChannelMonitor, MonitorRunResult } from '../types'
 
 const PROVIDER_FILTERS: { value: string; label: string }[] = [
@@ -105,12 +106,28 @@ function formatAvailability(rate: number | null): string {
   return `${(rate * 100).toFixed(1)}%`
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({
+  status,
+  latencyMs,
+  apiMode,
+}: {
+  status: string
+  latencyMs: number | null
+  apiMode: string
+}) {
   const { t } = useTranslation()
-  if (status === 'success') {
+  const tone = statusTone(status, latencyMs, apiMode)
+  if (tone === 'success') {
     return <Badge className='bg-success/15 text-success'>{t('Success')}</Badge>
   }
-  if (status === 'failure') {
+  if (tone === 'warning') {
+    return (
+      <Badge className='bg-amber-500/15 text-amber-600 dark:text-amber-400'>
+        {t('Slow')}
+      </Badge>
+    )
+  }
+  if (tone === 'failure') {
     return (
       <Badge className='bg-destructive/15 text-destructive'>
         {t('Failure')}
@@ -150,6 +167,7 @@ export default function ChannelMonitorView() {
   const [runOpen, setRunOpen] = useState(false)
   const [runResult, setRunResult] = useState<MonitorRunResult | null>(null)
   const [runMonitorName, setRunMonitorName] = useState<string>('')
+  const [runApiMode, setRunApiMode] = useState<string>('')
   const [runningId, setRunningId] = useState<number | null>(null)
 
   // delete dialog
@@ -231,6 +249,7 @@ export default function ChannelMonitorView() {
       const result = await channelMonitorAPI.runNow(monitor.id)
       setRunResult(result)
       setRunMonitorName(monitor.name)
+      setRunApiMode(monitor.api_mode)
       setRunOpen(true)
       const ok = result.results.filter((r) => r.status === 'success').length
       const total = result.results.length
@@ -517,7 +536,11 @@ export default function ChannelMonitorView() {
                       {monitor.primary_model || '—'}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={monitor.last_status} />
+                      <StatusBadge
+                        status={monitor.last_status}
+                        latencyMs={monitor.last_latency_ms}
+                        apiMode={monitor.api_mode}
+                      />
                     </TableCell>
                     <TableCell className='text-right tabular-nums'>
                       {monitor.last_latency_ms != null
@@ -625,6 +648,7 @@ export default function ChannelMonitorView() {
         open={runOpen}
         onOpenChange={setRunOpen}
         monitorName={runMonitorName}
+        apiMode={runApiMode}
         result={runResult}
       />
 

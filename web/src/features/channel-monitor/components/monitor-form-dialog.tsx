@@ -43,6 +43,10 @@ import {
   parseHeaderRows,
   type HeaderRow,
 } from '../lib/advanced-request-config'
+import {
+  timingDefaultsForApiMode,
+  timingForApiModeChange,
+} from '../lib/monitor-timing'
 import type { APIMode, BodyMode, ChannelMonitor, Provider } from '../types'
 import { AdvancedRequestConfig } from './advanced-request-config'
 import { MonitorKeyPickerDialog } from './monitor-key-picker-dialog'
@@ -64,15 +68,13 @@ const PROVIDERS: { value: Provider; label: string }[] = [
 const API_MODES: { value: APIMode; label: string }[] = [
   { value: 'chat_completions', label: 'Chat Completions' },
   { value: 'responses', label: 'Responses' },
+  { value: 'image_generation', label: 'Image Generations' },
 ]
 
-const DEFAULT_INTERVAL = 60
 const MIN_INTERVAL = 60
 const MAX_INTERVAL = 3600
 
-const DEFAULT_TIMEOUT = 10
 const MIN_TIMEOUT = 1
-const MAX_TIMEOUT = 60
 
 // Parse the extra_models JSON-encoded string[] into a string array.
 function parseExtraModels(extra: string): string[] {
@@ -112,8 +114,12 @@ export function MonitorFormDialog({
   const [extraModels, setExtraModels] = useState<string[]>([])
   const [extraModelInput, setExtraModelInput] = useState('')
   const [groupName, setGroupName] = useState('')
-  const [intervalSeconds, setIntervalSeconds] = useState(DEFAULT_INTERVAL)
-  const [timeoutSeconds, setTimeoutSeconds] = useState(DEFAULT_TIMEOUT)
+  const [intervalSeconds, setIntervalSeconds] = useState(
+    timingDefaultsForApiMode('chat_completions').intervalSeconds
+  )
+  const [timeoutSeconds, setTimeoutSeconds] = useState(
+    timingDefaultsForApiMode('chat_completions').timeoutSeconds
+  )
   const [enabled, setEnabled] = useState(true)
   const [ccSpoofEnabled, setCcSpoofEnabled] = useState(false)
 
@@ -142,8 +148,11 @@ export function MonitorFormDialog({
       setPrimaryModel(monitor.primary_model ?? '')
       setExtraModels(parseExtraModels(monitor.extra_models))
       setGroupName(monitor.group ?? '')
-      setIntervalSeconds(monitor.interval_seconds || DEFAULT_INTERVAL)
-      setTimeoutSeconds(monitor.timeout_seconds || DEFAULT_TIMEOUT)
+      const monitorTiming = timingDefaultsForApiMode(monitor.api_mode)
+      setIntervalSeconds(
+        monitor.interval_seconds || monitorTiming.intervalSeconds
+      )
+      setTimeoutSeconds(monitor.timeout_seconds || monitorTiming.timeoutSeconds)
       setEnabled(monitor.enabled ?? true)
       setCcSpoofEnabled(monitor.cc_spoof_enabled ?? false)
       setHeaderRows(parseHeaderRows(monitor.headers))
@@ -165,8 +174,12 @@ export function MonitorFormDialog({
       setPrimaryModel('')
       setExtraModels([])
       setGroupName('')
-      setIntervalSeconds(DEFAULT_INTERVAL)
-      setTimeoutSeconds(DEFAULT_TIMEOUT)
+      setIntervalSeconds(
+        timingDefaultsForApiMode('chat_completions').intervalSeconds
+      )
+      setTimeoutSeconds(
+        timingDefaultsForApiMode('chat_completions').timeoutSeconds
+      )
       setEnabled(true)
       setCcSpoofEnabled(false)
       setHeaderRows([])
@@ -181,6 +194,30 @@ export function MonitorFormDialog({
   }, [open, monitor])
 
   const showApiMode = provider === 'openai' || provider === 'grok'
+  const maxTimeoutSeconds = timingDefaultsForApiMode(apiMode).maxTimeoutSeconds
+
+  const handleApiModeChange = (nextApiMode: APIMode) => {
+    const timing = timingForApiModeChange(
+      apiMode,
+      nextApiMode,
+      intervalSeconds,
+      timeoutSeconds
+    )
+    setApiMode(nextApiMode)
+    setIntervalSeconds(timing.intervalSeconds)
+    setTimeoutSeconds(timing.timeoutSeconds)
+  }
+
+  const handleProviderChange = (nextProvider: Provider) => {
+    setProvider(nextProvider)
+    if (
+      nextProvider !== 'openai' &&
+      nextProvider !== 'grok' &&
+      apiMode === 'image_generation'
+    ) {
+      handleApiModeChange('chat_completions')
+    }
+  }
 
   const commitExtraModelInput = () => {
     const parts = extraModelInput
@@ -251,11 +288,11 @@ export function MonitorFormDialog({
     if (
       !Number.isFinite(timeoutSeconds) ||
       timeoutSeconds < MIN_TIMEOUT ||
-      timeoutSeconds > MAX_TIMEOUT
+      timeoutSeconds > maxTimeoutSeconds
     ) {
       next.timeout = t('Timeout must be between {{min}} and {{max}} seconds', {
         min: MIN_TIMEOUT,
-        max: MAX_TIMEOUT,
+        max: maxTimeoutSeconds,
       })
     } else if (
       Number.isFinite(intervalSeconds) &&
@@ -348,8 +385,11 @@ export function MonitorFormDialog({
   )
 
   const timeoutHint = useMemo(
-    () => t('Request timeout in seconds (1-60, must be less than interval)'),
-    [t]
+    () =>
+      apiMode === 'image_generation'
+        ? t('Image timeout must be between 1 and 180 seconds')
+        : t('Request timeout in seconds (1-60, must be less than interval)'),
+    [apiMode, t]
   )
 
   return (
@@ -411,7 +451,7 @@ export function MonitorFormDialog({
                 <button
                   key={p.value}
                   type='button'
-                  onClick={() => setProvider(p.value)}
+                  onClick={() => handleProviderChange(p.value)}
                   className={cn(
                     'flex-1 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors',
                     provider === p.value
@@ -434,7 +474,7 @@ export function MonitorFormDialog({
                   label: t(m.label),
                 }))}
                 value={apiMode}
-                onValueChange={(v) => setApiMode(v as APIMode)}
+                onValueChange={(v) => handleApiModeChange(v as APIMode)}
               >
                 <SelectTrigger className='w-full'>
                   <SelectValue placeholder={t('Select API mode')} />
@@ -449,6 +489,13 @@ export function MonitorFormDialog({
                   </SelectGroup>
                 </SelectContent>
               </Select>
+              {apiMode === 'image_generation' && (
+                <p className='text-muted-foreground text-xs'>
+                  {t(
+                    'Image health-check success under 60 seconds is green; 60 seconds or slower is yellow; failures are red.'
+                  )}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -617,7 +664,7 @@ export function MonitorFormDialog({
               id='monitor-timeout'
               type='number'
               min={MIN_TIMEOUT}
-              max={MAX_TIMEOUT}
+              max={maxTimeoutSeconds}
               value={timeoutSeconds}
               onChange={(e) => setTimeoutSeconds(Number(e.target.value))}
               aria-invalid={!!errors.timeout}

@@ -69,6 +69,7 @@ const PROVIDERS: { value: Provider; label: string }[] = [
 const API_MODES: { value: APIMode; label: string }[] = [
   { value: 'chat_completions', label: 'Chat Completions' },
   { value: 'responses', label: 'Responses' },
+  { value: 'image_generation', label: 'Image Generations' },
 ]
 
 export function TemplateFormDialog({
@@ -251,7 +252,16 @@ export function TemplateFormDialog({
                   key={p.value}
                   type='button'
                   disabled={isEdit}
-                  onClick={() => setProvider(p.value)}
+                  onClick={() => {
+                    setProvider(p.value)
+                    if (
+                      p.value !== 'openai' &&
+                      p.value !== 'grok' &&
+                      apiMode === 'image_generation'
+                    ) {
+                      setApiMode('chat_completions')
+                    }
+                  }}
                   className={cn(
                     'flex-1 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors',
                     provider === p.value

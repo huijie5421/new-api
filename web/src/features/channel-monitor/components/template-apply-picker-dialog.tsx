@@ -38,6 +38,12 @@ interface TemplateApplyPickerDialogProps {
   onApplied?: () => void
 }
 
+const API_MODE_LABEL: Record<string, string> = {
+  chat_completions: 'Chat Completions',
+  responses: 'Responses',
+  image_generation: 'Image Generations',
+}
+
 export function TemplateApplyPickerDialog({
   open,
   onOpenChange,
@@ -238,7 +244,7 @@ export function TemplateApplyPickerDialog({
                       </span>
                       {m.api_mode ? (
                         <Badge variant='outline' className='shrink-0'>
-                          {m.api_mode}
+                          {t(API_MODE_LABEL[m.api_mode] ?? m.api_mode)}
                         </Badge>
                       ) : null}
                     </div>

@@ -34,12 +34,13 @@ const MAX_BARS = 60
 
 interface StatusTimelineProps {
   points: MonitorTimelinePoint[]
+  apiMode?: string
 }
 
 // Uptime-style timeline: up to 60 uniform-height rounded bars, oldest -> newest.
 // When there are fewer than 60 points the empty slots render as faint track
 // segments on the LEFT. Status is encoded by color; latency shows on hover.
-export function StatusTimeline({ points }: StatusTimelineProps) {
+export function StatusTimeline({ points, apiMode = '' }: StatusTimelineProps) {
   const { t } = useTranslation()
 
   const recent = points.length > MAX_BARS ? points.slice(-MAX_BARS) : points
@@ -79,7 +80,11 @@ export function StatusTimeline({ points }: StatusTimelineProps) {
             />
           ))}
           {recent.map((point, i) => (
-            <TimelineBar key={`${point.checked_at}-${i}`} point={point} />
+            <TimelineBar
+              key={`${point.checked_at}-${i}`}
+              point={point}
+              apiMode={apiMode}
+            />
           ))}
         </div>
       </TooltipProvider>
@@ -97,9 +102,15 @@ function statusLabel(status: string, t: (key: string) => string): string {
   return t('Unknown')
 }
 
-function TimelineBar({ point }: { point: MonitorTimelinePoint }) {
+function TimelineBar({
+  point,
+  apiMode,
+}: {
+  point: MonitorTimelinePoint
+  apiMode: string
+}) {
   const { t } = useTranslation()
-  const { colorClass } = timelineBar(point.status, point.latency_ms)
+  const { colorClass } = timelineBar(point.status, point.latency_ms, apiMode)
   const relative = dayjs.unix(point.checked_at).fromNow()
 
   return (

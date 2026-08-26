@@ -42,6 +42,7 @@ import {
 import { cn } from '@/lib/utils'
 
 import { channelMonitorAPI } from '../api'
+import { statusTone } from '../lib/status'
 import type { ChannelMonitor, ChannelMonitorHistory } from '../types'
 
 interface MonitorHistoryDialogProps {
@@ -192,7 +193,12 @@ export function MonitorHistoryDialog({
             {!loading &&
               history.length > 0 &&
               history.map((row) => {
-                const ok = row.status === 'success'
+                const tone = statusTone(
+                  row.status,
+                  row.latency_ms,
+                  monitor?.api_mode ?? ''
+                )
+                const ok = tone === 'success' || tone === 'warning'
                 return (
                   <TableRow key={row.id}>
                     <TableCell className='font-mono text-xs'>
@@ -202,9 +208,11 @@ export function MonitorHistoryDialog({
                       <Badge
                         className={cn(
                           'gap-1',
-                          ok
-                            ? 'bg-success/15 text-success'
-                            : 'bg-destructive/15 text-destructive'
+                          tone === 'success' && 'bg-success/15 text-success',
+                          tone === 'warning' &&
+                            'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+                          tone === 'failure' &&
+                            'bg-destructive/15 text-destructive'
                         )}
                       >
                         {ok ? (
@@ -212,7 +220,11 @@ export function MonitorHistoryDialog({
                         ) : (
                           <XCircle className='size-3' />
                         )}
-                        {ok ? t('Success') : t('Failure')}
+                        {tone === 'warning'
+                          ? t('Slow')
+                          : ok
+                            ? t('Success')
+                            : t('Failure')}
                       </Badge>
                     </TableCell>
                     <TableCell className='text-right tabular-nums'>
