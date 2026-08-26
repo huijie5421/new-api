@@ -4,7 +4,7 @@
 
 **Goal:** Remove the Home top-navigation entry and make `/` lead authenticated users to the console while sending unauthenticated users into the existing sign-in flow.
 
-**Architecture:** Keep the existing TanStack Router authentication boundary and official session store. Replace the public Home route component with a route-level redirect that preserves `/dashboard` as the post-login target, and make the shared navigation defaults/backend option default Home disabled so dynamic and fallback navigation agree.
+**Architecture:** Keep the existing TanStack Router authentication boundary and official session store. Replace the public Home route component with a route-level redirect that preserves `/dashboard` as the post-login target, and force the retired Home module off while still accepting the old persisted configuration shape.
 
 **Tech Stack:** React 19, TanStack Router, Zustand auth store, Vitest, TypeScript native preview, Rsbuild, Go/Gin status options.
 
@@ -13,11 +13,11 @@
 ### Task 1: Lock current contracts with failing tests
 
 **Files:**
-- Create: `web/src/lib/nav-modules.test.ts`
+- Create: `web/src/lib/__tests__/nav-modules.test.ts`
 - Modify: `web/src/lib/legacy-route.test.ts`
 
-- [ ] Add tests asserting empty header-navigation config parses with `home: false`, explicit `home: true` remains supported for backward-compatible configuration parsing, and root legacy mapping resolves `/` to `/dashboard`.
-- [ ] Run the focused Vitest tests and confirm the new default expectation fails against the current `home: true` implementation.
+- [x] Add tests asserting empty and legacy `home: true` header-navigation configurations both keep Home disabled, and `/home` resolves to `/dashboard`.
+- [x] Run the focused Vitest tests and confirm the new expectations fail against the previous implementation.
 
 ### Task 2: Remove Home from navigation defaults
 
@@ -27,10 +27,10 @@
 - Modify: `web/src/hooks/use-top-nav-links.ts`
 - Modify: `controller/misc.go` or the persisted option only if the server default is code-defined
 
-- [ ] Set frontend header-navigation defaults to `home: false`.
-- [ ] Keep parsing of explicit `home: true` for existing administrator settings, but do not emit Home from the shared top-navigation builder.
-- [ ] Keep Console and all retained custom tabs unchanged.
-- [ ] Update the settings model so reset/default state reflects Home being removed.
+- [x] Set frontend header-navigation defaults to `home: false`.
+- [x] Keep the old persisted field readable, force it off, and stop emitting Home from the shared top-navigation builder.
+- [x] Keep Console and all retained custom tabs unchanged.
+- [x] Remove the Home switch from administrator settings and force future saves to `home: false`.
 
 ### Task 3: Redirect root to console/login
 
@@ -38,9 +38,9 @@
 - Modify: `web/src/routes/index.tsx`
 - Modify: `web/src/lib/legacy-route.ts` and its tests if the route resolver owns root fallback behavior
 
-- [ ] Replace the Home component with a route-level redirect to `/dashboard` for the authenticated path.
-- [ ] Ensure unauthenticated `/` reaches the existing `_authenticated` guard and redirects to `/sign-in` with a sanitized `/dashboard` target.
-- [ ] Make `/home` a compatibility redirect to `/dashboard` without rendering the removed Home page.
+- [x] Replace the Home component with a route-level redirect to `/dashboard` while preserving query parameters and hash fragments.
+- [x] Ensure unauthenticated `/` reaches the existing `_authenticated` guard and redirects to `/sign-in` with `/dashboard` as the return target.
+- [x] Make `/home` a compatibility redirect to `/dashboard` without rendering the removed Home page.
 
 ### Task 4: Verify and package
 

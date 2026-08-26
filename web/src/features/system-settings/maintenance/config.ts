@@ -39,7 +39,8 @@ export type SidebarSectionConfig = {
 export type SidebarModulesAdminConfig = Record<string, SidebarSectionConfig>
 
 export const HEADER_NAV_DEFAULT: HeaderNavModulesConfig = {
-  home: true,
+  // Kept for persisted-config compatibility; the landing page is retired.
+  home: false,
   console: true,
   pricing: {
     enabled: true,
@@ -168,6 +169,9 @@ export function parseHeaderNavModules(
       }
     })
 
+    // Never restore the retired landing-page tab from an old saved option.
+    result.home = false
+
     return result
   } catch {
     return base
@@ -177,7 +181,7 @@ export function parseHeaderNavModules(
 export function serializeHeaderNavModules(
   config: HeaderNavModulesConfig
 ): string {
-  return JSON.stringify(config)
+  return JSON.stringify({ ...config, home: false })
 }
 
 export function parseSidebarModulesAdmin(

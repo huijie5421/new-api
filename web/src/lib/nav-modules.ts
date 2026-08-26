@@ -33,7 +33,9 @@ export type HeaderNavModules = {
 }
 
 const DEFAULT_HEADER_NAV_MODULES: HeaderNavModules = {
-  home: true,
+  // Retained in the shape for backwards-compatible parsing of old settings,
+  // but the landing page is no longer a navigable module.
+  home: false,
   console: true,
   pricing: { enabled: true, requireAuth: false },
   rankings: { enabled: true, requireAuth: false },
@@ -132,6 +134,10 @@ export function parseHeaderNavModules(raw: unknown): HeaderNavModules {
       )
     }
   })
+
+  // Ignore a legacy persisted `home: true`; the retired landing page must not
+  // reappear after a status refresh.
+  result.home = false
 
   return result
 }

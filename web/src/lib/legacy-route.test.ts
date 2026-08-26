@@ -31,6 +31,7 @@ describe('legacy frontend route migration', () => {
       '/console/subscription': '/subscriptions',
       '/console/channel': '/channels',
       '/channel': '/channels',
+      '/home': '/dashboard',
       '/console/token': '/keys',
       '/console/playground': '/playground',
       '/console/redemption': '/redemption-codes',

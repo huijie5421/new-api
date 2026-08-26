@@ -36,6 +36,7 @@ const legacyConsoleRoutes: Record<string, string> = {
 
 const legacyStandaloneRoutes: Record<string, string> = {
   '/channel': '/channels',
+  '/home': '/dashboard',
 }
 
 const legacySettingsTabs: Record<string, string> = {

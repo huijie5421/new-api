@@ -16,19 +16,22 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { describe, expect, test } from 'vitest'
 
-export const Route = createFileRoute('/')({
-  // The public landing page was retired. Keep the root URL as a stable entry
-  // point: authenticated users continue to the dashboard, while the
-  // protected route guard sends signed-out users through the normal sign-in
-  // flow and preserves the dashboard as the post-login destination.
-  beforeLoad: ({ location }) => {
-    throw redirect({
-      to: '/dashboard',
-      search: location.search,
-      hash: location.hash,
-      replace: true,
-    })
-  },
+import {
+  HEADER_NAV_DEFAULT,
+  parseHeaderNavModules,
+  serializeHeaderNavModules,
+} from '../config'
+
+describe('maintenance header navigation config', () => {
+  test('forces the retired home entry off in saved settings', () => {
+    expect(HEADER_NAV_DEFAULT.home).toBe(false)
+    expect(parseHeaderNavModules('{"home":true}').home).toBe(false)
+    expect(
+      JSON.parse(
+        serializeHeaderNavModules({ ...HEADER_NAV_DEFAULT, home: true })
+      )
+    ).toMatchObject({ home: false })
+  })
 })
