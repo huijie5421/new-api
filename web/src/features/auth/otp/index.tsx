@@ -28,13 +28,13 @@ export function Otp() {
     <AuthLayout>
       <div className='w-full space-y-8'>
         <div className='space-y-3'>
-          <h2 className='text-center text-2xl font-semibold tracking-tight sm:text-left'>
+          <h2 className='text-center text-2xl font-semibold tracking-tight'>
             {t('Two-factor Authentication')}
           </h2>
-          <p className='text-muted-foreground text-left text-sm sm:text-base'>
+          <p className='text-muted-foreground text-center text-sm sm:text-base'>
             {t('Please enter the authentication code.')}
           </p>
-          <p className='text-muted-foreground text-left text-sm sm:text-base'>
+          <p className='text-muted-foreground text-center text-sm sm:text-base'>
             {t('Session expired?')}{' '}
             <Link
               to='/sign-in'

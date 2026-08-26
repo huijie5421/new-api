@@ -25,7 +25,11 @@ export function Header({ className, children, ...props }: HeaderProps) {
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 h-[var(--app-header-height,3rem)] w-full shrink-0 bg-transparent',
+        'sticky top-0 z-40 h-[var(--app-header-height,3rem)] w-full shrink-0',
+        // Apple-style frosted hairline header: translucent canvas with a
+        // saturated backdrop blur so content scrolling underneath stays
+        // legible but visually recessed.
+        'bg-background/80 supports-[backdrop-filter]:bg-background/60 supports-[backdrop-filter]:backdrop-blur-xl supports-[backdrop-filter]:backdrop-saturate-150',
         className
       )}
       {...props}

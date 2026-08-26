@@ -718,3 +718,71 @@ For commercial licensing, please contact support@quantumnous.com
     display: none;
   }
 }
+
+/* ── Auth aurora backdrop (Apple-style sign-in) ──
+ * Large, heavily blurred color fields that drift very slowly behind the
+ * frosted sign-in card. Color comes from utility classes on the blob
+ * elements themselves; this block only owns shape, blur and motion so the
+ * palette stays token-driven and theme-aware. */
+@keyframes auth-aurora-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(4%, -4%, 0) scale(1.12);
+  }
+}
+
+.auth-aurora-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.5;
+  will-change: transform;
+  animation: auth-aurora-drift 22s ease-in-out infinite;
+}
+
+.auth-aurora-blob--slow {
+  animation-duration: 30s;
+  animation-direction: reverse;
+}
+
+.dark .auth-aurora-blob {
+  opacity: 0.32;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-aurora-blob {
+    animation: none !important;
+  }
+}
+
+/* ── Auth brand panel (split sign-in layout) ──
+ * Deep navy hero canvas used on the left half of the auth screens. It is
+ * intentionally dark in both themes, like an Apple product hero, so the
+ * aurora glow and white headline always read the same. */
+.auth-brand-panel {
+  background:
+    radial-gradient(
+      120% 90% at 85% 0%,
+      oklch(0.36 0.1 278 / 0.6),
+      transparent 60%
+    ),
+    radial-gradient(
+      100% 85% at 8% 100%,
+      oklch(0.34 0.11 250 / 0.55),
+      transparent 58%
+    ),
+    linear-gradient(160deg, oklch(0.185 0.022 265), oklch(0.125 0.016 270));
+}
+
+/* Faint blueprint grid that fades out toward the edges. */
+.auth-brand-grid {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(80% 65% at 50% 38%, black, transparent);
+  -webkit-mask-image: radial-gradient(80% 65% at 50% 38%, black, transparent);
+}

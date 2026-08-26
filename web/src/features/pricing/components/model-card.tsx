@@ -195,15 +195,19 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
 
   return (
     <div
+      data-testid='pricing-model-card'
       className={cn(
-        'group relative flex flex-col rounded-xl border p-3 transition-colors sm:p-5',
-        'hover:bg-muted/20'
+        'group bg-card relative flex flex-col rounded-2xl border p-3 sm:p-5',
+        'shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-all duration-200',
+        'hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-12px_rgb(0_0_0/0.18)]',
+        'dark:hover:shadow-[0_12px_32px_-12px_rgb(0_0_0/0.6)]',
+        'motion-reduce:transition-none motion-reduce:hover:translate-y-0'
       )}
     >
       {/* Header: icon + name + price + actions */}
       <div className='flex items-start justify-between gap-2.5 sm:gap-3'>
         <div className='flex min-w-0 items-start gap-2.5 sm:gap-3'>
-          <div className='bg-muted/40 flex size-9 shrink-0 items-center justify-center rounded-lg sm:size-10 sm:rounded-xl'>
+          <div className='from-muted/70 to-muted/30 ring-border/60 flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ring-1 sm:size-10 sm:rounded-2xl'>
             {modelIcon || (
               <span className='text-muted-foreground text-sm font-bold'>
                 {initial}
@@ -224,7 +228,7 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
           <button
             type='button'
             onClick={props.onClick}
-            className='text-muted-foreground hover:text-foreground hover:bg-muted inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors sm:px-2.5 sm:py-1.5'
+            className='text-muted-foreground hover:text-foreground hover:bg-muted inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors sm:px-3 sm:py-1.5'
           >
             {t('Details')}
             <ChevronRight className='size-3.5' />
@@ -232,7 +236,7 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
           <button
             type='button'
             onClick={handleCopy}
-            className='text-muted-foreground hover:text-foreground hover:bg-muted rounded-md border p-1.5 transition-colors'
+            className='text-muted-foreground hover:text-foreground hover:bg-muted rounded-full border p-1.5 transition-colors'
             title={t('Copy')}
           >
             <Copy className='size-3.5' />
