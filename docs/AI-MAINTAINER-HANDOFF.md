@@ -19,7 +19,7 @@ linked rather than duplicated where possible.
 | Deployment timestamp | `.12` deployed `20260827T062919Z` UTC |
 | Next release label | `.13` unless the operator specifies another label |
 
-Production runs the current branch tip `e80d435f`. The `.09` Apple-style UI
+Production runs functional commit `e80d435f`; the branch may contain later documentation-only handoff commits. The `.09` Apple-style UI
 refresh remains a historical rolled-back release and must not be reused without
 operator approval. Always verify the actual branch tip with `git rev-parse
 --short HEAD`. Source-level reference tags include
@@ -207,7 +207,7 @@ operator decision unless the current request explicitly includes it.
   `/home/huiji/code/Api/progress.md` and production procedures to
   `/home/huiji/code/Api/SERVER-OPS.md`.
 
-As of this handoff, frontend typecheck, 52 test files / 235 tests, production
+As of this handoff, frontend typecheck, 53 test files / 238 tests, production
 build, full Go tests, changed-file lint/format, and `git diff --check` pass. The
 repository-wide frontend format check still lists pre-existing unrelated files;
 keep every newly changed file clean and do not silently reformat unrelated
