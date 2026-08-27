@@ -10,20 +10,20 @@ linked rather than duplicated where possible.
 | --- | --- |
 | Source repository | `/home/huiji/code/Api/new-api-slim-aigc-v1-20260825` |
 | Branch | `codex/slim-aigc-v1` |
-| Latest functional source commit | `dc2da444` (wallet referral restoration and live invite counts) |
-| Production runtime source commit | `dc2da444` |
-| Production release | `aizzz-gateway-slim-20260825.11` (deployed `20260827T033311Z`) |
+| Latest functional source commit | `e80d435f` (administrator dashboard channel filters) |
+| Production runtime source commit | `e80d435f` |
+| Production release | `aizzz-gateway-slim-20260825.12` (deployed `20260827T062919Z`) |
 | Official base | `v1.0.0-rc.25`, commit `f116414284162ad15d8925f7bca494c109b83e93` |
 | Runtime base marker | `official-v1.0.0-rc.25-f116414 (main-2d8e50bf)` |
-| Production binary SHA-256 | `bd0fcabe7926c5c6a2e06101f264b28b74391f3aca7f15883208858b7e476e6b` |
-| Deployment timestamp | `.11` deployed `20260827T033311Z` UTC |
-| Next release label | `.12` unless the operator specifies another label |
+| Production binary SHA-256 | `a2a01638fc159449f73ac3ce3fbaf7ee29e3af10a338cf3f075a178f2348693d` |
+| Deployment timestamp | `.12` deployed `20260827T062919Z` UTC |
+| Next release label | `.13` unless the operator specifies another label |
 
-Production runs the current branch tip `dc2da444`. The `.09` Apple-style UI
+Production runs the current branch tip `e80d435f`. The `.09` Apple-style UI
 refresh remains a historical rolled-back release and must not be reused without
 operator approval. Always verify the actual branch tip with `git rev-parse
 --short HEAD`. Source-level reference tags include
-`release/aizzz-gateway-slim-20260825.11` (`dc2da444`) and the prior `.10`, `.09`,
+`release/aizzz-gateway-slim-20260825.12` (`e80d435f`), the prior `.11`, `.10`, `.09`,
 and `.08` release/rollback markers.
 
 ## Source of truth
@@ -117,20 +117,21 @@ Production access uses the existing SSH alias `sever`. Do not place passwords,
 API keys, cookies, merchant secrets, or private keys in commits or handoff
 documents.
 
-Current release path (production runs `.11` at `/opt/new-api/current/new-api`;
+Current release path (production runs `.12` at `/opt/new-api/current/new-api`;
 the `.10` rollback target and earlier releases remain at):
 
 ```text
+/opt/new-api/releases/aizzz-gateway-slim-20260825-12-e80d435f/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-11-dc2da444/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-10-b5016156/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-08-080b678e/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-09-f5a0c48a/new-api  (rolled back, do not reuse without operator approval)
 ```
 
-One-click rollback to `.10` (from the running `.11`):
+One-click rollback to `.11` (from the running `.12`):
 
 ```bash
-ssh sever 'bash /backup/newapi/deployments/20260827T033311Z-before-aizzz-gateway-slim-20260825-11/rollback.sh'
+ssh sever 'bash /backup/newapi/deployments/20260827T062919Z-before-aizzz-gateway-slim-20260825-12/rollback.sh'
 ```
 
 Core database snapshots:
@@ -140,6 +141,7 @@ Core database snapshots:
 /backup/newapi/deployments/20260826T081803Z-before-aizzz-gateway-slim-20260825-09/newapi.sql.zst
 /backup/newapi/deployments/20260826T164005Z-before-aizzz-gateway-slim-20260825-10/newapi.sql.zst
 /backup/newapi/deployments/20260827T033311Z-before-aizzz-gateway-slim-20260825-11/newapi.sql.zst
+/backup/newapi/deployments/20260827T062919Z-before-aizzz-gateway-slim-20260825-12/newapi.sql.zst
 ```
 
 Deployment scripts:
@@ -149,6 +151,7 @@ Deployment scripts:
 /home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-09.sh  (deployed then rolled back)
 /home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-10.sh
 /home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-11.sh
+/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-12.sh
 /root/deploy-aizzz-gateway-slim-20260825-11.sh
 ```
 
@@ -252,3 +255,21 @@ ssh sever 'bash /backup/newapi/deployments/20260827T033311Z-before-aizzz-gateway
 - Rollback restores `.10`, SHA-256 `798aa1eede998d2689bc0423b1e003258495198311eabff215759eb3598ef330`.
 - Core database backup: `/backup/newapi/deployments/20260827T033311Z-before-aizzz-gateway-slim-20260825-11/newapi.sql.zst`; `zstd -t`, `SHA256SUMS`, and rollback-script syntax passed.
 - Local deployment script: `/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-11.sh`; server copy: `/root/deploy-aizzz-gateway-slim-20260825-11.sh`.
+
+
+## Slim gateway `.12` deployment: administrator dashboard channel filters (2026-08-27)
+
+- Source commit/tag: `e80d435f`, `release/aizzz-gateway-slim-20260825.12`; official base marker remains `official-v1.0.0-rc.25-f116414 (main-2d8e50bf)`.
+- Release binary: `/opt/new-api/releases/aizzz-gateway-slim-20260825-12-e80d435f/new-api`, 131567778 bytes, SHA-256 `a2a01638fc159449f73ac3ce3fbaf7ee29e3af10a338cf3f075a178f2348693d`.
+- Administrator dashboard supports a bounded, deduplicated `channel_ids` filter for aggregate model/cache data and flow data; invalid lists are rejected and self-service endpoints do not gain the administrator dimension.
+- Deployed at `20260827T062919Z` UTC. Local/public status report `.12`; service is `active`, `Result=success`, `NRestarts=0`, failed units `0`. Isolated port-3300 probe, channel-filter requests, compatibility endpoints, public status/assets, Nginx syntax, database snapshot, startup critical-log scan, and rollback-script syntax passed.
+- Full Go tests, frontend typecheck, and Vitest (53 files / 238 tests) passed. Login sessions/API tokens were intentionally untouched: 451 active sessions and 2811 API tokens were identical before/after deployment.
+
+### Rollback
+
+```bash
+ssh sever 'bash /backup/newapi/deployments/20260827T062919Z-before-aizzz-gateway-slim-20260825-12/rollback.sh'
+```
+
+- Rollback restores `.11`, SHA-256 `bd0fcabe7926c5c6a2e06101f264b28b74391f3aca7f15883208858b7e476e6b`.
+- Core database backup: `/backup/newapi/deployments/20260827T062919Z-before-aizzz-gateway-slim-20260825-12/newapi.sql.zst`; deployment script: `/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-12.sh`.
