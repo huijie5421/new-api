@@ -10,22 +10,21 @@ linked rather than duplicated where possible.
 | --- | --- |
 | Source repository | `/home/huiji/code/Api/new-api-slim-aigc-v1-20260825` |
 | Branch | `codex/slim-aigc-v1` |
-| Latest functional source commit | `f5a0c48a` (Apple-style UI refresh — deployed as `.09`, then rolled back by operator decision) |
-| Production runtime source commit | `080b678e` (Home removal and console default) |
-| Production release | `aizzz-gateway-slim-20260825.08` (restored `20260826T082740Z` after `.09` rollback) |
+| Latest functional source commit | `dc2da444` (wallet referral restoration and live invite counts) |
+| Production runtime source commit | `dc2da444` |
+| Production release | `aizzz-gateway-slim-20260825.11` (deployed `20260827T033311Z`) |
 | Official base | `v1.0.0-rc.25`, commit `f116414284162ad15d8925f7bca494c109b83e93` |
 | Runtime base marker | `official-v1.0.0-rc.25-f116414 (main-2d8e50bf)` |
-| Production binary SHA-256 | `a56407328aee76bfe3fd0d9cb958224987f3ca0e802f0fb1a79b04167e38602d` |
-| Deployment timestamp | `.08` restored `20260826T082740Z` UTC (original `.08` deploy `20260826T065012Z`) |
-| Next release label | `.10` unless the operator specifies another label (`.09` is burned) |
+| Production binary SHA-256 | `bd0fcabe7926c5c6a2e06101f264b28b74391f3aca7f15883208858b7e476e6b` |
+| Deployment timestamp | `.11` deployed `20260827T033311Z` UTC |
+| Next release label | `.12` unless the operator specifies another label |
 
-Production runs `080b678e` even though the branch tip contains the newer
-`f5a0c48a` UI refresh: the operator was dissatisfied with the `.09` visuals and
-ordered a rollback. Do NOT redeploy `f5a0c48a` as-is; a redesigned UI must be
-approved by the operator first. Always verify the actual branch tip with
-`git rev-parse --short HEAD`. Source-level reference tags:
-`rollback/aizzz-gateway-slim-20260825.08` (`080b678e`) and
-`release/aizzz-gateway-slim-20260825.09` (`f5a0c48a`, rolled back).
+Production runs the current branch tip `dc2da444`. The `.09` Apple-style UI
+refresh remains a historical rolled-back release and must not be reused without
+operator approval. Always verify the actual branch tip with `git rev-parse
+--short HEAD`. Source-level reference tags include
+`release/aizzz-gateway-slim-20260825.11` (`dc2da444`) and the prior `.10`, `.09`,
+and `.08` release/rollback markers.
 
 ## Source of truth
 
@@ -118,19 +117,20 @@ Production access uses the existing SSH alias `sever`. Do not place passwords,
 API keys, cookies, merchant secrets, or private keys in commits or handoff
 documents.
 
-Current release path (production runs `.10` at `/opt/new-api/current/new-api`;
-the `.08` rollback target and rolled-back `.09` release remain at):
+Current release path (production runs `.11` at `/opt/new-api/current/new-api`;
+the `.10` rollback target and earlier releases remain at):
 
 ```text
+/opt/new-api/releases/aizzz-gateway-slim-20260825-11-dc2da444/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-10-b5016156/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-08-080b678e/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-09-f5a0c48a/new-api  (rolled back, do not reuse without operator approval)
 ```
 
-One-click rollback to `.08` (from the running `.10`):
+One-click rollback to `.10` (from the running `.11`):
 
 ```bash
-ssh sever 'bash /backup/newapi/deployments/20260826T164005Z-before-aizzz-gateway-slim-20260825-10/rollback.sh'
+ssh sever 'bash /backup/newapi/deployments/20260827T033311Z-before-aizzz-gateway-slim-20260825-11/rollback.sh'
 ```
 
 Core database snapshots:
@@ -139,6 +139,7 @@ Core database snapshots:
 /backup/newapi/deployments/20260826T065012Z-before-aizzz-gateway-slim-20260825-08/newapi.sql.zst
 /backup/newapi/deployments/20260826T081803Z-before-aizzz-gateway-slim-20260825-09/newapi.sql.zst
 /backup/newapi/deployments/20260826T164005Z-before-aizzz-gateway-slim-20260825-10/newapi.sql.zst
+/backup/newapi/deployments/20260827T033311Z-before-aizzz-gateway-slim-20260825-11/newapi.sql.zst
 ```
 
 Deployment scripts:
@@ -147,6 +148,8 @@ Deployment scripts:
 /home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-08.sh
 /home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-09.sh  (deployed then rolled back)
 /home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-10.sh
+/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-11.sh
+/root/deploy-aizzz-gateway-slim-20260825-11.sh
 ```
 
 Neither the `.09` deployment nor its rollback refreshed or revoked sessions;
@@ -201,7 +204,7 @@ operator decision unless the current request explicitly includes it.
   `/home/huiji/code/Api/progress.md` and production procedures to
   `/home/huiji/code/Api/SERVER-OPS.md`.
 
-As of this handoff, frontend typecheck, 53 test files / 244 tests, production
+As of this handoff, frontend typecheck, 52 test files / 235 tests, production
 build, full Go tests, changed-file lint/format, and `git diff --check` pass. The
 repository-wide frontend format check still lists pre-existing unrelated files;
 keep every newly changed file clean and do not silently reformat unrelated
@@ -227,3 +230,25 @@ new-api.service 状态和 /api/status。先向我汇报源码 HEAD、工作树�
 的新需求。沿用官方认证与现有数据库；不要从旧二开版本重新搬运已
 移除功能；没有明确部署要求时只完成源码和验证。
 ```
+
+## Slim gateway `.11` deployment: wallet referral restoration and live invite counts (2026-08-27)
+
+- Restored the pre-refactor full referral program card in the wallet's right column, directly above subscription plans; the compact standalone strip was removed. Rebate history now has the former two-tab dialog (rebate ledger and invited users) with paginated authenticated APIs.
+- Restored `GET /api/user/aff/rebate` and `GET /api/user/aff/invitees`, and restored rebate settings in `/api/status` so the wallet can show the configured ratio. No schema migration was required; the retained `affiliate_rebate_records` table and `users.inviter_id` relation are used.
+- `GetSelf` now reports a live count of non-deleted users with `inviter_id=<current user>`, so stale `users.aff_count` values no longer reach the wallet. Future signup/OAuth completion refreshes the compatibility counter independently of optional reward/compliance gates; reward crediting remains gated as before. Production data was not bulk-rewritten.
+- Source commit/tag: `dc2da444`, `release/aizzz-gateway-slim-20260825.11`; official base marker remains `official-v1.0.0-rc.25-f116414 (main-2d8e50bf)`.
+- Release binary: `/opt/new-api/releases/aizzz-gateway-slim-20260825-11-dc2da444/new-api`, 131637410 bytes, SHA-256 `bd0fcabe7926c5c6a2e06101f264b28b74391f3aca7f15883208858b7e476e6b`.
+- Deployed at `20260827T033311Z` UTC. Local and public status report `.11`; service is `active`, `Result=success`, `NRestarts=0`, failed units `0`. Isolated port-3300 probe, USD balance/top-up compatibility, public status/assets, Nginx syntax, startup critical-log scan, database snapshot, and rollback-script syntax passed.
+- Production endpoint verification used user `393`: database live invite count `91` versus legacy stored `7`; `/api/user/self` returned `aff_count=91`, and `/api/user/aff/invitees` returned `total=91`. `/api/user/aff/rebate` returned a successful paginated response. Rebate settings are exposed as enabled with ratio `8`.
+- Sessions and API tokens were intentionally untouched: 392 active sessions and 2811 API tokens were identical before/after deployment. A first attempt was automatically rolled back after the daily backup timer collided with the shared lock (`TEMPFAIL 75`); the corrected script recognizes only that exact transient state and the successful retry cleared the stale failed-unit state.
+- The daily DB backup timer is now explicit `OnCalendar=*-*-* 03:30:00 Asia/Shanghai`; next trigger verified as `2026-08-28 03:30:00 CST` (`2026-08-27 19:30:00 UTC`). Previous unit file backup: `/root/ops-backups/newapi-db-backup-daily-timer-20260827T033532Z/newapi-db-backup-daily.timer.before`.
+
+### Rollback
+
+```bash
+ssh sever 'bash /backup/newapi/deployments/20260827T033311Z-before-aizzz-gateway-slim-20260825-11/rollback.sh'
+```
+
+- Rollback restores `.10`, SHA-256 `798aa1eede998d2689bc0423b1e003258495198311eabff215759eb3598ef330`.
+- Core database backup: `/backup/newapi/deployments/20260827T033311Z-before-aizzz-gateway-slim-20260825-11/newapi.sql.zst`; `zstd -t`, `SHA256SUMS`, and rollback-script syntax passed.
+- Local deployment script: `/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-11.sh`; server copy: `/root/deploy-aizzz-gateway-slim-20260825-11.sh`.
