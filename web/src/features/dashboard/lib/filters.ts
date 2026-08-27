@@ -154,16 +154,31 @@ export function buildDefaultDashboardFilters(
 
 export function buildQueryParams(
   timeRange: { start_timestamp: number; end_timestamp: number },
-  filters?: { time_granularity?: TimeGranularity; username?: string }
+  filters?: {
+    time_granularity?: TimeGranularity
+    username?: string
+    channel_ids?: number[]
+  }
 ): {
   start_timestamp: number
   end_timestamp: number
   default_time: string
   username?: string
+  channel_ids?: string
 } {
+  const channelIDs = [
+    ...new Set(
+      (filters?.channel_ids ?? []).filter(
+        (channelID): channelID is number =>
+          Number.isInteger(channelID) && channelID > 0
+      )
+    ),
+  ].sort((a, b) => a - b)
+
   return {
     ...timeRange,
     default_time: getSavedGranularity(filters?.time_granularity),
     ...(filters?.username && { username: filters.username }),
+    ...(channelIDs.length > 0 && { channel_ids: channelIDs.join(',') }),
   }
 }

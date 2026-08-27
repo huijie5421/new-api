@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next'
 
 import { DateTimePicker } from '@/components/datetime-picker'
 import { Dialog } from '@/components/dialog'
+import { MultiSelect } from '@/components/multi-select'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -38,6 +39,7 @@ import {
   TIME_GRANULARITY_OPTIONS,
   TIME_RANGE_PRESETS,
 } from '@/features/dashboard/constants'
+import { useDashboardChannels } from '@/features/dashboard/hooks/use-dashboard-channels'
 import {
   buildDefaultDashboardFilters,
   cleanFilters,
@@ -101,6 +103,11 @@ export function ModelsFilter(props: ModelsFilterProps) {
   // 使用已缓存的用户数据，避免重复调用 API
   const user = useAuthStore((state) => state.auth.user)
   const isAdmin = user?.role && user.role >= 10
+  const channelsQuery = useDashboardChannels(Boolean(isAdmin))
+  const channelOptions = (channelsQuery.data ?? []).map((channel) => ({
+    value: String(channel.id),
+    label: `${channel.name || t('Unnamed channel')} (#${channel.id})`,
+  }))
 
   const [open, setOpen] = useState(false)
   const [filters, setFilters] = useState<DashboardFilters>(
@@ -147,11 +154,12 @@ export function ModelsFilter(props: ModelsFilterProps) {
 
   const handleChange = (
     field: keyof DashboardFilters,
-    value: Date | string | undefined
+    value: Date | string | number[] | undefined
   ) => {
     setFilters((prev) => ({ ...prev, [field]: value }))
-    if (field === 'start_timestamp' || field === 'end_timestamp')
+    if (field === 'start_timestamp' || field === 'end_timestamp') {
       setSelectedRange(null)
+    }
   }
 
   const handleQuickRange = (days: number) => {
@@ -257,12 +265,10 @@ export function ModelsFilter(props: ModelsFilterProps) {
           <div className='grid gap-2'>
             <Label htmlFor='time_granularity'>{t('Time Granularity')}</Label>
             <Select
-              items={[
-                ...TIME_GRANULARITY_OPTIONS.map((option) => ({
-                  value: option.value,
-                  label: t(option.label),
-                })),
-              ]}
+              items={TIME_GRANULARITY_OPTIONS.map((option) => ({
+                value: option.value,
+                label: t(option.label),
+              }))}
               value={filters.time_granularity}
               onValueChange={(value) =>
                 handleChange('time_granularity', value as TimeGranularity)
@@ -296,6 +302,74 @@ export function ModelsFilter(props: ModelsFilterProps) {
                   value={filters.username}
                   onChange={(e) => handleChange('username', e.target.value)}
                 />
+              </div>
+
+              <div className='grid gap-2'>
+                <div className='flex items-center justify-between gap-2'>
+                  <Label htmlFor='channel_ids'>{t('Channels')}</Label>
+                  <div className='flex items-center gap-1'>
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='sm'
+                      className='h-7 px-2 text-xs'
+                      disabled={
+                        channelsQuery.isLoading || channelOptions.length === 0
+                      }
+                      onClick={() =>
+                        handleChange(
+                          'channel_ids',
+                          channelOptions.map((option) => Number(option.value))
+                        )
+                      }
+                    >
+                      {t('Select all')}
+                    </Button>
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='sm'
+                      className='h-7 px-2 text-xs'
+                      disabled={!filters.channel_ids?.length}
+                      onClick={() => handleChange('channel_ids', [])}
+                    >
+                      {t('Clear selection')}
+                    </Button>
+                  </div>
+                </div>
+                <MultiSelect
+                  id='channel_ids'
+                  options={channelOptions}
+                  selected={(filters.channel_ids ?? []).map(String)}
+                  onChange={(values) =>
+                    handleChange(
+                      'channel_ids',
+                      values
+                        .map(Number)
+                        .filter((value) => Number.isInteger(value) && value > 0)
+                    )
+                  }
+                  placeholder={t('All channels')}
+                  emptyText={t('No channels')}
+                  disabled={channelsQuery.isLoading}
+                  maxVisibleChips={2}
+                  renderSelectedSummary={(values) => {
+                    if (values.length === 0) return t('All channels')
+                    if (values.length === 1) {
+                      return (
+                        channelOptions.find(
+                          (option) => option.value === values[0]
+                        )?.label ?? values[0]
+                      )
+                    }
+                    return t('{{count}} selected', { count: values.length })
+                  }}
+                />
+                {channelsQuery.isError && (
+                  <p className='text-destructive text-xs'>
+                    {t('Failed to load channels')}
+                  </p>
+                )}
               </div>
             </>
           )}

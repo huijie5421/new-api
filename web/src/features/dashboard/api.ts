@@ -24,6 +24,14 @@ import type {
   UptimeGroupResult,
 } from './types'
 
+function withoutChannelFilter<T extends { channel_ids?: string }>(
+  params: T
+): Omit<T, 'channel_ids'> {
+  const selfParams = { ...params }
+  delete selfParams.channel_ids
+  return selfParams
+}
+
 // ============================================================================
 // Dashboard APIs
 // ============================================================================
@@ -40,13 +48,15 @@ export async function getUserQuotaDates(
     end_timestamp: number
     default_time?: string
     username?: string
+    channel_ids?: string
   },
   isAdmin = false
 ) {
   const endpoint = isAdmin ? '/api/data' : '/api/data/self'
+  const requestParams = isAdmin ? params : withoutChannelFilter(params)
   const res = await api.get<{ success: boolean; data: QuotaDataItem[] }>(
     endpoint,
-    { params }
+    { params: requestParams }
   )
   return res.data
 }
@@ -72,15 +82,17 @@ export async function getFlowQuotaDates(
     end_timestamp: number
     default_time?: string
     username?: string
+    channel_ids?: string
   },
   isAdmin = false
 ) {
   const endpoint = isAdmin ? '/api/data/flow' : '/api/data/flow/self'
+  const requestParams = isAdmin ? params : withoutChannelFilter(params)
   const res = await api.get<{
     success: boolean
     data?: FlowQuotaDataItem[]
     message?: string
-  }>(endpoint, { params })
+  }>(endpoint, { params: requestParams })
   return res.data
 }
 

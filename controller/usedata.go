@@ -3,12 +3,43 @@ package controller
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 
 	"github.com/gin-gonic/gin"
 )
+
+const maxDashboardChannelIDs = 100
+
+func parseChannelIDs(c *gin.Context) ([]int, bool) {
+	raw := strings.TrimSpace(c.Query("channel_ids"))
+	if raw == "" {
+		return nil, true
+	}
+
+	ids := make([]int, 0)
+	seen := make(map[int]struct{})
+	for _, part := range strings.Split(raw, ",") {
+		part = strings.TrimSpace(part)
+		id, err := strconv.Atoi(part)
+		if err != nil || id <= 0 {
+			common.ApiErrorMsg(c, "invalid channel_ids")
+			return nil, false
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		if len(ids) >= maxDashboardChannelIDs {
+			common.ApiErrorMsg(c, "too many channel_ids")
+			return nil, false
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	return ids, true
+}
 
 func parseFlowQuotaTimeRange(c *gin.Context) (int64, int64, bool) {
 	startTimestamp, err := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
@@ -32,7 +63,11 @@ func GetAllQuotaDates(c *gin.Context) {
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
 	username := c.Query("username")
-	dates, err := model.GetAllQuotaDates(startTimestamp, endTimestamp, username)
+	channelIDs, ok := parseChannelIDs(c)
+	if !ok {
+		return
+	}
+	dates, err := model.GetAllQuotaDates(startTimestamp, endTimestamp, username, channelIDs)
 	if err != nil {
 		common.ApiError(c, err)
 		return
@@ -91,7 +126,11 @@ func GetAllFlowQuotaDates(c *gin.Context) {
 		return
 	}
 	username := c.Query("username")
-	dates, err := model.GetFlowQuotaData(startTimestamp, endTimestamp, username, 0, c.GetInt("role"))
+	channelIDs, ok := parseChannelIDs(c)
+	if !ok {
+		return
+	}
+	dates, err := model.GetFlowQuotaData(startTimestamp, endTimestamp, username, channelIDs, 0, c.GetInt("role"))
 	if err != nil {
 		common.ApiError(c, err)
 		return
@@ -117,7 +156,7 @@ func GetUserFlowQuotaDates(c *gin.Context) {
 		})
 		return
 	}
-	dates, err := model.GetFlowQuotaData(startTimestamp, endTimestamp, "", userId, common.RoleCommonUser)
+	dates, err := model.GetFlowQuotaData(startTimestamp, endTimestamp, "", nil, userId, common.RoleCommonUser)
 	if err != nil {
 		common.ApiError(c, err)
 		return
