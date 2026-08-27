@@ -487,6 +487,12 @@ func GetSelf(c *gin.Context) {
 		return
 	}
 	responseData := buildSelfUserData(user)
+	inviteCount, err := model.GetUserInviteeCount(id)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	responseData["aff_count"] = inviteCount
 	// The authenticated role is loaded from GetUserCache. It should equal the
 	// row role, but use it for capabilities so GetSelf and login/refresh remain
 	// consistent with the authorization decision made for this request.
@@ -500,6 +506,34 @@ func GetSelf(c *gin.Context) {
 		"data":    responseData,
 	})
 	return
+}
+
+// GetSelfRebateRecords returns the current user's recharge rebate ledger.
+func GetSelfRebateRecords(c *gin.Context) {
+	id := c.GetInt("id")
+	pageInfo := common.GetPageQuery(c)
+	records, total, err := model.GetUserRebateRecords(id, pageInfo)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	pageInfo.SetTotal(int(total))
+	pageInfo.SetItems(records)
+	common.ApiSuccess(c, pageInfo)
+}
+
+// GetSelfInvitees returns the current user's invited-user list.
+func GetSelfInvitees(c *gin.Context) {
+	id := c.GetInt("id")
+	pageInfo := common.GetPageQuery(c)
+	invitees, total, err := model.GetUserInvitees(id, pageInfo)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	pageInfo.SetTotal(int(total))
+	pageInfo.SetItems(invitees)
+	common.ApiSuccess(c, pageInfo)
 }
 
 // buildSelfUserData is the single safe dashboard-user DTO used by GetSelf,

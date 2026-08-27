@@ -25,13 +25,14 @@ import { useStatus } from '@/hooks/use-status'
 import { useSystemConfig } from '@/hooks/use-system-config'
 import { getSelf } from '@/lib/api'
 
-import { AffiliateRewardsCard } from './components/affiliate-rewards-card'
 import { BillingHistoryDialog } from './components/dialogs/billing-history-dialog'
 import { CreemConfirmDialog } from './components/dialogs/creem-confirm-dialog'
 import { PaymentConfirmDialog } from './components/dialogs/payment-confirm-dialog'
+import { RebateHistoryDialog } from './components/dialogs/rebate-history-dialog'
 import { TransferDialog } from './components/dialogs/transfer-dialog'
 import { RechargeFormCard } from './components/recharge-form-card'
 import { RedeemCodeShopCard } from './components/redeem-code-shop-card'
+import { ReferralProgramCard } from './components/referral-program-card'
 import { SubscriptionPlansCard } from './components/subscription-plans-card'
 import { WalletStatsCard } from './components/wallet-stats-card'
 import { DEFAULT_DISCOUNT_RATE, PAYMENT_TYPES } from './constants'
@@ -80,6 +81,7 @@ export function Wallet(props: WalletProps) {
   const [qrPayment, setQrPayment] = useState<EpayPaymentDetail | null>(null)
   const [transferDialogOpen, setTransferDialogOpen] = useState(false)
   const [billingDialogOpen, setBillingDialogOpen] = useState(false)
+  const [rebateHistoryOpen, setRebateHistoryOpen] = useState(false)
   const [redemptionCode, setRedemptionCode] = useState('')
   const [creemDialogOpen, setCreemDialogOpen] = useState(false)
   const [selectedCreemProduct, setSelectedCreemProduct] =
@@ -89,6 +91,9 @@ export function Wallet(props: WalletProps) {
   const { status } = useStatus()
   const { currency } = useSystemConfig()
   const { topupInfo, presetAmounts, loading: topupLoading } = useTopupInfo()
+
+  const rebateEnabled = status?.recharge_rebate_enabled === true
+  const rebateRatio = (status?.recharge_rebate_ratio as number) ?? 0
 
   // Calculate effective exchange rate - when display type is USD, use rate of 1
   const effectiveUsdExchangeRate = useMemo(() => {
@@ -362,25 +367,44 @@ export function Wallet(props: WalletProps) {
                 />
               </div>
 
-              <SubscriptionPlansCard
-                topupInfo={topupInfo}
-                onAvailabilityChange={handleSubscriptionAvailabilityChange}
-                userQuota={user?.quota}
-                onPurchaseSuccess={fetchUser}
-              />
+              {showSubscriptionPanel ? (
+                <div className='flex flex-col gap-4'>
+                  <ReferralProgramCard
+                    user={user}
+                    affiliateLink={affiliateLink}
+                    onTransfer={() => setTransferDialogOpen(true)}
+                    onShowHistory={() => setRebateHistoryOpen(true)}
+                    complianceConfirmed={
+                      topupInfo?.payment_compliance_confirmed !== false
+                    }
+                    loading={affiliateLoading}
+                    rebateEnabled={rebateEnabled}
+                    rebateRatio={rebateRatio}
+                  />
+                  <SubscriptionPlansCard
+                    topupInfo={topupInfo}
+                    onAvailabilityChange={handleSubscriptionAvailabilityChange}
+                    userQuota={user?.quota}
+                    onPurchaseSuccess={fetchUser}
+                  />
+                </div>
+              ) : (
+                <ReferralProgramCard
+                  user={user}
+                  affiliateLink={affiliateLink}
+                  onTransfer={() => setTransferDialogOpen(true)}
+                  onShowHistory={() => setRebateHistoryOpen(true)}
+                  complianceConfirmed={
+                    topupInfo?.payment_compliance_confirmed !== false
+                  }
+                  loading={affiliateLoading}
+                  rebateEnabled={rebateEnabled}
+                  rebateRatio={rebateRatio}
+                />
+              )}
             </div>
 
             <RedeemCodeShopCard shopUrl={topupInfo?.topup_link} />
-
-            <AffiliateRewardsCard
-              user={user}
-              affiliateLink={affiliateLink}
-              onTransfer={() => setTransferDialogOpen(true)}
-              complianceConfirmed={
-                topupInfo?.payment_compliance_confirmed !== false
-              }
-              loading={affiliateLoading}
-            />
           </div>
         </SectionPageLayout.Content>
       </SectionPageLayout>
@@ -414,6 +438,11 @@ export function Wallet(props: WalletProps) {
       <BillingHistoryDialog
         open={billingDialogOpen}
         onOpenChange={setBillingDialogOpen}
+      />
+
+      <RebateHistoryDialog
+        open={rebateHistoryOpen}
+        onOpenChange={setRebateHistoryOpen}
       />
 
       <CreemConfirmDialog

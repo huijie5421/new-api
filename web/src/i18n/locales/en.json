@@ -5492,6 +5492,24 @@
     "Browse products here, then redeem your code below": "Browse products here, then redeem your code below",
     "Click to maximize": "Click to maximize",
     "Loading shop": "Loading shop",
-    "The shop did not load here. Continue in a new tab.": "The shop did not load here. Continue in a new tab."
+    "The shop did not load here. Continue in a new tab.": "The shop did not load here. Continue in a new tab.",
+    "Earn rewards when your referrals add funds": "Earn rewards when your referrals add funds",
+    "Earn {{ratio}}% rebate when your referrals recharge online": "Earn {{ratio}}% rebate when your referrals recharge online",
+    "Failed to load invitees": "Failed to load invitees",
+    "Failed to load rebate history": "Failed to load rebate history",
+    "Invitee": "Invitee",
+    "Joined": "Joined",
+    "My Invitees": "My Invitees",
+    "No invitees yet": "No invitees yet",
+    "No rebate records found": "No rebate records found",
+    "Order Number": "Order Number",
+    "Pending Rewards": "Pending Rewards",
+    "Rebate": "Rebate",
+    "Rebate History": "Rebate History",
+    "Rebate Records": "Rebate Records",
+    "Rebates appear here when your referrals recharge online": "Rebates appear here when your referrals recharge online",
+    "Recharged": "Recharged",
+    "Share your referral link to invite users": "Share your referral link to invite users",
+    "Track rebates earned from your referrals and the users you invited": "Track rebates earned from your referrals and the users you invited"
   }
 }

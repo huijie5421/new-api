@@ -330,6 +330,44 @@ export interface BillingHistoryResponse {
   total: number
 }
 
+/** Recharge rebate record earned from a referred user's online top-up. */
+export interface RebateRecord {
+  id: number
+  inviter_id: number
+  source_user_id: number
+  source_username: string
+  quota: number
+  recharged_quota: number
+  ratio: number
+  trade_no: string
+  top_up_id: number
+  created_at: number
+}
+
+export interface RebateHistoryResponse {
+  items: RebateRecord[]
+  total: number
+  page?: number
+  page_size?: number
+}
+
+/** User referred by the current user. */
+export interface InviteeRecord {
+  id: number
+  username: string
+  display_name: string
+  created_at: number
+  used_quota: number
+  quota: number
+}
+
+export interface InviteesResponse {
+  items: InviteeRecord[]
+  total: number
+  page?: number
+  page_size?: number
+}
+
 /**
  * Complete order request (admin only)
  */

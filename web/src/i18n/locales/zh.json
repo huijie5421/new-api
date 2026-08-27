@@ -5497,6 +5497,24 @@
     "Browse products here, then redeem your code below": "在这里浏览商品，购买后使用下方兑换码充值",
     "Click to maximize": "点击最大化",
     "Loading shop": "商城加载中",
-    "The shop did not load here. Continue in a new tab.": "商城暂时未能载入，可在新标签页继续购买"
+    "The shop did not load here. Continue in a new tab.": "商城暂时未能载入，可在新标签页继续购买",
+    "Earn rewards when your referrals add funds": "邀请好友充值即可获得奖励",
+    "Earn {{ratio}}% rebate when your referrals recharge online": "当您邀请的用户在线充值时，可获得 {{ratio}}% 的返利",
+    "Failed to load invitees": "加载受邀用户失败",
+    "Failed to load rebate history": "加载返利记录失败",
+    "Invitee": "受邀用户",
+    "Joined": "加入时间",
+    "My Invitees": "我的受邀用户",
+    "No invitees yet": "暂无受邀用户",
+    "No rebate records found": "未找到返利记录",
+    "Order Number": "订单号",
+    "Pending Rewards": "待领取奖励",
+    "Rebate": "返利",
+    "Rebate History": "返利记录",
+    "Rebate Records": "返利记录",
+    "Rebates appear here when your referrals recharge online": "当您邀请的用户在线充值时，返利将显示在此处",
+    "Recharged": "充值金额",
+    "Share your referral link to invite users": "分享您的推荐链接以邀请用户",
+    "Track rebates earned from your referrals and the users you invited": "查看邀请用户及其为您带来的充值返利"
   }
 }

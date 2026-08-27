@@ -58,3 +58,30 @@ func GetUserInvitees(inviterId int, pageInfo *common.PageInfo) ([]*User, int64, 
 
 	return users, total, nil
 }
+
+// GetUserInviteeCount returns the current number of non-deleted users linked
+// to an inviter. The users.inviter_id relation is authoritative; aff_count is
+// retained only as a compatibility field for older clients and reports.
+func GetUserInviteeCount(inviterId int) (int64, error) {
+	var total int64
+	err := DB.Model(&User{}).Where("inviter_id = ?", inviterId).Count(&total).Error
+	return total, err
+}
+
+// RefreshAffiliateCount repairs the denormalized compatibility counter from
+// the authoritative inviter relationship.
+func RefreshAffiliateCount(inviterId int) error {
+	total, err := GetUserInviteeCount(inviterId)
+	if err != nil {
+		return err
+	}
+	result := DB.Model(&User{}).Where("id = ?", inviterId).Update("aff_count", total)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		var existing User
+		return DB.Select("id").First(&existing, inviterId).Error
+	}
+	return nil
+}

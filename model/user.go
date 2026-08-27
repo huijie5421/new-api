@@ -529,9 +529,8 @@ func HardDeleteUserById(id int) error {
 	return user.HardDelete()
 }
 
-func inviteUser(inviterId int) error {
+func rewardInviter(inviterId int) error {
 	result := DB.Model(&User{}).Where("id = ?", inviterId).Updates(map[string]interface{}{
-		"aff_count":   gorm.Expr("aff_count + ?", 1),
 		"aff_quota":   gorm.Expr("aff_quota + ?", common.QuotaForInviter),
 		"aff_history": gorm.Expr("aff_history + ?", common.QuotaForInviter),
 	})
@@ -680,6 +679,9 @@ func (user *User) finishInsert(inviterId int) {
 	if common.QuotaForNewUser > 0 {
 		RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("新用户注册赠送 %s", logger.LogQuota(common.QuotaForNewUser)))
 	}
+	if inviterId != 0 {
+		_ = RefreshAffiliateCount(inviterId)
+	}
 	if inviterId != 0 && operation_setting.IsPaymentComplianceConfirmed() {
 		if common.QuotaForInvitee > 0 {
 			_ = IncreaseUserQuota(user.Id, common.QuotaForInvitee, true)
@@ -688,7 +690,7 @@ func (user *User) finishInsert(inviterId int) {
 		if common.QuotaForInviter > 0 {
 			//_ = IncreaseUserQuota(inviterId, common.QuotaForInviter)
 			RecordLog(inviterId, LogTypeSystem, fmt.Sprintf("邀请用户赠送 %s", logger.LogQuota(common.QuotaForInviter)))
-			_ = inviteUser(inviterId)
+			_ = rewardInviter(inviterId)
 		}
 	}
 }
@@ -740,6 +742,9 @@ func (user *User) FinalizeOAuthUserCreation(inviterId int) {
 	if common.QuotaForNewUser > 0 {
 		RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("新用户注册赠送 %s", logger.LogQuota(common.QuotaForNewUser)))
 	}
+	if inviterId != 0 {
+		_ = RefreshAffiliateCount(inviterId)
+	}
 	if inviterId != 0 && operation_setting.IsPaymentComplianceConfirmed() {
 		if common.QuotaForInvitee > 0 {
 			_ = IncreaseUserQuota(user.Id, common.QuotaForInvitee, true)
@@ -747,7 +752,7 @@ func (user *User) FinalizeOAuthUserCreation(inviterId int) {
 		}
 		if common.QuotaForInviter > 0 {
 			RecordLog(inviterId, LogTypeSystem, fmt.Sprintf("邀请用户赠送 %s", logger.LogQuota(common.QuotaForInviter)))
-			_ = inviteUser(inviterId)
+			_ = rewardInviter(inviterId)
 		}
 	}
 }

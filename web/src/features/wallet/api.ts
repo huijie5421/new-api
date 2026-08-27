@@ -40,6 +40,8 @@ import type {
   WaffoPancakePaymentRequest,
   WaffoPancakePaymentResponse,
   TopUpStatusResponse,
+  RebateHistoryResponse,
+  InviteesResponse,
 } from './types'
 
 // ============================================================================
@@ -213,6 +215,32 @@ export async function transferAffiliateQuota(
   request: AffiliateTransferRequest
 ): Promise<AffiliateTransferResponse> {
   const res = await api.post('/api/user/aff_transfer', request)
+  return res.data
+}
+
+/** Get recharge rebate history for the current user. */
+export async function getRebateHistory(
+  page: number,
+  pageSize: number
+): Promise<ApiResponse<RebateHistoryResponse>> {
+  const params = new URLSearchParams({
+    p: page.toString(),
+    page_size: pageSize.toString(),
+  })
+  const res = await api.get(`/api/user/aff/rebate?${params.toString()}`)
+  return res.data
+}
+
+/** Get users invited by the current user. */
+export async function getInvitees(
+  page: number,
+  pageSize: number
+): Promise<ApiResponse<InviteesResponse>> {
+  const params = new URLSearchParams({
+    p: page.toString(),
+    page_size: pageSize.toString(),
+  })
+  const res = await api.get(`/api/user/aff/invitees?${params.toString()}`)
   return res.data
 }
 
