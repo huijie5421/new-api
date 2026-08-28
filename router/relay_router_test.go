@@ -89,6 +89,26 @@ func TestListModelsSupportsOpenAIAndGeminiAuthentication(t *testing.T) {
 	}
 }
 
+func TestResponsesWebSocketRouteContract(t *testing.T) {
+	engine := gin.New()
+	SetRelayRouter(engine)
+
+	routes := make(map[string][]string)
+	for _, route := range engine.Routes() {
+		routes[route.Method] = append(routes[route.Method], route.Path)
+	}
+
+	for _, path := range []string{
+		"/v1/responses",
+		"/responses",
+		"/backend-api/codex/responses",
+	} {
+		assert.Contains(t, routes[http.MethodGet], path, "Responses WebSocket route must be registered")
+	}
+	assert.NotContains(t, routes[http.MethodGet], "/v1/messages")
+	assert.NotContains(t, routes[http.MethodGet], "/v1/chat/completions")
+}
+
 func setupRelayRouterTestDB(t *testing.T) {
 	t.Helper()
 

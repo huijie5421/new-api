@@ -79,6 +79,7 @@ func SetRelayRouter(router *gin.Engine) {
 			controller.Relay(c, types.RelayFormatOpenAIRealtime)
 		})
 	}
+	registerResponsesWebSocketRoutes(router)
 	{
 		//http router
 		httpRouter := relayV1Router.Group("")
@@ -202,6 +203,21 @@ func SetRelayRouter(router *gin.Engine) {
 		relayGeminiRouter.POST("/models/*path", func(c *gin.Context) {
 			controller.Relay(c, types.RelayFormatGemini)
 		})
+	}
+}
+
+func registerResponsesWebSocketRoutes(router *gin.Engine) {
+	for _, path := range []string{
+		"/v1/responses",
+		"/responses",
+		"/backend-api/codex/responses",
+	} {
+		router.GET(path,
+			middleware.RouteTag("relay"),
+			middleware.SystemPerformanceCheck(),
+			middleware.TokenAuth(),
+			controller.ResponsesWebSocketBridgeHandler(router),
+		)
 	}
 }
 
