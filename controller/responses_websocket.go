@@ -32,8 +32,6 @@ type responsesWSInbound struct {
 }
 
 type responsesWSReader struct {
-	conn         *websocket.Conn
-	ctx          context.Context
 	inbound      chan responsesWSInbound
 	activeMu     sync.Mutex
 	activeCancel context.CancelFunc
@@ -398,7 +396,7 @@ func ResponsesWebSocketBridge(c *gin.Context, next http.Handler) {
 }
 
 func readResponsesWSMessages(conn *websocket.Conn, ctx context.Context, firstMessageTimeout int) *responsesWSReader {
-	reader := &responsesWSReader{conn: conn, ctx: ctx, inbound: make(chan responsesWSInbound, 1)}
+	reader := &responsesWSReader{inbound: make(chan responsesWSInbound, 1)}
 	go func() {
 		defer close(reader.inbound)
 		for turn := 0; ; turn++ {
@@ -425,6 +423,13 @@ func readResponsesWSMessages(conn *websocket.Conn, ctx context.Context, firstMes
 			select {
 			case reader.inbound <- item:
 			case <-ctx.Done():
+				return
+			default:
+				// Keep the reader responsive to a close frame instead of
+				// blocking behind an already queued turn. One pending turn is
+				// enough for sequential mode; excess client frames end the
+				// session and cancel the active downstream request.
+				reader.cancelActiveTurn()
 				return
 			}
 			if err != nil {
