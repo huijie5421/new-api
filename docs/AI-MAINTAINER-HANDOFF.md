@@ -10,20 +10,20 @@ linked rather than duplicated where possible.
 | --- | --- |
 | Source repository | `/home/huiji/code/Api/new-api-slim-aigc-v1-20260825` |
 | Branch | `codex/slim-aigc-v1` |
-| Latest functional source commit | `e80d435f` (administrator dashboard channel filters) |
-| Production runtime source commit | `e80d435f` |
-| Production release | `aizzz-gateway-slim-20260825.12` (deployed `20260827T062919Z`) |
+| Latest functional source commit | `5bfeb985` (per-channel upstream Responses WebSocket) |
+| Production runtime source commit | `5bfeb985` |
+| Production release | `aizzz-gateway-slim-20260825.14` (deployed `20260828T060400Z`) |
 | Official base | `v1.0.0-rc.25`, commit `f116414284162ad15d8925f7bca494c109b83e93` |
 | Runtime base marker | `official-v1.0.0-rc.25-f116414 (main-2d8e50bf)` |
-| Production binary SHA-256 | `a2a01638fc159449f73ac3ce3fbaf7ee29e3af10a338cf3f075a178f2348693d` |
-| Deployment timestamp | `.12` deployed `20260827T062919Z` UTC |
-| Next release label | `.13` unless the operator specifies another label |
+| Production binary SHA-256 | `2e39eb1eccc058cb6839413872b592834b10208f2051a72c6af78877662cc7b2` |
+| Deployment timestamp | `.14` deployed `20260828T060400Z` UTC |
+| Next release label | `.15` unless the operator specifies another label |
 
-Production runs functional commit `e80d435f`; the branch may contain later documentation-only handoff commits. The `.09` Apple-style UI
+Production runs functional commit `5bfeb985`; the branch may contain later documentation-only handoff commits. The `.09` Apple-style UI
 refresh remains a historical rolled-back release and must not be reused without
 operator approval. Always verify the actual branch tip with `git rev-parse
 --short HEAD`. Source-level reference tags include
-`release/aizzz-gateway-slim-20260825.12` (`e80d435f`), the prior `.11`, `.10`, `.09`,
+`release/aizzz-gateway-slim-20260825.14` (`5bfeb985`), the prior `.13`, `.12`, `.11`, `.10`, `.09`,
 and `.08` release/rollback markers.
 
 ## Source of truth
@@ -117,10 +117,12 @@ Production access uses the existing SSH alias `sever`. Do not place passwords,
 API keys, cookies, merchant secrets, or private keys in commits or handoff
 documents.
 
-Current release path (production runs `.12` at `/opt/new-api/current/new-api`;
-the `.10` rollback target and earlier releases remain at):
+Current release path (production runs `.14` at `/opt/new-api/current/new-api`;
+the `.13` rollback target and earlier releases remain at):
 
 ```text
+/opt/new-api/releases/aizzz-gateway-slim-20260825-14-5bfeb985/new-api
+/opt/new-api/releases/aizzz-gateway-slim-20260825-13-f2984507/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-12-e80d435f/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-11-dc2da444/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-10-b5016156/new-api
@@ -273,3 +275,14 @@ ssh sever 'bash /backup/newapi/deployments/20260827T062919Z-before-aizzz-gateway
 
 - Rollback restores `.11`, SHA-256 `bd0fcabe7926c5c6a2e06101f264b28b74391f3aca7f15883208858b7e476e6b`.
 - Core database backup: `/backup/newapi/deployments/20260827T062919Z-before-aizzz-gateway-slim-20260825-12/newapi.sql.zst`; deployment script: `/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-12.sh`.
+
+
+## Slim gateway `.14` deployment: per-channel upstream Responses WebSocket (2026-08-28)
+
+- Source commit/tag: `5bfeb985`, `release/aizzz-gateway-slim-20260825.14`; official base remains `v1.0.0-rc.25`.
+- Production binary: `/opt/new-api/releases/aizzz-gateway-slim-20260825-14-5bfeb985/new-api`, 131731618 bytes, SHA-256 `2e39eb1eccc058cb6839413872b592834b10208f2051a72c6af78877662cc7b2`.
+- Downstream Responses WSS turns may use upstream WS/WSS through a per-channel administrator switch. Explicit unsupported responses use the channel's HTTP/SSE path for the current request and suspend only that channel's WS attempt for 24 hours; expiry permits one half-open probe. Ordinary HTTP requests stay unchanged.
+- Deployment at `20260828T060400Z` UTC passed the isolated probe, local/public status and WSS handshakes, payment/balance and dashboard compatibility checks, public assets, Nginx, additive breaker-table migration, database snapshot integrity, and post-start log scan. Service is active/success with `NRestarts=0`, failed units 0.
+- Sessions and API tokens were untouched: 702 active sessions and 2851 API tokens before/after.
+- One-click rollback: `ssh sever 'bash /backup/newapi/deployments/20260828T060400Z-before-aizzz-gateway-slim-20260825-14/rollback.sh'`; restores `.13` SHA-256 `1b131c6fb8f63d7b218a02fd8e19177a9341e943f4e4b7a2d7448cffeb42964f`.
+- Deployment scripts: `/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-14.sh` and `/root/deploy-aizzz-gateway-slim-20260825-14.sh`.
