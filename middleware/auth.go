@@ -352,18 +352,7 @@ func TokenAuthReadOnly() func(c *gin.Context) {
 func TokenAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		// 先检测是否为ws
-		if c.Request.Header.Get("Sec-WebSocket-Protocol") != "" {
-			// Sec-WebSocket-Protocol: realtime, openai-insecure-api-key.sk-xxx, openai-beta.realtime-v1
-			// read sk from Sec-WebSocket-Protocol
-			key := c.Request.Header.Get("Sec-WebSocket-Protocol")
-			parts := strings.Split(key, ",")
-			for _, part := range parts {
-				part = strings.TrimSpace(part)
-				if strings.HasPrefix(part, "openai-insecure-api-key") {
-					key = strings.TrimPrefix(part, "openai-insecure-api-key.")
-					break
-				}
-			}
+		if key := webSocketAPIKeyFromSubprotocol(c.Request.Header.Get("Sec-WebSocket-Protocol")); key != "" {
 			c.Request.Header.Set("Authorization", "Bearer "+key)
 		}
 		// 检查path包含/v1/messages 或 /v1/models
@@ -481,6 +470,21 @@ func TokenAuth() func(c *gin.Context) {
 		}
 		c.Next()
 	}
+}
+
+// webSocketAPIKeyFromSubprotocol extracts the OpenAI API key item used by
+// clients that cannot send Authorization during the WebSocket handshake.
+// Other negotiated subprotocols are transport metadata and must not replace
+// an existing Authorization header.
+func webSocketAPIKeyFromSubprotocol(header string) string {
+	for _, part := range strings.Split(header, ",") {
+		part = strings.TrimSpace(part)
+		const prefix = "openai-insecure-api-key."
+		if strings.HasPrefix(part, prefix) {
+			return strings.TrimSpace(strings.TrimPrefix(part, prefix))
+		}
+	}
+	return ""
 }
 
 func SetupContextForToken(c *gin.Context, token *model.Token, parts ...string) error {

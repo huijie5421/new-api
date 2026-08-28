@@ -42,6 +42,27 @@ func setupDashboardAuthMiddlewareTest(t *testing.T) {
 	})
 }
 
+func TestWebSocketAPIKeyFromSubprotocol(t *testing.T) {
+	tests := []struct {
+		name     string
+		header   string
+		expected string
+	}{
+		{name: "explicit key", header: "realtime, openai-insecure-api-key.sk-test, openai-beta.realtime-v1", expected: "sk-test"},
+		{name: "trim whitespace", header: "  openai-insecure-api-key.secret-value  ", expected: "secret-value"},
+		{name: "Responses feature only", header: "responses_websockets_v2"},
+		{name: "ordinary protocol only", header: "realtime"},
+		{name: "empty key", header: "openai-insecure-api-key."},
+		{name: "missing", header: ""},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, webSocketAPIKeyFromSubprotocol(test.header))
+		})
+	}
+}
+
 func issueExpiredDashboardAccessToken(t *testing.T, identity service.AuthIdentity) string {
 	t.Helper()
 	claims := jwt.MapClaims{
