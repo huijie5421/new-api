@@ -28,7 +28,7 @@ Expected: failure because the three Responses `GET` routes are absent.
 
 - [ ] **Step 3: Register the minimum routes**
 
-Register `/v1/responses` under the existing relay authentication group without `middleware.Distribute()`. Register the two aliases with the same route tag, system-performance, token-auth, and model-rate-limit middleware. Each route calls `controller.ResponsesWebSocketBridge(c, router)`.
+Register the three GET ingress routes with route tagging, system-performance checks, and token authentication. Keep model-rate limiting on the internal POST turn only: applying it to the bodyless handshake would count a connection rather than a model request. Each route calls `controller.ResponsesWebSocketBridge(c, router)`.
 
 - [ ] **Step 4: Re-run the route test**
 

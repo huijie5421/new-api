@@ -2,10 +2,13 @@ package controller
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -19,8 +22,47 @@ type responsesWSMessageWriter interface {
 	WriteMessage(messageType int, data []byte) error
 }
 
+type responsesWSDeadlineWriter interface {
+	SetWriteDeadline(deadline time.Time) error
+}
+
+type responsesWSInbound struct {
+	message []byte
+	err     error
+}
+
+type responsesWSReader struct {
+	conn         *websocket.Conn
+	ctx          context.Context
+	inbound      chan responsesWSInbound
+	activeMu     sync.Mutex
+	activeCancel context.CancelFunc
+}
+
+func (r *responsesWSReader) setActiveCancel(cancel context.CancelFunc) {
+	r.activeMu.Lock()
+	r.activeCancel = cancel
+	r.activeMu.Unlock()
+}
+
+func (r *responsesWSReader) clearActiveCancel() {
+	r.setActiveCancel(nil)
+}
+
+func (r *responsesWSReader) cancelActiveTurn() {
+	r.activeMu.Lock()
+	cancel := r.activeCancel
+	r.activeMu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+}
+
+const responsesWSWriteTimeout = 30 * time.Second
+
 type responsesWSBridgeWriter struct {
 	sink        responsesWSMessageWriter
+	cancel      context.CancelFunc
 	header      http.Header
 	statusCode  int
 	wroteHeader bool
@@ -28,11 +70,17 @@ type responsesWSBridgeWriter struct {
 	eventData   [][]byte
 	body        bytes.Buffer
 	writeErr    error
+	terminal    bool
 }
 
-func newResponsesWSBridgeWriter(sink responsesWSMessageWriter) *responsesWSBridgeWriter {
+func newResponsesWSBridgeWriter(sink responsesWSMessageWriter, cancel ...context.CancelFunc) *responsesWSBridgeWriter {
+	var cancelFunc context.CancelFunc
+	if len(cancel) > 0 {
+		cancelFunc = cancel[0]
+	}
 	return &responsesWSBridgeWriter{
 		sink:       sink,
+		cancel:     cancelFunc,
 		header:     make(http.Header),
 		statusCode: http.StatusOK,
 	}
@@ -81,6 +129,15 @@ func (w *responsesWSBridgeWriter) Flush() {
 	// SSE events are sent as soon as their terminating blank line is written.
 }
 
+// SetWriteDeadline lets net/http's ResponseController carry the existing
+// streaming write timeout through Gin to the WebSocket connection.
+func (w *responsesWSBridgeWriter) SetWriteDeadline(deadline time.Time) error {
+	if sink, ok := w.sink.(responsesWSDeadlineWriter); ok {
+		return sink.SetWriteDeadline(deadline)
+	}
+	return nil
+}
+
 func (w *responsesWSBridgeWriter) isEventStream() bool {
 	return strings.Contains(strings.ToLower(w.header.Get("Content-Type")), "text/event-stream")
 }
@@ -107,7 +164,28 @@ func (w *responsesWSBridgeWriter) flushSSEEvent() {
 	if bytes.Equal(payload, []byte("[DONE]")) || len(payload) == 0 {
 		return
 	}
-	w.writeErr = w.sink.WriteMessage(websocket.TextMessage, payload)
+	w.writeErr = w.writeMessage(payload)
+	if w.writeErr != nil {
+		if w.cancel != nil {
+			w.cancel()
+		}
+		return
+	}
+	var event struct {
+		Type string `json:"type"`
+	}
+	if json.Unmarshal(payload, &event) == nil && isResponsesWSTerminalEvent(event.Type) {
+		w.terminal = true
+	}
+}
+
+func isResponsesWSTerminalEvent(eventType string) bool {
+	switch eventType {
+	case "response.completed", "response.done", "response.failed", "response.incomplete", "response.cancelled", "response.canceled", "response.error", "error":
+		return true
+	default:
+		return false
+	}
 }
 
 func (w *responsesWSBridgeWriter) finish() error {
@@ -117,26 +195,53 @@ func (w *responsesWSBridgeWriter) finish() error {
 			w.lineBuffer = nil
 		}
 		w.flushSSEEvent()
-		return w.writeErr
+		if w.writeErr != nil {
+			return w.writeErr
+		}
+		if !w.terminal {
+			return fmt.Errorf("Responses stream ended without a terminal event")
+		}
+		return nil
 	}
 
 	if w.body.Len() == 0 {
-		return w.writeErr
+		if w.statusCode < http.StatusBadRequest {
+			return w.writeErr
+		}
+		return w.writeMessage(responsesWSHTTPErrorEvent(w.statusCode, nil))
 	}
 	message := append([]byte(nil), w.body.Bytes()...)
 	if w.statusCode >= http.StatusBadRequest {
 		message = responsesWSHTTPErrorEvent(w.statusCode, message)
 	}
-	return w.sink.WriteMessage(websocket.TextMessage, message)
+	return w.writeMessage(message)
+}
+
+func (w *responsesWSBridgeWriter) writeMessage(message []byte) error {
+	if err := w.SetWriteDeadline(time.Now().Add(responsesWSWriteTimeout)); err != nil {
+		if w.cancel != nil {
+			w.cancel()
+		}
+		return err
+	}
+	err := w.sink.WriteMessage(websocket.TextMessage, message)
+	if err != nil && w.cancel != nil {
+		w.cancel()
+	}
+	return err
 }
 
 func responsesWSHTTPErrorEvent(statusCode int, body []byte) []byte {
+	message := strings.TrimSpace(string(body))
+	if message == "" {
+		message = http.StatusText(statusCode)
+	}
 	var payload map[string]any
 	if err := common.Unmarshal(body, &payload); err != nil || payload == nil {
 		payload = map[string]any{
 			"error": map[string]any{
 				"type":    "http_error",
-				"message": strings.TrimSpace(string(body)),
+				"message": message,
 				"code":    statusCode,
 			},
 		}
@@ -145,7 +250,7 @@ func responsesWSHTTPErrorEvent(statusCode int, body []byte) []byte {
 	if !ok {
 		errorValue = map[string]any{
 			"type":    "http_error",
-			"message": strings.TrimSpace(string(body)),
+			"message": message,
 			"code":    statusCode,
 		}
 	}
@@ -202,30 +307,132 @@ func ResponsesWebSocketBridge(c *gin.Context, next http.Handler) {
 	defer conn.Close()
 	conn.SetReadLimit(int64(maxResponsesWSFrameBytes()))
 
-	for turn := 0; ; turn++ {
-		if deadline := responsesWSReadDeadline(turn); !deadline.IsZero() {
-			if err := conn.SetReadDeadline(deadline); err != nil {
-				return
+	firstMessageTimeout := constant.ResponsesWSFirstMessageTimeoutSeconds
+	interTurnIdleTimeout := constant.ResponsesWSInterTurnIdleTimeoutSeconds
+	readContext, cancelRead := context.WithCancel(c.Request.Context())
+	defer cancelRead()
+	reader := readResponsesWSMessages(conn, readContext, firstMessageTimeout)
+	inbound := reader.inbound
+	sessionModel := ""
+	var pending *responsesWSInbound
+	for {
+		var item responsesWSInbound
+		if pending != nil {
+			item = *pending
+			pending = nil
+		} else {
+			idleTimeout := interTurnIdleTimeout
+			if sessionModel == "" {
+				idleTimeout = firstMessageTimeout
+			}
+			if idleTimeout <= 0 {
+				var ok bool
+				item, ok = <-inbound
+				if !ok {
+					return
+				}
+			} else {
+				timer := time.NewTimer(time.Duration(idleTimeout) * time.Second)
+				select {
+				case nextItem, ok := <-inbound:
+					if !timer.Stop() {
+						<-timer.C
+					}
+					if !ok {
+						return
+					}
+					item = nextItem
+				case <-timer.C:
+					return
+				}
 			}
 		}
-		_, message, err := conn.ReadMessage()
-		if err != nil {
+		if item.err != nil {
 			return
 		}
 
-		body, err := normalizeResponsesWebSocketTurn(message)
+		body, model, err := normalizeResponsesWebSocketTurnWithModel(item.message, sessionModel)
 		if err != nil {
 			if writeErr := writeResponsesWebSocketError(conn, "invalid_request_error", err.Error()); writeErr != nil {
 				return
 			}
 			continue
 		}
-		if err := dispatchResponsesWebSocketTurn(c, next, body, conn); err != nil {
-			if writeErr := writeResponsesWebSocketError(conn, "upstream_error", err.Error()); writeErr != nil {
+		sessionModel = model
+
+		turnContext, cancelTurn := context.WithCancel(c.Request.Context())
+		reader.setActiveCancel(cancelTurn)
+		turnResult := make(chan error, 1)
+		go func() {
+			turnResult <- dispatchResponsesWebSocketTurnContext(c, next, body, conn, turnContext, cancelTurn)
+		}()
+		var turnErr error
+		for {
+			select {
+			case turnErr = <-turnResult:
+				goto turnComplete
+			case nextItem, ok := <-inbound:
+				if !ok || nextItem.err != nil {
+					cancelTurn()
+					<-turnResult
+					return
+				}
+				if pending != nil {
+					cancelTurn()
+					<-turnResult
+					return
+				}
+				pending = &nextItem
+			}
+		}
+
+	turnComplete:
+		reader.clearActiveCancel()
+		cancelTurn()
+		if turnErr != nil {
+			if writeErr := writeResponsesWebSocketError(conn, "upstream_error", turnErr.Error()); writeErr != nil {
 				return
 			}
 		}
 	}
+}
+
+func readResponsesWSMessages(conn *websocket.Conn, ctx context.Context, firstMessageTimeout int) *responsesWSReader {
+	reader := &responsesWSReader{conn: conn, ctx: ctx, inbound: make(chan responsesWSInbound, 1)}
+	go func() {
+		defer close(reader.inbound)
+		for turn := 0; ; turn++ {
+			if deadline := responsesWSReadDeadline(turn, firstMessageTimeout, 0); !deadline.IsZero() {
+				if err := conn.SetReadDeadline(deadline); err != nil {
+					reader.cancelActiveTurn()
+					select {
+					case reader.inbound <- responsesWSInbound{err: err}:
+					case <-ctx.Done():
+					}
+					return
+				}
+			}
+			_, message, err := conn.ReadMessage()
+			if turn == 0 && err == nil {
+				if deadlineErr := conn.SetReadDeadline(time.Time{}); deadlineErr != nil {
+					err = deadlineErr
+				}
+			}
+			if err != nil {
+				reader.cancelActiveTurn()
+			}
+			item := responsesWSInbound{message: message, err: err}
+			select {
+			case reader.inbound <- item:
+			case <-ctx.Done():
+				return
+			}
+			if err != nil {
+				return
+			}
+		}
+	}()
+	return reader
 }
 
 func ResponsesWebSocketBridgeHandler(next http.Handler) gin.HandlerFunc {
@@ -250,18 +457,18 @@ func headerContainsToken(value, token string) bool {
 	return false
 }
 
-func maxResponsesWSFrameBytes() int {
+func maxResponsesWSFrameBytes() int64 {
 	maxMB := constant.MaxRequestBodyMB
 	if maxMB <= 0 {
 		maxMB = 128
 	}
-	return maxMB << 20
+	return int64(maxMB) << 20
 }
 
-func responsesWSReadDeadline(turn int) time.Time {
-	seconds := constant.ResponsesWSFirstMessageTimeoutSeconds
+func responsesWSReadDeadline(turn, firstMessageTimeout, interTurnIdleTimeout int) time.Time {
+	seconds := firstMessageTimeout
 	if turn > 0 {
-		seconds = constant.ResponsesWSInterTurnIdleTimeoutSeconds
+		seconds = interTurnIdleTimeout
 	}
 	if seconds <= 0 {
 		return time.Time{}
@@ -270,7 +477,13 @@ func responsesWSReadDeadline(turn int) time.Time {
 }
 
 func dispatchResponsesWebSocketTurn(parent *gin.Context, next http.Handler, body []byte, conn *websocket.Conn) error {
-	req := parent.Request.Clone(parent.Request.Context())
+	turnContext, cancelTurn := context.WithCancel(parent.Request.Context())
+	defer cancelTurn()
+	return dispatchResponsesWebSocketTurnContext(parent, next, body, conn, turnContext, cancelTurn)
+}
+
+func dispatchResponsesWebSocketTurnContext(parent *gin.Context, next http.Handler, body []byte, conn *websocket.Conn, turnContext context.Context, cancelTurn context.CancelFunc) error {
+	req := parent.Request.Clone(turnContext)
 	req.Method = http.MethodPost
 	req.URL.Path = "/v1/responses"
 	req.URL.RawPath = ""
@@ -283,7 +496,7 @@ func dispatchResponsesWebSocketTurn(parent *gin.Context, next http.Handler, body
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
 
-	writer := newResponsesWSBridgeWriter(conn)
+	writer := newResponsesWSBridgeWriter(conn, cancelTurn)
 	next.ServeHTTP(writer, req)
 	return writer.finish()
 }
@@ -321,29 +534,65 @@ func writeResponsesWebSocketError(conn *websocket.Conn, errorType, message strin
 	if err != nil {
 		return err
 	}
+	if err := conn.SetWriteDeadline(time.Now().Add(responsesWSWriteTimeout)); err != nil {
+		return err
+	}
 	return conn.WriteMessage(websocket.TextMessage, body)
 }
 
-func normalizeResponsesWebSocketTurn(message []byte) ([]byte, error) {
-	var payload map[string]any
-	if err := common.Unmarshal(message, &payload); err != nil || payload == nil {
-		return nil, fmt.Errorf("message must be a valid JSON object")
+func normalizeResponsesWebSocketTurn(message []byte, fallbackModel ...string) ([]byte, error) {
+	fallback := ""
+	if len(fallbackModel) > 0 {
+		fallback = fallbackModel[0]
+	}
+	body, _, err := normalizeResponsesWebSocketTurnWithModel(message, fallback)
+	return body, err
+}
+
+func normalizeResponsesWebSocketTurnWithModel(message []byte, fallbackModel string) ([]byte, string, error) {
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(message, &payload); err != nil || payload == nil {
+		return nil, "", fmt.Errorf("message must be a valid JSON object")
 	}
 
-	eventType, ok := payload["type"].(string)
-	if !ok || eventType != "response.create" {
-		return nil, fmt.Errorf("message type must be response.create")
+	if rawType, ok := payload["type"]; ok {
+		var eventType string
+		if json.Unmarshal(rawType, &eventType) != nil || eventType != "response.create" {
+			return nil, "", fmt.Errorf("message type must be response.create")
+		}
 	}
-	model, ok := payload["model"].(string)
-	if !ok || strings.TrimSpace(model) == "" {
-		return nil, fmt.Errorf("model must be a non-empty string")
+
+	model := ""
+	modelPresent := false
+	if rawModel, ok := payload["model"]; ok {
+		modelPresent = true
+		if bytes.Equal(bytes.TrimSpace(rawModel), []byte("null")) || json.Unmarshal(rawModel, &model) != nil {
+			return nil, "", fmt.Errorf("model must be a non-empty string")
+		}
+	}
+	model = strings.TrimSpace(model)
+	if model == "" && modelPresent {
+		return nil, "", fmt.Errorf("model must be a non-empty string")
+	}
+	if model == "" {
+		model = strings.TrimSpace(fallbackModel)
+		if model != "" {
+			encodedModel, err := json.Marshal(model)
+			if err != nil {
+				return nil, "", fmt.Errorf("serialize Responses model: %w", err)
+			}
+			payload["model"] = encodedModel
+		}
+	}
+	if model == "" {
+		return nil, "", fmt.Errorf("model must be a non-empty string")
 	}
 
 	delete(payload, "type")
-	payload["stream"] = true
-	body, err := common.Marshal(payload)
+	payload["stream"] = json.RawMessage("true")
+	body, err := json.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("serialize Responses request: %w", err)
+		return nil, "", fmt.Errorf("serialize Responses request: %w", err)
 	}
-	return body, nil
+	return body, model, nil
 }
