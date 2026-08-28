@@ -10,7 +10,7 @@ linked rather than duplicated where possible.
 | --- | --- |
 | Source repository | `/home/huiji/code/Api/new-api-slim-aigc-v1-20260825` |
 | Branch | `codex/slim-aigc-v1` |
-| Latest functional source commit | `5bfeb985` (per-channel upstream Responses WebSocket) |
+| Latest functional source commit | `33405846` (per-channel concurrency and RPM routing) |
 | Production runtime source commit | `5bfeb985` |
 | Production release | `aizzz-gateway-slim-20260825.14` (deployed `20260828T060400Z`) |
 | Official base | `v1.0.0-rc.25`, commit `f116414284162ad15d8925f7bca494c109b83e93` |
@@ -19,7 +19,7 @@ linked rather than duplicated where possible.
 | Deployment timestamp | `.14` deployed `20260828T060400Z` UTC |
 | Next release label | `.15` unless the operator specifies another label |
 
-Production runs functional commit `5bfeb985`; the branch may contain later documentation-only handoff commits. The `.09` Apple-style UI
+Production runs functional commit `5bfeb985`; the branch contains newer source-only capacity work at `33405846`. The `.09` Apple-style UI
 refresh remains a historical rolled-back release and must not be reused without
 operator approval. Always verify the actual branch tip with `git rev-parse
 --short HEAD`. Source-level reference tags include
@@ -286,3 +286,11 @@ ssh sever 'bash /backup/newapi/deployments/20260827T062919Z-before-aizzz-gateway
 - Sessions and API tokens were untouched: 702 active sessions and 2851 API tokens before/after.
 - One-click rollback: `ssh sever 'bash /backup/newapi/deployments/20260828T060400Z-before-aizzz-gateway-slim-20260825-14/rollback.sh'`; restores `.13` SHA-256 `1b131c6fb8f63d7b218a02fd8e19177a9341e943f4e4b7a2d7448cffeb42964f`.
 - Deployment scripts: `/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-14.sh` and `/root/deploy-aizzz-gateway-slim-20260825-14.sh`.
+
+## Source-only: per-channel concurrency and RPM routing (2026-08-28)
+
+- Functional source commit: `33405846`; production remains `.14` at runtime commit `5bfeb985` until an operator explicitly requests deployment.
+- Channel advanced settings now accept `max_concurrent_requests` and `requests_per_minute`; both default to `0` (unlimited), so existing channels retain their behavior.
+- Capacity is reserved atomically immediately before each upstream attempt. A saturated channel is excluded from that selection and another channel is chosen only within the same concrete group and model, preferring the same priority before lower priorities. Specific-channel tokens and task-bound channels return `503` with `Retry-After` instead of changing channels.
+- Concurrency leases cover normal HTTP, SSE, Responses WSS turns, Realtime sessions, retries, and task submissions, and release when the attempt actually finishes. RPM uses a rolling 60-second window. A Redis ZSET backend coordinates multiple nodes when Redis is enabled; the current single-node production configuration uses the process-local mutex backend.
+- Verification passed the full Go suite, `go vet`, RelayKit independent tests/build, frontend typecheck, full Vitest (`55` files / `242` tests), production build, changed-file lint/format, and targeted race tests. Repository-wide service race still reports the pre-existing video polling/logger shared-state races documented in prior work.
