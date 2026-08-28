@@ -289,6 +289,8 @@ const SENSITIVE_FORM_FIELDS = [
   'proxy',
   'http_protocol',
   'http2_connection_shards',
+  'responses_ws_upstream_enabled',
+  'responses_ws_upstream_url',
   'pass_through_body_enabled',
   'system_prompt',
   'system_prompt_override',
@@ -347,6 +349,8 @@ function hasAdvancedSettingsValues(values: ChannelFormValues): boolean {
     (values.http_protocol && values.http_protocol !== 'auto') ||
     (values.http2_connection_shards != null &&
       values.http2_connection_shards > 1) ||
+    values.responses_ws_upstream_enabled ||
+    values.responses_ws_upstream_url?.trim() ||
     values.claude_beta_query ||
     values.upstream_model_update_check_enabled ||
     values.upstream_model_update_auto_sync_enabled ||
@@ -755,6 +759,9 @@ export function ChannelMutateDrawer({
   const currentProxy = form.watch('proxy')
   const currentHttpProtocol = form.watch('http_protocol')
   const currentHttp2ConnectionShards = form.watch('http2_connection_shards')
+  const currentResponsesWSUpstreamEnabled = form.watch(
+    'responses_ws_upstream_enabled'
+  )
   const currentSystemPrompt = form.watch('system_prompt')
   const currentSystemPromptOverride = form.watch('system_prompt_override')
   const currentAllowServiceTier = form.watch('allow_service_tier')
@@ -4152,6 +4159,31 @@ export function ChannelMutateDrawer({
 
                               <FormField
                                 control={form.control}
+                                name='responses_ws_upstream_enabled'
+                                render={({ field }) => (
+                                  <FormItem className='flex items-center justify-between px-4 py-3'>
+                                    <div className='space-y-0.5'>
+                                      <FormLabel>
+                                        {t('Responses upstream WebSocket')}
+                                      </FormLabel>
+                                      <FormDescription>
+                                        {t(
+                                          'Use WebSocket upstream only for downstream Responses WebSocket requests. HTTP requests stay unchanged.'
+                                        )}
+                                      </FormDescription>
+                                    </div>
+                                    <FormControl>
+                                      <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
                                 name='disable_task_polling_sleep'
                                 render={({ field }) => (
                                   <FormItem className='flex items-center justify-between px-4 py-3'>
@@ -4175,6 +4207,73 @@ export function ChannelMutateDrawer({
                                 )}
                               />
                             </div>
+
+                            {currentResponsesWSUpstreamEnabled && (
+                              <FormField
+                                control={form.control}
+                                name='responses_ws_upstream_url'
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>
+                                      {t('Responses WebSocket URL override')}
+                                    </FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder='wss://upstream.example/v1/responses'
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                    <FormDescription>
+                                      {t(
+                                        'Optional. Leave empty to derive WS/WSS from the exact HTTP Responses endpoint.'
+                                      )}
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            )}
+
+                            {channelData?.data?.responses_ws_breaker &&
+                              channelData.data.responses_ws_breaker
+                                .disabled_until >
+                                Math.floor(Date.now() / 1000) && (
+                                <Alert className='border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-50'>
+                                  <AlertDescription>
+                                    {t(
+                                      'This channel WebSocket passthrough is temporarily disabled until {{time}} (UTC+8). Current requests use HTTP/SSE.',
+                                      {
+                                        time: new Intl.DateTimeFormat('zh-CN', {
+                                          timeZone: 'Asia/Shanghai',
+                                          year: 'numeric',
+                                          month: '2-digit',
+                                          day: '2-digit',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                          second: '2-digit',
+                                          hour12: false,
+                                        }).format(
+                                          new Date(
+                                            channelData.data
+                                              .responses_ws_breaker
+                                              .disabled_until * 1000
+                                          )
+                                        ),
+                                      }
+                                    )}
+                                    {channelData.data.responses_ws_breaker
+                                      .reason_detail && (
+                                      <span className='mt-1 block text-xs opacity-80'>
+                                        {t('Reason')}:{' '}
+                                        {
+                                          channelData.data.responses_ws_breaker
+                                            .reason_detail
+                                        }
+                                      </span>
+                                    )}
+                                  </AlertDescription>
+                                </Alert>
+                              )}
 
                             <FormField
                               control={form.control}

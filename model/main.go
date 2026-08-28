@@ -292,6 +292,7 @@ func migrateDB() error {
 		&ChannelMonitorDailyRollup{},
 		&ChannelMonitorRequestTemplate{},
 		&ChannelMonitorAggregationWatermark{},
+		&ChannelResponsesWSBreaker{},
 		&AffiliateRebateRecord{},
 		&SystemInstance{},
 		&SystemTask{},

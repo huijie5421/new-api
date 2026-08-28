@@ -168,6 +168,9 @@ func GetAllChannels(c *gin.Context) {
 	for _, datum := range channelData {
 		clearChannelInfo(datum)
 	}
+	if err := model.AttachChannelResponsesWSBreakers(channelData); err != nil {
+		common.SysError("failed to attach channel websocket breaker status: " + err.Error())
+	}
 
 	countQuery := buildChannelListQuery(groupFilter, statusFilter, -1)
 	var results []struct {
@@ -381,6 +384,9 @@ func SearchChannels(c *gin.Context) {
 	for _, datum := range pagedData {
 		clearChannelInfo(datum)
 	}
+	if err := model.AttachChannelResponsesWSBreakers(pagedData); err != nil {
+		common.SysError("failed to attach channel websocket breaker status: " + err.Error())
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -407,6 +413,9 @@ func GetChannel(c *gin.Context) {
 	}
 	if channel != nil {
 		clearChannelInfo(channel)
+		if err := model.AttachChannelResponsesWSBreakers([]*model.Channel{channel}); err != nil {
+			common.SysError("failed to attach channel websocket breaker status: " + err.Error())
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

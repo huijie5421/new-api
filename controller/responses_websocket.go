@@ -14,6 +14,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/new-api/relay"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
@@ -488,6 +489,7 @@ func dispatchResponsesWebSocketTurn(parent *gin.Context, next http.Handler, body
 }
 
 func dispatchResponsesWebSocketTurnContext(parent *gin.Context, next http.Handler, body []byte, conn *websocket.Conn, turnContext context.Context, cancelTurn context.CancelFunc) error {
+	turnContext = relay.MarkResponsesWSUpstreamRequest(turnContext)
 	req := parent.Request.Clone(turnContext)
 	req.Method = http.MethodPost
 	req.URL.Path = "/v1/responses"

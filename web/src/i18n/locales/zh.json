@@ -5519,6 +5519,12 @@
     "Rebates appear here when your referrals recharge online": "当您邀请的用户在线充值时，返利将显示在此处",
     "Recharged": "充值金额",
     "Share your referral link to invite users": "分享您的推荐链接以邀请用户",
-    "Track rebates earned from your referrals and the users you invited": "查看邀请用户及其为您带来的充值返利"
+    "Track rebates earned from your referrals and the users you invited": "查看邀请用户及其为您带来的充值返利",
+    "Responses upstream WebSocket": "Responses 上游 WebSocket",
+    "Use WebSocket upstream only for downstream Responses WebSocket requests. HTTP requests stay unchanged.": "仅对下游 Responses WebSocket 请求使用上游 WebSocket，普通 HTTP 请求保持原有链路。",
+    "Responses WebSocket URL override": "Responses WebSocket 地址覆盖",
+    "Optional. Leave empty to derive WS/WSS from the exact HTTP Responses endpoint.": "选填。留空时根据实际 HTTP Responses 端点自动派生 WS/WSS 地址。",
+    "This channel WebSocket passthrough is temporarily disabled until {{time}} (UTC+8). Current requests use HTTP/SSE.": "此渠道的 WebSocket 透传已临时停用至 {{time}}（UTC+8），当前请求使用 HTTP/SSE。",
+    "Responses WebSocket URL must use WS or WSS and include a valid host": "Responses WebSocket 地址必须使用 WS 或 WSS，并包含有效主机名"
   }
 }

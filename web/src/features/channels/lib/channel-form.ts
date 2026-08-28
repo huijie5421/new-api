@@ -73,6 +73,20 @@ function isOptionalProxyURL(value: string | undefined): boolean {
   }
 }
 
+function isOptionalResponsesWSURL(value: string | undefined): boolean {
+  const trimmedValue = value?.trim() || ''
+  if (!trimmedValue) return true
+  try {
+    const parsedURL = new URL(trimmedValue)
+    return (
+      (parsedURL.protocol === 'ws:' || parsedURL.protocol === 'wss:') &&
+      Boolean(parsedURL.hostname)
+    )
+  } catch {
+    return false
+  }
+}
+
 export const HTTP_PROTOCOL_AUTO = 'auto'
 export const HTTP_PROTOCOL_HTTP1 = 'http1'
 export const MAX_HTTP2_CONNECTION_SHARDS = 8
@@ -261,6 +275,14 @@ export const channelFormSchema = z
       .refine(isOptionalProxyURL, ERROR_MESSAGES.INVALID_PROXY),
     http_protocol: z.enum(['auto', 'http1']).optional(),
     http2_connection_shards: z.number().int().optional(),
+    responses_ws_upstream_enabled: z.boolean().optional(),
+    responses_ws_upstream_url: z
+      .string()
+      .optional()
+      .refine(
+        isOptionalResponsesWSURL,
+        ERROR_MESSAGES.INVALID_RESPONSES_WS_URL
+      ),
     pass_through_body_enabled: z.boolean().optional(),
     system_prompt: z.string().optional(),
     system_prompt_override: z.boolean().optional(),
@@ -433,6 +455,8 @@ export const CHANNEL_FORM_DEFAULT_VALUES: ChannelFormValues = {
   proxy: '',
   http_protocol: HTTP_PROTOCOL_AUTO,
   http2_connection_shards: 1,
+  responses_ws_upstream_enabled: false,
+  responses_ws_upstream_url: '',
   pass_through_body_enabled: false,
   system_prompt: '',
   system_prompt_override: false,
@@ -473,6 +497,8 @@ export function transformChannelToFormDefaults(
     proxy: '',
     http_protocol: HTTP_PROTOCOL_AUTO as 'auto' | 'http1',
     http2_connection_shards: 1,
+    responses_ws_upstream_enabled: false,
+    responses_ws_upstream_url: '',
     pass_through_body_enabled: false,
     system_prompt: '',
     system_prompt_override: false,
@@ -491,6 +517,9 @@ export function transformChannelToFormDefaults(
         proxy: parsed.proxy || '',
         http_protocol: protocol,
         http2_connection_shards: protocol === HTTP_PROTOCOL_HTTP1 ? 1 : shards,
+        responses_ws_upstream_enabled:
+          parsed.responses_ws_upstream_enabled === true,
+        responses_ws_upstream_url: parsed.responses_ws_upstream_url || '',
         pass_through_body_enabled: parsed.pass_through_body_enabled || false,
         system_prompt: parsed.system_prompt || '',
         system_prompt_override: parsed.system_prompt_override || false,
@@ -611,6 +640,13 @@ export function buildSettingJSON(formData: ChannelFormValues): string {
     pass_through_body_enabled: formData.pass_through_body_enabled || false,
     system_prompt: formData.system_prompt || '',
     system_prompt_override: formData.system_prompt_override || false,
+    responses_ws_upstream_enabled:
+      formData.responses_ws_upstream_enabled === true,
+  }
+
+  const responsesWSURL = formData.responses_ws_upstream_url?.trim()
+  if (responsesWSURL) {
+    settingObj.responses_ws_upstream_url = responsesWSURL
   }
 
   const protocol = normalizeHttpProtocol(formData.http_protocol)

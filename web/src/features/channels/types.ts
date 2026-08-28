@@ -70,6 +70,15 @@ export const channelSchema = z.object({
     multi_key_polling_index: 0,
     multi_key_mode: 'random',
   }),
+  responses_ws_breaker: z
+    .object({
+      channel_id: z.number(),
+      disabled_until: z.number(),
+      reason_code: z.string(),
+      reason_detail: z.string(),
+      updated_at: z.number(),
+    })
+    .nullish(),
   settings: z.string().default('{}'), // other_settings JSON
 })
 
@@ -88,6 +97,8 @@ export interface ChannelSettings {
   system_prompt_override?: boolean
   http_protocol?: 'auto' | 'http1' | string
   http2_connection_shards?: number
+  responses_ws_upstream_enabled?: boolean
+  responses_ws_upstream_url?: string
 }
 
 export interface ChannelOtherSettings {

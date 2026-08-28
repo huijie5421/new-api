@@ -23,6 +23,12 @@ type ChannelSettings struct {
 	// HTTP2ConnectionShards spreads HTTP/2 traffic across N independent transports
 	// (1-8). Zero/unset means 1. Ignored when HTTPProtocol is "http1".
 	HTTP2ConnectionShards int `json:"http2_connection_shards,omitempty"`
+	// ResponsesWSUpstreamEnabled enables upstream WebSocket transport only for
+	// requests that entered through the authenticated Responses WS bridge.
+	ResponsesWSUpstreamEnabled bool `json:"responses_ws_upstream_enabled,omitempty"`
+	// ResponsesWSUpstreamURL optionally overrides the derived ws/wss endpoint.
+	// Leave empty to convert the adaptor's exact http/https request URL.
+	ResponsesWSUpstreamURL string `json:"responses_ws_upstream_url,omitempty"`
 }
 
 const (
@@ -49,6 +55,26 @@ func (s *ChannelSettings) ValidateHTTPTransport() error {
 		return fmt.Errorf("http2_connection_shards must be 1 when http_protocol is http1")
 	}
 	return nil
+}
+
+func (s *ChannelSettings) ValidateResponsesWebSocket() error {
+	if s == nil {
+		return nil
+	}
+	rawURL := strings.TrimSpace(s.ResponsesWSUpstreamURL)
+	if rawURL == "" {
+		return nil
+	}
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Host == "" {
+		return fmt.Errorf("invalid responses_ws_upstream_url")
+	}
+	switch strings.ToLower(parsed.Scheme) {
+	case "ws", "wss":
+		return nil
+	default:
+		return fmt.Errorf("invalid responses_ws_upstream_url: scheme must be ws or wss")
+	}
 }
 
 type VertexKeyType string

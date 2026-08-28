@@ -245,6 +245,8 @@ export const ERROR_MESSAGES = {
   INVALID_MODEL_MAPPING: 'Invalid model mapping format',
   INVALID_PROXY:
     'Proxy address must use HTTP, HTTPS, SOCKS5, or SOCKS5H and include a valid host',
+  INVALID_RESPONSES_WS_URL:
+    'Responses WebSocket URL must use WS or WSS and include a valid host',
   INVALID_HTTP_PROTOCOL: 'HTTP protocol must be Auto or HTTP/1.1',
   INVALID_HTTP2_CONNECTION_SHARDS:
     'HTTP/2 connection shards must be between 1 and 8',

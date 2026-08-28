@@ -12,6 +12,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
+	"github.com/QuantumNous/new-api/relay"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -105,6 +106,7 @@ func TestResponsesWebSocketBridgeSequentialTurns(t *testing.T) {
 	inner := gin.New()
 	inner.POST("/v1/responses", func(c *gin.Context) {
 		r := c.Request
+		require.True(t, relay.IsResponsesWSUpstreamRequest(r.Context()))
 		require.Equal(t, "Bearer test-key", r.Header.Get("Authorization"))
 		var payload map[string]any
 		require.NoError(t, common.DecodeJson(r.Body, &payload))

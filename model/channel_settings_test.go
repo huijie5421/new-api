@@ -41,6 +41,58 @@ func TestChannelValidateSettingsRejectsInvalidHTTPTransport(t *testing.T) {
 	}
 }
 
+func TestChannelValidateSettingsValidatesResponsesWebSocketURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		setting dto.ChannelSettings
+		wantErr string
+	}{
+		{
+			name: "enabled with derived URL",
+			setting: dto.ChannelSettings{
+				ResponsesWSUpstreamEnabled: true,
+			},
+		},
+		{
+			name: "enabled with explicit secure websocket URL",
+			setting: dto.ChannelSettings{
+				ResponsesWSUpstreamEnabled: true,
+				ResponsesWSUpstreamURL:     "wss://upstream.example/v1/responses",
+			},
+		},
+		{
+			name: "http override rejected",
+			setting: dto.ChannelSettings{
+				ResponsesWSUpstreamEnabled: true,
+				ResponsesWSUpstreamURL:     "https://upstream.example/v1/responses",
+			},
+			wantErr: "responses_ws_upstream_url",
+		},
+		{
+			name: "host is required",
+			setting: dto.ChannelSettings{
+				ResponsesWSUpstreamEnabled: true,
+				ResponsesWSUpstreamURL:     "wss:///v1/responses",
+			},
+			wantErr: "responses_ws_upstream_url",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			channel := &Channel{}
+			channel.SetSetting(tt.setting)
+			err := channel.ValidateSettings()
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
+}
+
 func TestAdvancedCustomChannelRequiresModelListRouteOnlyWhenUpdateChecksEnabled(t *testing.T) {
 	inferenceRoute := dto.AdvancedCustomRoute{
 		IncomingPath: "/v1/chat/completions",

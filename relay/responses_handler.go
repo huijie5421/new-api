@@ -119,9 +119,19 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 	}
 
 	var httpResp *http.Response
-	resp, err := adaptor.DoRequest(c, info, requestBody)
-	if err != nil {
-		return types.NewOpenAIError(err, types.ErrorCodeDoRequestFailed, http.StatusInternalServerError)
+	var resp any
+	wsProbe := false
+	if shouldUseResponsesWSUpstream(c.Request.Context(), info.RelayMode, info.ChannelSetting) {
+		resp, wsProbe, newAPIError = tryResponsesWSUpstream(c, info, adaptor, requestBody)
+		if newAPIError != nil {
+			return newAPIError
+		}
+	}
+	if resp == nil {
+		resp, err = adaptor.DoRequest(c, info, requestBody)
+		if err != nil {
+			return types.NewOpenAIError(err, types.ErrorCodeDoRequestFailed, http.StatusInternalServerError)
+		}
 	}
 
 	statusCodeMappingStr := c.GetString("status_code_mapping")
@@ -139,10 +149,12 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 
 	usage, newAPIError := adaptor.DoResponse(c, httpResp, info)
 	if newAPIError != nil {
+		completeResponsesWSUpstreamAttempt(info.ChannelId, wsProbe, httpResp, false)
 		// reset status code 重置状态码
 		service.ResetStatusCode(newAPIError, statusCodeMappingStr)
 		return newAPIError
 	}
+	completeResponsesWSUpstreamAttempt(info.ChannelId, wsProbe, httpResp, true)
 
 	usageDto := usage.(*dto.Usage)
 	if info.RelayMode == relayconstant.RelayModeResponsesCompact {

@@ -60,7 +60,8 @@ type Channel struct {
 	OtherSettings string `json:"settings" gorm:"column:settings"` // 其他设置，存储azure版本等不需要检索的信息，详见dto.ChannelOtherSettings
 
 	// cache info
-	Keys []string `json:"-" gorm:"-"`
+	Keys               []string                   `json:"-" gorm:"-"`
+	ResponsesWSBreaker *ChannelResponsesWSBreaker `json:"responses_ws_breaker,omitempty" gorm:"-"`
 }
 
 type ChannelInfo struct {
@@ -970,6 +971,9 @@ func (channel *Channel) ValidateSettings() error {
 		return fmt.Errorf("invalid channel proxy: %w", err)
 	}
 	if err := channelParams.ValidateHTTPTransport(); err != nil {
+		return err
+	}
+	if err := channelParams.ValidateResponsesWebSocket(); err != nil {
 		return err
 	}
 	channelOtherSettings := &dto.ChannelOtherSettings{}
