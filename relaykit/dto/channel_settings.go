@@ -29,12 +29,20 @@ type ChannelSettings struct {
 	// ResponsesWSUpstreamURL optionally overrides the derived ws/wss endpoint.
 	// Leave empty to convert the adaptor's exact http/https request URL.
 	ResponsesWSUpstreamURL string `json:"responses_ws_upstream_url,omitempty"`
+	// MaxConcurrentRequests caps active upstream attempts for this channel.
+	// Zero leaves concurrency unrestricted.
+	MaxConcurrentRequests int `json:"max_concurrent_requests,omitempty"`
+	// RequestsPerMinute caps accepted upstream attempts in a rolling minute.
+	// Zero leaves request frequency unrestricted.
+	RequestsPerMinute int `json:"requests_per_minute,omitempty"`
 }
 
 const (
-	HTTPProtocolAuto         = "auto"
-	HTTPProtocolHTTP1        = "http1"
-	MaxHTTP2ConnectionShards = 8
+	HTTPProtocolAuto             = "auto"
+	HTTPProtocolHTTP1            = "http1"
+	MaxHTTP2ConnectionShards     = 8
+	MaxChannelConcurrentRequests = 100000
+	MaxChannelRequestsPerMinute  = 10000000
 )
 
 // ValidateHTTPTransport validates save-time HTTP transport channel settings.
@@ -75,6 +83,19 @@ func (s *ChannelSettings) ValidateResponsesWebSocket() error {
 	default:
 		return fmt.Errorf("invalid responses_ws_upstream_url: scheme must be ws or wss")
 	}
+}
+
+func (s *ChannelSettings) ValidateCapacityLimits() error {
+	if s == nil {
+		return nil
+	}
+	if s.MaxConcurrentRequests < 0 || s.MaxConcurrentRequests > MaxChannelConcurrentRequests {
+		return fmt.Errorf("invalid max_concurrent_requests: %d", s.MaxConcurrentRequests)
+	}
+	if s.RequestsPerMinute < 0 || s.RequestsPerMinute > MaxChannelRequestsPerMinute {
+		return fmt.Errorf("invalid requests_per_minute: %d", s.RequestsPerMinute)
+	}
+	return nil
 }
 
 type VertexKeyType string

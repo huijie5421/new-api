@@ -976,6 +976,9 @@ func (channel *Channel) ValidateSettings() error {
 	if err := channelParams.ValidateResponsesWebSocket(); err != nil {
 		return err
 	}
+	if err := channelParams.ValidateCapacityLimits(); err != nil {
+		return err
+	}
 	channelOtherSettings := &dto.ChannelOtherSettings{}
 	if channel.OtherSettings != "" {
 		err := common.UnmarshalJsonStr(channel.OtherSettings, channelOtherSettings)

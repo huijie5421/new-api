@@ -90,6 +90,8 @@ function isOptionalResponsesWSURL(value: string | undefined): boolean {
 export const HTTP_PROTOCOL_AUTO = 'auto'
 export const HTTP_PROTOCOL_HTTP1 = 'http1'
 export const MAX_HTTP2_CONNECTION_SHARDS = 8
+export const MAX_CHANNEL_CONCURRENT_REQUESTS = 100000
+export const MAX_CHANNEL_REQUESTS_PER_MINUTE = 10000000
 
 export function normalizeHttpProtocol(
   value: string | undefined | null
@@ -275,6 +277,18 @@ export const channelFormSchema = z
       .refine(isOptionalProxyURL, ERROR_MESSAGES.INVALID_PROXY),
     http_protocol: z.enum(['auto', 'http1']).optional(),
     http2_connection_shards: z.number().int().optional(),
+    max_concurrent_requests: z
+      .number()
+      .int()
+      .min(0)
+      .max(MAX_CHANNEL_CONCURRENT_REQUESTS)
+      .optional(),
+    requests_per_minute: z
+      .number()
+      .int()
+      .min(0)
+      .max(MAX_CHANNEL_REQUESTS_PER_MINUTE)
+      .optional(),
     responses_ws_upstream_enabled: z.boolean().optional(),
     responses_ws_upstream_url: z
       .string()
@@ -455,6 +469,8 @@ export const CHANNEL_FORM_DEFAULT_VALUES: ChannelFormValues = {
   proxy: '',
   http_protocol: HTTP_PROTOCOL_AUTO,
   http2_connection_shards: 1,
+  max_concurrent_requests: 0,
+  requests_per_minute: 0,
   responses_ws_upstream_enabled: false,
   responses_ws_upstream_url: '',
   pass_through_body_enabled: false,
@@ -497,6 +513,8 @@ export function transformChannelToFormDefaults(
     proxy: '',
     http_protocol: HTTP_PROTOCOL_AUTO as 'auto' | 'http1',
     http2_connection_shards: 1,
+    max_concurrent_requests: 0,
+    requests_per_minute: 0,
     responses_ws_upstream_enabled: false,
     responses_ws_upstream_url: '',
     pass_through_body_enabled: false,
@@ -517,6 +535,14 @@ export function transformChannelToFormDefaults(
         proxy: parsed.proxy || '',
         http_protocol: protocol,
         http2_connection_shards: protocol === HTTP_PROTOCOL_HTTP1 ? 1 : shards,
+        max_concurrent_requests: Number.isInteger(
+          parsed.max_concurrent_requests
+        )
+          ? parsed.max_concurrent_requests
+          : 0,
+        requests_per_minute: Number.isInteger(parsed.requests_per_minute)
+          ? parsed.requests_per_minute
+          : 0,
         responses_ws_upstream_enabled:
           parsed.responses_ws_upstream_enabled === true,
         responses_ws_upstream_url: parsed.responses_ws_upstream_url || '',
@@ -647,6 +673,13 @@ export function buildSettingJSON(formData: ChannelFormValues): string {
   const responsesWSURL = formData.responses_ws_upstream_url?.trim()
   if (responsesWSURL) {
     settingObj.responses_ws_upstream_url = responsesWSURL
+  }
+
+  if ((formData.max_concurrent_requests || 0) > 0) {
+    settingObj.max_concurrent_requests = formData.max_concurrent_requests
+  }
+  if ((formData.requests_per_minute || 0) > 0) {
+    settingObj.requests_per_minute = formData.requests_per_minute
   }
 
   const protocol = normalizeHttpProtocol(formData.http_protocol)

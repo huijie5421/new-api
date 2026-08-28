@@ -97,6 +97,8 @@ export interface ChannelSettings {
   system_prompt_override?: boolean
   http_protocol?: 'auto' | 'http1' | string
   http2_connection_shards?: number
+  max_concurrent_requests?: number
+  requests_per_minute?: number
   responses_ws_upstream_enabled?: boolean
   responses_ws_upstream_url?: string
 }

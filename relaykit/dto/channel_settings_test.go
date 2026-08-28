@@ -642,3 +642,20 @@ func TestChannelSettingsValidateHTTPTransport(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "http2_connection_shards")
 }
+
+func TestChannelSettingsValidateCapacityLimits(t *testing.T) {
+	require.NoError(t, (&ChannelSettings{}).ValidateCapacityLimits())
+	require.NoError(t, (&ChannelSettings{
+		MaxConcurrentRequests: MaxChannelConcurrentRequests,
+		RequestsPerMinute:     MaxChannelRequestsPerMinute,
+	}).ValidateCapacityLimits())
+
+	err := (&ChannelSettings{MaxConcurrentRequests: -1}).ValidateCapacityLimits()
+	require.ErrorContains(t, err, "max_concurrent_requests")
+	err = (&ChannelSettings{MaxConcurrentRequests: MaxChannelConcurrentRequests + 1}).ValidateCapacityLimits()
+	require.ErrorContains(t, err, "max_concurrent_requests")
+	err = (&ChannelSettings{RequestsPerMinute: -1}).ValidateCapacityLimits()
+	require.ErrorContains(t, err, "requests_per_minute")
+	err = (&ChannelSettings{RequestsPerMinute: MaxChannelRequestsPerMinute + 1}).ValidateCapacityLimits()
+	require.ErrorContains(t, err, "requests_per_minute")
+}

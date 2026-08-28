@@ -193,40 +193,14 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 
 	for ; retryParam.GetRetry() <= common.RetryTimes; retryParam.IncreaseRetry() {
 		relayInfo.RetryIndex = retryParam.GetRetry()
-		channel, channelErr := getChannel(c, relayInfo, retryParam)
+		channel, capacityLease, channelErr := getChannelWithCapacity(c, relayInfo, retryParam)
 		if channelErr != nil {
 			logger.LogError(c, channelErr.Error())
 			newAPIError = channelErr
 			break
 		}
 		addUsedChannel(c, channel.Id)
-		if billingErr := service.PrepareTieredBillingForSelectedGroup(c, relayInfo); billingErr != nil {
-			newAPIError = billingErr
-			break
-		}
-
-		bodyStorage, bodyErr := common.GetBodyStorage(c)
-		if bodyErr != nil {
-			// Ensure consistent 413 for oversized bodies even when error occurs later (e.g., retry path)
-			if common.IsRequestBodyTooLargeError(bodyErr) || errors.Is(bodyErr, common.ErrRequestBodyTooLarge) {
-				newAPIError = types.NewErrorWithStatusCode(bodyErr, types.ErrorCodeReadRequestBodyFailed, http.StatusRequestEntityTooLarge, types.ErrOptionWithSkipRetry())
-			} else {
-				newAPIError = types.NewErrorWithStatusCode(bodyErr, types.ErrorCodeReadRequestBodyFailed, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
-			}
-			break
-		}
-		c.Request.Body = io.NopCloser(bodyStorage)
-
-		switch relayFormat {
-		case types.RelayFormatOpenAIRealtime:
-			newAPIError = relay.WssHelper(c, relayInfo)
-		case types.RelayFormatClaude:
-			newAPIError = relay.ClaudeHelper(c, relayInfo)
-		case types.RelayFormatGemini:
-			newAPIError = geminiRelayHandler(c, relayInfo)
-		default:
-			newAPIError = relayHandler(c, relayInfo)
-		}
+		newAPIError = executeRelayAttempt(c, relayInfo, relayFormat, capacityLease)
 
 		if newAPIError == nil {
 			relayInfo.LastError = nil
@@ -252,6 +226,33 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		gopool.Go(func() {
 			perfmetrics.RecordRelaySample(relayInfo, false, 0)
 		})
+	}
+}
+
+func executeRelayAttempt(c *gin.Context, relayInfo *relaycommon.RelayInfo, relayFormat types.RelayFormat, capacityLease *service.ChannelCapacityLease) *types.NewAPIError {
+	defer capacityLease.Release()
+
+	if billingErr := service.PrepareTieredBillingForSelectedGroup(c, relayInfo); billingErr != nil {
+		return billingErr
+	}
+	bodyStorage, bodyErr := common.GetBodyStorage(c)
+	if bodyErr != nil {
+		if common.IsRequestBodyTooLargeError(bodyErr) || errors.Is(bodyErr, common.ErrRequestBodyTooLarge) {
+			return types.NewErrorWithStatusCode(bodyErr, types.ErrorCodeReadRequestBodyFailed, http.StatusRequestEntityTooLarge, types.ErrOptionWithSkipRetry())
+		}
+		return types.NewErrorWithStatusCode(bodyErr, types.ErrorCodeReadRequestBodyFailed, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+	}
+	c.Request.Body = io.NopCloser(bodyStorage)
+
+	switch relayFormat {
+	case types.RelayFormatOpenAIRealtime:
+		return relay.WssHelper(c, relayInfo)
+	case types.RelayFormatClaude:
+		return relay.ClaudeHelper(c, relayInfo)
+	case types.RelayFormatGemini:
+		return geminiRelayHandler(c, relayInfo)
+	default:
+		return relayHandler(c, relayInfo)
 	}
 }
 
@@ -298,7 +299,7 @@ func fastTokenCountMetaForPricing(request dto.Request) *types.TokenCountMeta {
 }
 
 func getChannel(c *gin.Context, info *relaycommon.RelayInfo, retryParam *service.RetryParam) (*model.Channel, *types.NewAPIError) {
-	if info.ChannelMeta == nil {
+	if info.ChannelMeta == nil && !retryParam.ForceReselect {
 		autoBan := c.GetBool("auto_ban")
 		autoBanInt := 1
 		if !autoBan {
@@ -523,6 +524,7 @@ func RelayTask(c *gin.Context) {
 
 	for ; retryParam.GetRetry() <= common.RetryTimes; retryParam.IncreaseRetry() {
 		var channel *model.Channel
+		var capacityLease *service.ChannelCapacityLease
 
 		if lockedCh, ok := relayInfo.LockedChannel.(*model.Channel); ok && lockedCh != nil {
 			channel = lockedCh
@@ -534,27 +536,29 @@ func RelayTask(c *gin.Context) {
 			}
 		} else {
 			var channelErr *types.NewAPIError
-			channel, channelErr = getChannel(c, relayInfo, retryParam)
+			channel, capacityLease, channelErr = getChannelWithCapacity(c, relayInfo, retryParam)
 			if channelErr != nil {
 				logger.LogError(c, channelErr.Error())
-				taskErr = service.TaskErrorWrapperLocal(channelErr.Err, "get_channel_failed", http.StatusInternalServerError)
+				statusCode := channelErr.StatusCode
+				if statusCode == 0 {
+					statusCode = http.StatusInternalServerError
+				}
+				taskErr = service.TaskErrorWrapperLocal(channelErr.Err, string(channelErr.GetErrorCode()), statusCode)
+				break
+			}
+		}
+
+		if lockedCh, ok := relayInfo.LockedChannel.(*model.Channel); ok && lockedCh != nil {
+			var capacityErr *types.NewAPIError
+			capacityLease, capacityErr = acquireLockedChannelCapacity(c, channel)
+			if capacityErr != nil {
+				taskErr = service.TaskErrorWrapperLocal(capacityErr.Err, string(types.ErrorCodeChannelCapacityExceeded), capacityErr.StatusCode)
 				break
 			}
 		}
 
 		addUsedChannel(c, channel.Id)
-		bodyStorage, bodyErr := common.GetBodyStorage(c)
-		if bodyErr != nil {
-			if common.IsRequestBodyTooLargeError(bodyErr) || errors.Is(bodyErr, common.ErrRequestBodyTooLarge) {
-				taskErr = service.TaskErrorWrapperLocal(bodyErr, "read_request_body_failed", http.StatusRequestEntityTooLarge)
-			} else {
-				taskErr = service.TaskErrorWrapperLocal(bodyErr, "read_request_body_failed", http.StatusBadRequest)
-			}
-			break
-		}
-		c.Request.Body = io.NopCloser(bodyStorage)
-
-		result, taskErr = relay.RelayTaskSubmit(c, relayInfo)
+		result, taskErr = executeTaskRelayAttempt(c, relayInfo, capacityLease)
 		if taskErr == nil {
 			break
 		}
@@ -609,6 +613,19 @@ func RelayTask(c *gin.Context) {
 	if taskErr != nil {
 		respondTaskError(c, taskErr)
 	}
+}
+
+func executeTaskRelayAttempt(c *gin.Context, relayInfo *relaycommon.RelayInfo, capacityLease *service.ChannelCapacityLease) (*relay.TaskSubmitResult, *taskdto.TaskError) {
+	defer capacityLease.Release()
+	bodyStorage, bodyErr := common.GetBodyStorage(c)
+	if bodyErr != nil {
+		if common.IsRequestBodyTooLargeError(bodyErr) || errors.Is(bodyErr, common.ErrRequestBodyTooLarge) {
+			return nil, service.TaskErrorWrapperLocal(bodyErr, "read_request_body_failed", http.StatusRequestEntityTooLarge)
+		}
+		return nil, service.TaskErrorWrapperLocal(bodyErr, "read_request_body_failed", http.StatusBadRequest)
+	}
+	c.Request.Body = io.NopCloser(bodyStorage)
+	return relay.RelayTaskSubmit(c, relayInfo)
 }
 
 // respondTaskError 统一输出 Task 错误响应（含 429 限流提示改写）

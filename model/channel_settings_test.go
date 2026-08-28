@@ -93,6 +93,57 @@ func TestChannelValidateSettingsValidatesResponsesWebSocketURL(t *testing.T) {
 	}
 }
 
+func TestChannelValidateSettingsValidatesCapacityLimits(t *testing.T) {
+	tests := []struct {
+		name    string
+		setting dto.ChannelSettings
+		wantErr string
+	}{
+		{name: "zero keeps limits disabled"},
+		{
+			name: "positive limits accepted",
+			setting: dto.ChannelSettings{
+				MaxConcurrentRequests: 20,
+				RequestsPerMinute:     300,
+			},
+		},
+		{
+			name:    "negative concurrency rejected",
+			setting: dto.ChannelSettings{MaxConcurrentRequests: -1},
+			wantErr: "max_concurrent_requests",
+		},
+		{
+			name:    "negative rpm rejected",
+			setting: dto.ChannelSettings{RequestsPerMinute: -1},
+			wantErr: "requests_per_minute",
+		},
+		{
+			name:    "excessive concurrency rejected",
+			setting: dto.ChannelSettings{MaxConcurrentRequests: dto.MaxChannelConcurrentRequests + 1},
+			wantErr: "max_concurrent_requests",
+		},
+		{
+			name:    "excessive rpm rejected",
+			setting: dto.ChannelSettings{RequestsPerMinute: dto.MaxChannelRequestsPerMinute + 1},
+			wantErr: "requests_per_minute",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			channel := &Channel{}
+			channel.SetSetting(tt.setting)
+			err := channel.ValidateSettings()
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
+}
+
 func TestAdvancedCustomChannelRequiresModelListRouteOnlyWhenUpdateChecksEnabled(t *testing.T) {
 	inferenceRoute := dto.AdvancedCustomRoute{
 		IncomingPath: "/v1/chat/completions",

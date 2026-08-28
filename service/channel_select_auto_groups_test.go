@@ -65,8 +65,12 @@ func setupChannelSelectAutoGroupsTest(t *testing.T) *gorm.DB {
 }
 
 func createChannelSelectAutoGroupsChannel(t *testing.T, db *gorm.DB, id int, group, modelName string) {
+	createChannelSelectChannelAtPriority(t, db, id, group, modelName, 0)
+}
+
+func createChannelSelectChannelAtPriority(t *testing.T, db *gorm.DB, id int, group, modelName string, priorityValue int64) {
 	t.Helper()
-	priority := int64(0)
+	priority := priorityValue
 	weight := uint(100)
 	require.NoError(t, db.Create(&model.Channel{
 		Id:       id,
@@ -87,6 +91,63 @@ func createChannelSelectAutoGroupsChannel(t *testing.T, db *gorm.DB, id int, gro
 		Priority:  &priority,
 		Weight:    weight,
 	}).Error)
+}
+
+func TestCacheGetRandomSatisfiedChannelExcludesSaturatedChannelsWithinGroup(t *testing.T) {
+	db := setupChannelSelectAutoGroupsTest(t)
+	const modelName = "capacity-selection-model"
+	createChannelSelectChannelAtPriority(t, db, 2201, "vip", modelName, 10)
+	createChannelSelectChannelAtPriority(t, db, 2202, "vip", modelName, 10)
+	createChannelSelectChannelAtPriority(t, db, 2203, "vip", modelName, 0)
+	model.InitChannelCache()
+
+	gin.SetMode(gin.TestMode)
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	retry := 0
+	param := &RetryParam{
+		Ctx:                ctx,
+		TokenGroup:         "vip",
+		ModelName:          modelName,
+		RequestPath:        "/v1/chat/completions",
+		Retry:              &retry,
+		ExcludedChannelIDs: map[int]struct{}{2201: {}},
+	}
+
+	selected, group, err := CacheGetRandomSatisfiedChannel(param)
+	require.NoError(t, err)
+	require.NotNil(t, selected)
+	assert.Equal(t, "vip", group)
+	assert.Equal(t, 2202, selected.Id, "another same-priority channel must be preferred")
+
+	param.ExcludedChannelIDs[2202] = struct{}{}
+	selected, _, err = CacheGetRandomSatisfiedChannel(param)
+	require.NoError(t, err)
+	require.NotNil(t, selected)
+	assert.Equal(t, 2203, selected.Id, "a lower priority in the same group is used after the tier is full")
+}
+
+func TestCacheGetRandomSatisfiedChannelDoesNotWrapToHigherPriorityWhenRetryTierIsFull(t *testing.T) {
+	db := setupChannelSelectAutoGroupsTest(t)
+	const modelName = "capacity-retry-priority-model"
+	createChannelSelectChannelAtPriority(t, db, 2301, "vip", modelName, 10)
+	createChannelSelectChannelAtPriority(t, db, 2302, "vip", modelName, 0)
+	model.InitChannelCache()
+
+	gin.SetMode(gin.TestMode)
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	retry := 1
+	param := &RetryParam{
+		Ctx:                ctx,
+		TokenGroup:         "vip",
+		ModelName:          modelName,
+		RequestPath:        "/v1/chat/completions",
+		Retry:              &retry,
+		ExcludedChannelIDs: map[int]struct{}{2302: {}},
+	}
+
+	selected, _, err := CacheGetRandomSatisfiedChannel(param)
+	require.NoError(t, err)
+	assert.Nil(t, selected, "capacity filtering must not send a retry back to a higher priority")
 }
 
 func TestCacheGetRandomSatisfiedChannelUsesTokenAutoGroupsWhenGlobalAutoIsEmpty(t *testing.T) {

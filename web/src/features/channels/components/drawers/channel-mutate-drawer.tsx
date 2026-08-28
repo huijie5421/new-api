@@ -153,6 +153,8 @@ import { useChannelMutateForm } from '../../hooks/use-channel-mutate-form'
 import {
   CHANNEL_FORM_DEFAULT_VALUES,
   CHANNEL_TYPE_ADVANCED_CUSTOM,
+  MAX_CHANNEL_CONCURRENT_REQUESTS,
+  MAX_CHANNEL_REQUESTS_PER_MINUTE,
   channelFormSchema,
   channelsQueryKeys,
   getAdvancedCustomStats,
@@ -289,6 +291,8 @@ const SENSITIVE_FORM_FIELDS = [
   'proxy',
   'http_protocol',
   'http2_connection_shards',
+  'max_concurrent_requests',
+  'requests_per_minute',
   'responses_ws_upstream_enabled',
   'responses_ws_upstream_url',
   'pass_through_body_enabled',
@@ -349,6 +353,8 @@ function hasAdvancedSettingsValues(values: ChannelFormValues): boolean {
     (values.http_protocol && values.http_protocol !== 'auto') ||
     (values.http2_connection_shards != null &&
       values.http2_connection_shards > 1) ||
+    (values.max_concurrent_requests || 0) > 0 ||
+    (values.requests_per_minute || 0) > 0 ||
     values.responses_ws_upstream_enabled ||
     values.responses_ws_upstream_url?.trim() ||
     values.claude_beta_query ||
@@ -4274,6 +4280,74 @@ export function ChannelMutateDrawer({
                                   </AlertDescription>
                                 </Alert>
                               )}
+
+                            <div className='grid gap-4 sm:grid-cols-2'>
+                              <FormField
+                                control={form.control}
+                                name='max_concurrent_requests'
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>
+                                      {t('Maximum channel concurrency')}
+                                    </FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type='number'
+                                        min={0}
+                                        max={MAX_CHANNEL_CONCURRENT_REQUESTS}
+                                        step={1}
+                                        placeholder='0'
+                                        {...field}
+                                        onChange={(event) =>
+                                          field.onChange(
+                                            Number(event.target.value)
+                                          )
+                                        }
+                                      />
+                                    </FormControl>
+                                    <FormDescription>
+                                      {t(
+                                        'Maximum active upstream requests for this channel. Use 0 for unlimited.'
+                                      )}
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name='requests_per_minute'
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>
+                                      {t('Channel RPM limit')}
+                                    </FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type='number'
+                                        min={0}
+                                        max={MAX_CHANNEL_REQUESTS_PER_MINUTE}
+                                        step={1}
+                                        placeholder='0'
+                                        {...field}
+                                        onChange={(event) =>
+                                          field.onChange(
+                                            Number(event.target.value)
+                                          )
+                                        }
+                                      />
+                                    </FormControl>
+                                    <FormDescription>
+                                      {t(
+                                        'Maximum accepted upstream requests in a rolling minute. Use 0 for unlimited.'
+                                      )}
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
 
                             <FormField
                               control={form.control}

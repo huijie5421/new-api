@@ -5525,6 +5525,10 @@
     "Responses WebSocket URL override": "Responses WebSocket 地址覆盖",
     "Optional. Leave empty to derive WS/WSS from the exact HTTP Responses endpoint.": "选填。留空时根据实际 HTTP Responses 端点自动派生 WS/WSS 地址。",
     "This channel WebSocket passthrough is temporarily disabled until {{time}} (UTC+8). Current requests use HTTP/SSE.": "此渠道的 WebSocket 透传已临时停用至 {{time}}（UTC+8），当前请求使用 HTTP/SSE。",
-    "Responses WebSocket URL must use WS or WSS and include a valid host": "Responses WebSocket 地址必须使用 WS 或 WSS，并包含有效主机名"
+    "Responses WebSocket URL must use WS or WSS and include a valid host": "Responses WebSocket 地址必须使用 WS 或 WSS，并包含有效主机名",
+    "Maximum channel concurrency": "渠道最大并发数",
+    "Maximum active upstream requests for this channel. Use 0 for unlimited.": "该渠道同时处理的上游请求上限，填写 0 表示不限制。",
+    "Channel RPM limit": "渠道 RPM 上限",
+    "Maximum accepted upstream requests in a rolling minute. Use 0 for unlimited.": "该渠道滚动一分钟内接受的上游请求上限，填写 0 表示不限制。"
   }
 }

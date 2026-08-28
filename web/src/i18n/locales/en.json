@@ -5520,6 +5520,10 @@
     "Responses WebSocket URL override": "Responses WebSocket URL override",
     "Optional. Leave empty to derive WS/WSS from the exact HTTP Responses endpoint.": "Optional. Leave empty to derive WS/WSS from the exact HTTP Responses endpoint.",
     "This channel WebSocket passthrough is temporarily disabled until {{time}} (UTC+8). Current requests use HTTP/SSE.": "This channel WebSocket passthrough is temporarily disabled until {{time}} (UTC+8). Current requests use HTTP/SSE.",
-    "Responses WebSocket URL must use WS or WSS and include a valid host": "Responses WebSocket URL must use WS or WSS and include a valid host"
+    "Responses WebSocket URL must use WS or WSS and include a valid host": "Responses WebSocket URL must use WS or WSS and include a valid host",
+    "Maximum channel concurrency": "Maximum channel concurrency",
+    "Maximum active upstream requests for this channel. Use 0 for unlimited.": "Maximum active upstream requests for this channel. Use 0 for unlimited.",
+    "Channel RPM limit": "Channel RPM limit",
+    "Maximum accepted upstream requests in a rolling minute. Use 0 for unlimited.": "Maximum accepted upstream requests in a rolling minute. Use 0 for unlimited."
   }
 }
