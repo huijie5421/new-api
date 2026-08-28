@@ -69,6 +69,7 @@ func getChannelWithCapacity(c *gin.Context, info *relaycommon.RelayInfo, retryPa
 		if _, specific := c.Get("specific_channel_id"); specific {
 			return nil, nil, newChannelCapacityError(c, retryAfter)
 		}
+		service.MarkChannelAffinityCapacitySpillover(c)
 		excluded[channel.Id] = struct{}{}
 		if capacityGroup == "" {
 			capacityGroup = retryParam.TokenGroup

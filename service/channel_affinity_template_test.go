@@ -263,6 +263,54 @@ func TestClearCurrentChannelAffinityCache(t *testing.T) {
 	require.False(t, ShouldSkipRetryAfterChannelAffinityFailure(ctx))
 }
 
+func TestRecordChannelAffinityKeepsAnchorForCapacitySpillover(t *testing.T) {
+	setting := operation_setting.GetChannelAffinitySetting()
+	require.NotNil(t, setting)
+	originalEnabled := setting.Enabled
+	originalSwitchOnSuccess := setting.SwitchOnSuccess
+	setting.Enabled = true
+	setting.SwitchOnSuccess = true
+	t.Cleanup(func() {
+		setting.Enabled = originalEnabled
+		setting.SwitchOnSuccess = originalSwitchOnSuccess
+	})
+
+	tests := []struct {
+		name              string
+		capacitySpillover bool
+		wantChannelID     int
+	}{
+		{name: "ordinary successful retry updates affinity", wantChannelID: 9722},
+		{name: "capacity spillover preserves original affinity", capacitySpillover: true, wantChannelID: 9711},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cacheKeySuffix := fmt.Sprintf("record-capacity-spillover:%d", time.Now().UnixNano())
+			cacheKeyFull := channelAffinityCacheNamespace + ":" + cacheKeySuffix
+			cache := getChannelAffinityCache()
+			t.Cleanup(func() {
+				_, _ = cache.DeleteMany([]string{cacheKeySuffix})
+			})
+
+			ctx := buildChannelAffinityTemplateContextForTest(channelAffinityMeta{
+				CacheKey:   cacheKeyFull,
+				TTLSeconds: 60,
+				RuleName:   "capacity-spillover",
+			})
+			ctx.Set("channel_id", 9722)
+			if tt.capacitySpillover {
+				MarkChannelAffinityCapacitySpillover(ctx)
+			}
+
+			RecordChannelAffinity(ctx, 9711)
+			channelID, found, err := cache.Get(cacheKeySuffix)
+			require.NoError(t, err)
+			require.True(t, found)
+			require.Equal(t, tt.wantChannelID, channelID)
+		})
+	}
+}
+
 func TestChannelAffinityHitCodexTemplatePassHeadersEffective(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

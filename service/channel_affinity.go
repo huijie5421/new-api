@@ -20,11 +20,12 @@ import (
 )
 
 const (
-	ginKeyChannelAffinityCacheKey   = "channel_affinity_cache_key"
-	ginKeyChannelAffinityTTLSeconds = "channel_affinity_ttl_seconds"
-	ginKeyChannelAffinityMeta       = "channel_affinity_meta"
-	ginKeyChannelAffinityLogInfo    = "channel_affinity_log_info"
-	ginKeyChannelAffinitySkipRetry  = "channel_affinity_skip_retry_on_failure"
+	ginKeyChannelAffinityCacheKey          = "channel_affinity_cache_key"
+	ginKeyChannelAffinityTTLSeconds        = "channel_affinity_ttl_seconds"
+	ginKeyChannelAffinityMeta              = "channel_affinity_meta"
+	ginKeyChannelAffinityLogInfo           = "channel_affinity_log_info"
+	ginKeyChannelAffinitySkipRetry         = "channel_affinity_skip_retry_on_failure"
+	ginKeyChannelAffinityCapacitySpillover = "channel_affinity_capacity_spillover"
 
 	channelAffinityCacheNamespace           = "new-api:channel_affinity:v1"
 	channelAffinityUsageCacheStatsNamespace = "new-api:channel_affinity_usage_cache_stats:v1"
@@ -710,6 +711,17 @@ func AppendChannelAffinityAdminInfo(c *gin.Context, adminInfo map[string]interfa
 	adminInfo["channel_affinity"] = anyInfo
 }
 
+func MarkChannelAffinityCapacitySpillover(c *gin.Context) {
+	if c == nil {
+		return
+	}
+	c.Set(ginKeyChannelAffinityCapacitySpillover, true)
+}
+
+func IsChannelAffinityCapacitySpillover(c *gin.Context) bool {
+	return c != nil && c.GetBool(ginKeyChannelAffinityCapacitySpillover)
+}
+
 func RecordChannelAffinity(c *gin.Context, channelID int) {
 	if channelID <= 0 {
 		return
@@ -718,7 +730,7 @@ func RecordChannelAffinity(c *gin.Context, channelID int) {
 	if setting == nil || !setting.Enabled {
 		return
 	}
-	if setting.SwitchOnSuccess && c != nil {
+	if setting.SwitchOnSuccess && c != nil && !IsChannelAffinityCapacitySpillover(c) {
 		if successChannelID := c.GetInt("channel_id"); successChannelID > 0 {
 			channelID = successChannelID
 		}

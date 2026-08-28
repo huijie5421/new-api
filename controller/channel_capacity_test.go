@@ -112,6 +112,31 @@ func TestGetChannelWithCapacityMovesToAnotherChannelInSameGroup(t *testing.T) {
 	defer lease.Release()
 	assert.Equal(t, second.Id, selected.Id)
 	assert.Equal(t, second.Id, common.GetContextKeyInt(c, constant.ContextKeyChannelId))
+	assert.True(t, service.IsChannelAffinityCapacitySpillover(c))
+}
+
+func TestGetChannelWithCapacityDoesNotMarkSpilloverWhenInitialChannelHasCapacity(t *testing.T) {
+	db := setupChannelCapacityControllerTest(t)
+	const modelName = "capacity-controller-available-model"
+	first := createCapacityControllerChannel(t, db, 91_101, "vip", modelName)
+	createCapacityControllerChannel(t, db, 91_102, "vip", modelName)
+	model.InitChannelCache()
+
+	c := newCapacityControllerContext(first, modelName)
+	retry := 0
+	info := &relaycommon.RelayInfo{
+		RelayMode:       relayconstant.RelayModeChatCompletions,
+		OriginModelName: modelName,
+		TokenGroup:      "vip",
+	}
+	selected, lease, apiErr := getChannelWithCapacity(c, info, &service.RetryParam{
+		Ctx: c, TokenGroup: "vip", ModelName: modelName, RequestPath: c.Request.URL.Path, Retry: &retry,
+	})
+	require.Nil(t, apiErr)
+	require.NotNil(t, lease)
+	defer lease.Release()
+	assert.Equal(t, first.Id, selected.Id)
+	assert.False(t, service.IsChannelAffinityCapacitySpillover(c))
 }
 
 func TestGetChannelWithCapacityKeepsSpecificChannelBinding(t *testing.T) {
