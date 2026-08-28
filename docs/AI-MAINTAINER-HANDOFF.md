@@ -10,7 +10,7 @@ linked rather than duplicated where possible.
 | --- | --- |
 | Source repository | `/home/huiji/code/Api/new-api-slim-aigc-v1-20260825` |
 | Branch | `codex/slim-aigc-v1` |
-| Latest functional source commit | `33405846` (per-channel concurrency and RPM routing) |
+| Latest functional source commit | `d7392d15` (preserve affinity during capacity spillover) |
 | Production runtime source commit | `33405846` |
 | Production release | `aizzz-gateway-slim-20260825.15` (deployed `20260828T101303Z`) |
 | Official base | `v1.0.0-rc.25`, commit `f116414284162ad15d8925f7bca494c109b83e93` |
@@ -19,7 +19,7 @@ linked rather than duplicated where possible.
 | Deployment timestamp | `.15` deployed `20260828T101303Z` UTC |
 | Next release label | `.16` unless the operator specifies another label |
 
-Production runs functional commit `33405846`. The `.09` Apple-style UI
+Production runs functional commit `33405846`; the branch contains the newer source-only capacity/affinity fix at `d7392d15`. The `.09` Apple-style UI
 refresh remains a historical rolled-back release and must not be reused without
 operator approval. Always verify the actual branch tip with `git rev-parse
 --short HEAD`. Source-level reference tags include
@@ -306,3 +306,11 @@ ssh sever 'bash /backup/newapi/deployments/20260827T062919Z-before-aizzz-gateway
 - Existing channels remain unlimited until an administrator sets either capacity field. The deployment issued no session or API-token mutation: active sessions remained 770 and API-token rows remained 2852.
 - One-click rollback: `ssh sever 'bash /backup/newapi/deployments/20260828T101303Z-before-aizzz-gateway-slim-20260825-15/rollback.sh'`; restores `.14` SHA-256 `2e39eb1eccc058cb6839413872b592834b10208f2051a72c6af78877662cc7b2` while preserving later database writes.
 - Deployment scripts: `/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-15.sh` and `/root/deploy-aizzz-gateway-slim-20260825-15.sh`; SHA-256 `93c130cf2e636cab2b3b4c1aa2e27866f31012f683df91c7fbbb9f8bd7a2d5fb`.
+
+## Source-only: preserve affinity during capacity spillover (2026-08-28)
+
+- Functional source commit: `d7392d15`; production remains `.15` at runtime commit `33405846` until an operator explicitly requests deployment.
+- A channel-capacity rejection now marks the request only when it will spill over to another channel. If that fallback succeeds, affinity remains anchored to the originally selected channel instead of being rewritten to the temporary lower-priority channel.
+- Ordinary upstream failure/retry behavior is unchanged: with `switch_on_success` enabled, a successful retry still updates affinity to the successful channel. Specific-channel bindings, same-group selection, billing, retries, and capacity accounting are unchanged.
+- Regression coverage verifies capacity spillover marking, no false marker when the original channel has capacity, ordinary successful affinity switching, and preservation of the original affinity anchor after capacity fallback. Targeted race checks, `go test ./... -count=1`, and `go vet ./...` passed.
+- Production currently uses the process-local affinity cache because Redis is disabled. A future binary restart will naturally clear pre-fix low-priority affinity entries; if Redis is enabled before that deployment, explicitly clear the affinity cache after the new binary becomes healthy.
