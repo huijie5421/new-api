@@ -206,6 +206,18 @@ func initConstantEnv() {
 	constant.TaskQueryLimit = GetEnvOrDefault("TASK_QUERY_LIMIT", 1000)
 	// 异步任务超时时间（分钟），超过此时间未完成的任务将被标记为失败并退款。0 表示禁用。
 	constant.TaskTimeoutMinutes = GetEnvOrDefault("TASK_TIMEOUT_MINUTES", 1440)
+	constant.ResponsesWSFirstMessageTimeoutSeconds = GetEnvOrDefault("RESPONSES_WS_FIRST_MESSAGE_TIMEOUT", 30)
+	if constant.ResponsesWSFirstMessageTimeoutSeconds <= 0 {
+		constant.ResponsesWSFirstMessageTimeoutSeconds = 30
+	}
+	constant.ResponsesWSInterTurnIdleTimeoutSeconds = GetEnvOrDefault("RESPONSES_WS_INTER_TURN_IDLE_TIMEOUT", 300)
+	if constant.ResponsesWSInterTurnIdleTimeoutSeconds < 0 {
+		constant.ResponsesWSInterTurnIdleTimeoutSeconds = 300
+	}
+	constant.ResponsesWSMaxConnectionsPerToken = GetEnvOrDefault("RESPONSES_WS_MAX_CONNECTIONS_PER_TOKEN", 64)
+	if constant.ResponsesWSMaxConnectionsPerToken < 0 {
+		constant.ResponsesWSMaxConnectionsPerToken = 64
+	}
 
 	soraPatchStr := GetEnvOrDefaultString("TASK_PRICE_PATCH", "")
 	if soraPatchStr != "" {
