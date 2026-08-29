@@ -5532,7 +5532,7 @@
     "Maximum accepted upstream requests in a rolling minute. Use 0 for unlimited.": "该渠道滚动一分钟内接受的上游请求上限，填写 0 表示不限制。",
     "Semantic prompt review": "语义二次审查",
     "Enable semantic second pass": "启用语义二次审查",
-    "When enabled, send text-only requests to the configured model for a second decision. Keyword filtering remains the fast first pass.": "开启后，将文字请求发送到配置的模型进行二次判定；关键词过滤仍作为快速的第一道检查。",
+    "When enabled, send text-only GPT requests to the configured model for a second decision. Keyword filtering remains the fast first pass for other models.": "开启后，仅将 GPT 模型的文字请求发送到配置的模型进行二次判定；其他模型仍使用关键词快速检查。",
     "Review model": "审查模型",
     "Defaults to gpt-5.6-luna. You can enter another model available in this gateway.": "默认使用 gpt-5.6-luna，也可以填写本站可用的其他模型。",
     "Reasoning effort": "思考强度",

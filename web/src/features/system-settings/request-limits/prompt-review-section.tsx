@@ -108,7 +108,7 @@ export function PromptReviewSection({
                   <FormLabel>{t('Enable semantic second pass')}</FormLabel>
                   <FormDescription>
                     {t(
-                      'When enabled, send text-only requests to the configured model for a second decision. Keyword filtering remains the fast first pass.'
+                      'When enabled, send text-only GPT requests to the configured model for a second decision. Keyword filtering remains the fast first pass for other models.'
                     )}
                   </FormDescription>
                 </SettingsSwitchContent>

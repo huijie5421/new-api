@@ -558,7 +558,7 @@ func enqueueAigcVideoGeneration(c *gin.Context) {
 		abortAigcWorkshopOpenAIError(c, http.StatusBadRequest, err)
 		return
 	}
-	if taskErr := reviewTaskPrompt(c); taskErr != nil {
+	if taskErr := reviewTaskPrompt(c, request.Model); taskErr != nil {
 		abortAigcWorkshopOpenAIError(c, taskErr.StatusCode, taskErr.Error)
 		return
 	}

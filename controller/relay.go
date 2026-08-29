@@ -133,7 +133,8 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		return
 	}
 
-	needSensitiveCheck := setting.ShouldCheckPromptSensitive() || setting.PromptReviewEnabled
+	semanticReviewForModel := setting.PromptReviewEnabled && service.IsGPTPromptReviewModel(relayInfo.OriginModelName)
+	needSensitiveCheck := setting.ShouldCheckPromptSensitive() || semanticReviewForModel
 	needCountToken := constant.CountToken
 	// Avoid building huge CombineText (strings.Join) when token counting and sensitive check are both disabled.
 	var meta *types.TokenCountMeta
@@ -144,7 +145,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 	}
 
 	if needSensitiveCheck && meta != nil && !promptReviewInternal {
-		result, words, blocked, reviewErr := service.ReviewPromptAfterKeyword(c.Request.Context(), meta.CombineText)
+		result, words, blocked, reviewErr := service.ReviewPromptForModel(c.Request.Context(), meta.CombineText, relayInfo.OriginModelName)
 		if reviewErr != nil && !blocked {
 			logger.LogWarn(c, "prompt review failed but fail mode allows request")
 		}
@@ -524,7 +525,7 @@ func RelayTask(c *gin.Context) {
 		respondTaskError(c, taskErr)
 		return
 	}
-	if taskErr := reviewTaskPrompt(c); taskErr != nil {
+	if taskErr := reviewTaskPrompt(c, relayInfo.OriginModelName); taskErr != nil {
 		respondTaskError(c, taskErr)
 		return
 	}
@@ -651,8 +652,8 @@ func executeTaskRelayAttempt(c *gin.Context, relayInfo *relaycommon.RelayInfo, c
 	return relay.RelayTaskSubmit(c, relayInfo)
 }
 
-func reviewTaskPrompt(c *gin.Context) *taskdto.TaskError {
-	if c == nil || service.IsPromptReviewRequest(c) || !setting.ShouldCheckPromptSensitive() {
+func reviewTaskPrompt(c *gin.Context, modelName string) *taskdto.TaskError {
+	if c == nil || service.IsPromptReviewRequest(c) || (!setting.ShouldCheckPromptSensitive() && !(setting.PromptReviewEnabled && service.IsGPTPromptReviewModel(modelName))) {
 		return nil
 	}
 	storage, err := common.GetBodyStorage(c)
@@ -667,7 +668,10 @@ func reviewTaskPrompt(c *gin.Context) *taskdto.TaskError {
 	if err := common.Unmarshal(body, &request); err != nil || strings.TrimSpace(request.Prompt) == "" {
 		return nil
 	}
-	_, _, blocked, reviewErr := service.ReviewPromptAfterKeyword(c.Request.Context(), request.Prompt)
+	if strings.TrimSpace(modelName) == "" {
+		modelName = request.Model
+	}
+	_, _, blocked, reviewErr := service.ReviewPromptForModel(c.Request.Context(), request.Prompt, modelName)
 	if !blocked {
 		return nil
 	}

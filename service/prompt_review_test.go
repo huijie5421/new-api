@@ -82,6 +82,13 @@ func TestPromptReviewAllowsHonorsThreshold(t *testing.T) {
 	require.False(t, PromptReviewAllows(PromptReviewResult{Decision: "review", Confidence: 0.99}))
 }
 
+func TestIsGPTPromptReviewModel(t *testing.T) {
+	require.True(t, IsGPTPromptReviewModel("gpt-5.6-luna"))
+	require.True(t, IsGPTPromptReviewModel(" GPT-4o "))
+	require.False(t, IsGPTPromptReviewModel("claude-sonnet"))
+	require.False(t, IsGPTPromptReviewModel(""))
+}
+
 func TestReviewPromptAfterKeywordUsesKeywordGate(t *testing.T) {
 	originalEnabled := setting.PromptReviewEnabled
 	originalWords := setting.SensitiveWords

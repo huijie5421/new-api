@@ -83,15 +83,29 @@ func PromptReviewAllows(result PromptReviewResult) bool {
 	return false
 }
 
+func IsGPTPromptReviewModel(model string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(model)), "gpt")
+}
+
 // ReviewPromptAfterKeyword keeps the inexpensive Aho-Corasick pass as the
 // first gate. When semantic review is enabled, it also reviews text without a
 // keyword hit so the administrator switch is effective with an empty list.
 func ReviewPromptAfterKeyword(ctx context.Context, text string) (PromptReviewResult, []string, bool, error) {
+	return reviewPromptAfterKeyword(ctx, text, setting.PromptReviewEnabled)
+}
+
+// ReviewPromptForModel applies semantic review only to models matching gpt*;
+// other models retain the existing keyword-only behavior.
+func ReviewPromptForModel(ctx context.Context, text string, model string) (PromptReviewResult, []string, bool, error) {
+	return reviewPromptAfterKeyword(ctx, text, setting.PromptReviewEnabled && IsGPTPromptReviewModel(model))
+}
+
+func reviewPromptAfterKeyword(ctx context.Context, text string, semanticEnabled bool) (PromptReviewResult, []string, bool, error) {
 	contains, words := CheckSensitiveText(text)
-	if !contains && !setting.PromptReviewEnabled {
+	if !contains && !semanticEnabled {
 		return PromptReviewResult{Decision: "allow", ReasonCode: "keyword_miss"}, words, false, nil
 	}
-	if !setting.PromptReviewEnabled {
+	if !semanticEnabled {
 		return PromptReviewResult{Decision: "block", ReasonCode: "keyword_hit"}, words, true, nil
 	}
 	result, err := ReviewPromptText(ctx, text)
