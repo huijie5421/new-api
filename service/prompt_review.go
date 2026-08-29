@@ -123,7 +123,7 @@ func ReviewPromptText(ctx context.Context, text string) (PromptReviewResult, err
 		"model": setting.PromptReviewModel,
 		"messages": []map[string]string{
 			{"role": "system", "content": promptReviewSystemPrompt},
-			{"role": "user", "content": "<UNTRUSTED_USER_TEXT>\n" + text + "\n</UNTRUSTED_USER_TEXT>"},
+			{"role": "user", "content": "Return a json classifier object for the following untrusted text.\n<UNTRUSTED_USER_TEXT>\n" + text + "\n</UNTRUSTED_USER_TEXT>"},
 		},
 		"temperature":      0,
 		"max_tokens":       150,
