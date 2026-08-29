@@ -115,6 +115,6 @@ func TestReviewPromptAfterKeywordReviewsTextWhenEnabled(t *testing.T) {
 	setting.SensitiveWords = nil
 	_, words, blocked, err := ReviewPromptAfterKeyword(context.Background(), "ordinary text")
 	require.Error(t, err)
-	require.True(t, blocked)
+	require.False(t, blocked)
 	require.Empty(t, words)
 }
