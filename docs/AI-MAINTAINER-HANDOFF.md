@@ -10,20 +10,20 @@ linked rather than duplicated where possible.
 | --- | --- |
 | Source repository | `/home/huiji/code/Api/new-api-slim-aigc-v1-20260825` |
 | Branch | `codex/slim-aigc-v1` |
-| Latest functional source commit | `97b47c83` (semantic prompt review and keyword policy) |
-| Production runtime source commit | `97b47c83` |
-| Production release | `aizzz-gateway-slim-20260825.18` (deployed `20260829T095651Z`) |
+| Latest functional source commit | `afeada13` (JSON response-format compatibility) |
+| Production runtime source commit | `afeada13` |
+| Production release | `aizzz-gateway-slim-20260825.19` (deployed `20260829T100738Z`) |
 | Official base | `v1.0.0-rc.25`, commit `f116414284162ad15d8925f7bca494c109b83e93` |
 | Runtime base marker | `official-v1.0.0-rc.25-f116414 (main-2d8e50bf)` |
-| Production binary SHA-256 | `7d59f36b303d6e6c5b960baa4ea03fedfb5ab016b667e863b45425dd6c852b6b` |
-| Deployment timestamp | `.18` deployed `20260829T095651Z` UTC |
-| Next release label | `.19` unless the operator specifies another label |
+| Production binary SHA-256 | `96b926c471820b1374a7ff9f621b2b445638ec17a01e8d79c9b979bdacfeae62` |
+| Deployment timestamp | `.19` deployed `20260829T100738Z` UTC |
+| Next release label | `.20` unless the operator specifies another label |
 
-Production runs functional commit `97b47c83`. The `.09` Apple-style UI
+Production runs functional commit `afeada13`. The `.09` Apple-style UI
 refresh remains a historical rolled-back release and must not be reused without
 operator approval. Always verify the actual branch tip with `git rev-parse
 --short HEAD`. Source-level reference tags include
-`release/aizzz-gateway-slim-20260825.18` (`97b47c83`), `.17` (`8c402cf5`), `.16` (`d7392d15`), the prior `.15`, `.14`, `.13`, `.12`, `.11`, `.10`, `.09`,
+`release/aizzz-gateway-slim-20260825.19` (`afeada13`), `.18` (`97b47c83`), `.17` (`8c402cf5`), `.16` (`d7392d15`), the prior `.15`, `.14`, `.13`, `.12`, `.11`, `.10`, `.09`,
 and `.08` release/rollback markers.
 
 ## Source of truth
@@ -124,6 +124,7 @@ the `.15` rollback target and earlier releases remain at):
 /opt/new-api/releases/aizzz-gateway-slim-20260825-16-d7392d15/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-18-97b47c83/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-17-8c402cf5/new-api
+/opt/new-api/releases/aizzz-gateway-slim-20260825-19-afeada13/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-15-33405846/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-14-5bfeb985/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-13-f2984507/new-api
@@ -134,10 +135,10 @@ the `.15` rollback target and earlier releases remain at):
 /opt/new-api/releases/aizzz-gateway-slim-20260825-09-f5a0c48a/new-api  (rolled back, do not reuse without operator approval)
 ```
 
-One-click rollback to `.17` (from the running `.18`):
+One-click rollback to `.18` (from the running `.19`):
 
 ```bash
-ssh sever 'bash /backup/newapi/deployments/20260829T095651Z-before-aizzz-gateway-slim-20260825-18/rollback.sh'
+ssh sever 'bash /backup/newapi/deployments/20260829T100738Z-before-aizzz-gateway-slim-20260825-19/rollback.sh'
 ```
 
 Core database snapshots:
@@ -168,8 +169,10 @@ Deployment scripts:
 /home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-16.sh
 /home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-17.sh
 /home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-18.sh
+/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-19.sh
 /root/deploy-aizzz-gateway-slim-20260825-16.sh
 /root/deploy-aizzz-gateway-slim-20260825-18.sh
+/root/deploy-aizzz-gateway-slim-20260825-19.sh
 ```
 
 Neither the `.09` deployment nor its rollback refreshed or revoked sessions;
@@ -340,3 +343,13 @@ ssh sever 'bash /backup/newapi/deployments/20260827T062919Z-before-aizzz-gateway
 - Deployment at `20260829T095651Z` UTC preserved login sessions and API tokens; live active sessions observed `931` after deployment and API-token rows remained `2860`.
 - One-click rollback: `ssh sever 'bash /backup/newapi/deployments/20260829T095651Z-before-aizzz-gateway-slim-20260825-18/rollback.sh'`; restores `.17` binary SHA-256 `ae472d712be4585e15c1578e2ad8d3bea568bc9a7c30dc9a135f7f259f903e4f` while preserving later database writes.
 - Deployment scripts: `/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-18.sh` and `/root/deploy-aizzz-gateway-slim-20260825-18.sh`; server script SHA-256 `e392268a5288dabbbd41ac9f6f75f85ff5b56debb8a175520966d29b5d7cc0a8`.
+
+## Slim gateway `.19` deployment: review model compatibility fix (2026-08-29)
+
+- Source commit/tag: `afeada13`, `release/aizzz-gateway-slim-20260825.19`.
+- The internal review system prompt now contains the lowercase `json` marker required by the selected provider when `response_format.type=json_object` is used. The previous `.18` deployment was healthy but returned 400 for this provider-specific validation; no user data was lost.
+- The internal token is assigned to `GPT luna专属分组`, which has an enabled `gpt-5.6-luna` channel. A live local smoke request returned HTTP 200 with one JSON classifier choice, confirming the end-to-end self-call.
+- Production binary: `/opt/new-api/releases/aizzz-gateway-slim-20260825-19-afeada13/new-api`, 131928329 bytes, SHA-256 `96b926c471820b1374a7ff9f621b2b445638ec17a01e8d79c9b979bdacfeae62`.
+- Deployment at `20260829T100738Z` UTC passed the standard isolated probe, compatibility endpoints, WSS handshakes, public assets, Nginx, database snapshot, rollback syntax and startup log gates. Service is active/success with `NRestarts=0`; login sessions were not revoked and API-token rows remained `2860`.
+- One-click rollback: `ssh sever 'bash /backup/newapi/deployments/20260829T100738Z-before-aizzz-gateway-slim-20260825-19/rollback.sh'`; restores `.18` binary SHA-256 `7d59f36b303d6e6c5b960baa4ea03fedfb5ab016b667e863b45425dd6c852b6b` while preserving later database writes.
+- Deployment script: `/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-19.sh` and `/root/deploy-aizzz-gateway-slim-20260825-19.sh`; server script SHA-256 `d36e2aa998be3818501d4ea014cc6e5c7c4be00e1cfed8bda7a126615544d9e3`.
