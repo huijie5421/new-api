@@ -36,7 +36,7 @@ const defaultSecuritySettings: SecuritySettings = {
   PromptReviewEnabled: false,
   PromptReviewModel: 'gpt-5.6-luna',
   PromptReviewReasoningEffort: 'low',
-  PromptReviewTimeoutMs: 1500,
+  PromptReviewTimeoutMs: 5000,
   PromptReviewBlockThreshold: 0.85,
   PromptReviewFailMode: 'block_on_keyword',
   'fetch_setting.enable_ssrf_protection': true,

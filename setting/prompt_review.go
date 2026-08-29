@@ -14,7 +14,7 @@ var (
 	PromptReviewModel           = "gpt-5.6-luna"
 	PromptReviewReasoningEffort = "low"
 	PromptReviewBaseURL         = "http://127.0.0.1:3000"
-	PromptReviewTimeoutMs       = 1500
+	PromptReviewTimeoutMs       = 5000
 	PromptReviewBlockThreshold  = 0.85
 	PromptReviewFailMode        = "block_on_keyword"
 	PromptReviewToken           = strings.TrimSpace(os.Getenv("PROMPT_REVIEW_TOKEN"))
