@@ -10,20 +10,20 @@ linked rather than duplicated where possible.
 | --- | --- |
 | Source repository | `/home/huiji/code/Api/new-api-slim-aigc-v1-20260825` |
 | Branch | `codex/slim-aigc-v1` |
-| Latest functional source commit | `d7392d15` (preserve affinity during capacity spillover) |
-| Production runtime source commit | `d7392d15` |
-| Production release | `aizzz-gateway-slim-20260825.16` (deployed `20260828T122250Z`) |
+| Latest functional source commit | `97b47c83` (semantic prompt review and keyword policy) |
+| Production runtime source commit | `97b47c83` |
+| Production release | `aizzz-gateway-slim-20260825.18` (deployed `20260829T095651Z`) |
 | Official base | `v1.0.0-rc.25`, commit `f116414284162ad15d8925f7bca494c109b83e93` |
 | Runtime base marker | `official-v1.0.0-rc.25-f116414 (main-2d8e50bf)` |
-| Production binary SHA-256 | `1ac3845b2752dd917a4bd424726e9a2abc55026016fa2fbe449170ca4a305b08` |
-| Deployment timestamp | `.16` deployed `20260828T122250Z` UTC |
-| Next release label | `.17` unless the operator specifies another label |
+| Production binary SHA-256 | `7d59f36b303d6e6c5b960baa4ea03fedfb5ab016b667e863b45425dd6c852b6b` |
+| Deployment timestamp | `.18` deployed `20260829T095651Z` UTC |
+| Next release label | `.19` unless the operator specifies another label |
 
-Production runs functional commit `d7392d15`. The `.09` Apple-style UI
+Production runs functional commit `97b47c83`. The `.09` Apple-style UI
 refresh remains a historical rolled-back release and must not be reused without
 operator approval. Always verify the actual branch tip with `git rev-parse
 --short HEAD`. Source-level reference tags include
-`release/aizzz-gateway-slim-20260825.16` (`d7392d15`), the prior `.15`, `.14`, `.13`, `.12`, `.11`, `.10`, `.09`,
+`release/aizzz-gateway-slim-20260825.18` (`97b47c83`), `.17` (`8c402cf5`), `.16` (`d7392d15`), the prior `.15`, `.14`, `.13`, `.12`, `.11`, `.10`, `.09`,
 and `.08` release/rollback markers.
 
 ## Source of truth
@@ -122,6 +122,8 @@ the `.15` rollback target and earlier releases remain at):
 
 ```text
 /opt/new-api/releases/aizzz-gateway-slim-20260825-16-d7392d15/new-api
+/opt/new-api/releases/aizzz-gateway-slim-20260825-18-97b47c83/new-api
+/opt/new-api/releases/aizzz-gateway-slim-20260825-17-8c402cf5/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-15-33405846/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-14-5bfeb985/new-api
 /opt/new-api/releases/aizzz-gateway-slim-20260825-13-f2984507/new-api
@@ -132,10 +134,10 @@ the `.15` rollback target and earlier releases remain at):
 /opt/new-api/releases/aizzz-gateway-slim-20260825-09-f5a0c48a/new-api  (rolled back, do not reuse without operator approval)
 ```
 
-One-click rollback to `.15` (from the running `.16`):
+One-click rollback to `.17` (from the running `.18`):
 
 ```bash
-ssh sever 'bash /backup/newapi/deployments/20260828T122250Z-before-aizzz-gateway-slim-20260825-16/rollback.sh'
+ssh sever 'bash /backup/newapi/deployments/20260829T095651Z-before-aizzz-gateway-slim-20260825-18/rollback.sh'
 ```
 
 Core database snapshots:
@@ -164,7 +166,10 @@ Deployment scripts:
 /home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-14.sh
 /home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-15.sh
 /home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-16.sh
+/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-17.sh
+/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-18.sh
 /root/deploy-aizzz-gateway-slim-20260825-16.sh
+/root/deploy-aizzz-gateway-slim-20260825-18.sh
 ```
 
 Neither the `.09` deployment nor its rollback refreshed or revoked sessions;
@@ -322,3 +327,16 @@ ssh sever 'bash /backup/newapi/deployments/20260827T062919Z-before-aizzz-gateway
 - The deployment issued no session or API-token mutation: active sessions remained 804 and API-token rows remained 2854.
 - One-click rollback: `ssh sever 'bash /backup/newapi/deployments/20260828T122250Z-before-aizzz-gateway-slim-20260825-16/rollback.sh'`; restores `.15` SHA-256 `95a63d2eb87c506e75d8ea023d9c1f2e949e8002fc3f4e7ca64d58a3541c5a0a` while preserving later database writes.
 - Deployment scripts: `/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-16.sh` and `/root/deploy-aizzz-gateway-slim-20260825-16.sh`; SHA-256 `013b0e46e2d43e563b9884faaa98e2ea54439fa026045b95b74f8c572ed71f85`.
+
+## Slim gateway `.18` deployment: configurable semantic prompt review (2026-08-29)
+
+- Source commit/tag: `97b47c83`, `release/aizzz-gateway-slim-20260825.18`; official base remains `v1.0.0-rc.25`.
+- Text requests now use the existing keyword scanner as a fast pass and, when enabled, call the configured gateway model for a semantic second decision. AIGC image/chat prompts and task prompts are covered; image/audio/video binaries are not sent to the review model.
+- Production options: `PromptReviewEnabled=true`, model `gpt-5.6-luna`, reasoning effort `low`, timeout `1500ms`, block threshold `0.85`, and failure policy `block_on_keyword`. Administrators can change the model, effort, timeout, threshold, and failure policy from Security > Semantic prompt review.
+- The pre-filter contains 108 high-risk intent phrases covering violence/weapons, self-harm, fraud/payment theft, credential theft/phishing, malware/attacks, privacy abuse, drugs/trafficking, and sexual exploitation. Historical, medical, legal, defensive-security, anti-fraud, sexual-health, translation, and journalistic contexts are delegated to semantic classification.
+- The internal review token and header secret are server-environment-only. Internal review calls bypass recursive review, user/channel quota mutation, violation charging, and upstream header forwarding. Normal user requests and billing remain unchanged.
+- Verification passed `go test ./...`, frontend typecheck, production build, isolated probe, compatibility endpoints, three Responses WSS handshakes, public assets, Nginx, database snapshot integrity, rollback syntax, and post-start log scan. Service is active/success with `NRestarts=0`; the production process loaded all seven options, both credentials, and 108 keywords.
+- Production binary: `/opt/new-api/releases/aizzz-gateway-slim-20260825-18-97b47c83/new-api`, 131928329 bytes, SHA-256 `7d59f36b303d6e6c5b960baa4ea03fedfb5ab016b667e863b45425dd6c852b6b`.
+- Deployment at `20260829T095651Z` UTC preserved login sessions and API tokens; live active sessions observed `931` after deployment and API-token rows remained `2860`.
+- One-click rollback: `ssh sever 'bash /backup/newapi/deployments/20260829T095651Z-before-aizzz-gateway-slim-20260825-18/rollback.sh'`; restores `.17` binary SHA-256 `ae472d712be4585e15c1578e2ad8d3bea568bc9a7c30dc9a135f7f259f903e4f` while preserving later database writes.
+- Deployment scripts: `/home/huiji/code/Api/docs/deploy-aizzz-gateway-slim-20260825-18.sh` and `/root/deploy-aizzz-gateway-slim-20260825-18.sh`; server script SHA-256 `e392268a5288dabbbd41ac9f6f75f85ff5b56debb8a175520966d29b5d7cc0a8`.
