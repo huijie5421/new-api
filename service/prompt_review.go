@@ -129,7 +129,6 @@ func ReviewPromptText(ctx context.Context, text string) (PromptReviewResult, err
 		"max_tokens":       150,
 		"stream":           false,
 		"reasoning_effort": setting.NormalizePromptReviewReasoningEffort(setting.PromptReviewReasoningEffort),
-		"response_format":  map[string]string{"type": "json_object"},
 	}
 	body, err := common.Marshal(payload)
 	if err != nil {
