@@ -177,6 +177,13 @@ func InitOptionMap() {
 	common.OptionMap["CheckSensitiveOnPromptEnabled"] = strconv.FormatBool(setting.CheckSensitiveOnPromptEnabled)
 	common.OptionMap["StopOnSensitiveEnabled"] = strconv.FormatBool(setting.StopOnSensitiveEnabled)
 	common.OptionMap["SensitiveWords"] = setting.SensitiveWordsToString()
+	common.OptionMap["PromptReviewEnabled"] = strconv.FormatBool(setting.PromptReviewEnabled)
+	common.OptionMap["PromptReviewModel"] = setting.PromptReviewModel
+	common.OptionMap["PromptReviewReasoningEffort"] = setting.PromptReviewReasoningEffort
+	common.OptionMap["PromptReviewBaseURL"] = setting.PromptReviewBaseURL
+	common.OptionMap["PromptReviewTimeoutMs"] = setting.PromptReviewTimeoutString()
+	common.OptionMap["PromptReviewBlockThreshold"] = strconv.FormatFloat(setting.PromptReviewBlockThreshold, 'f', -1, 64)
+	common.OptionMap["PromptReviewFailMode"] = setting.PromptReviewFailMode
 	common.OptionMap["StreamCacheQueueLength"] = strconv.Itoa(setting.StreamCacheQueueLength)
 	common.OptionMap["AutomaticDisableKeywords"] = operation_setting.AutomaticDisableKeywordsToString()
 	common.OptionMap["AutomaticDisableStatusCodes"] = operation_setting.AutomaticDisableStatusCodesToString()
@@ -380,6 +387,8 @@ func updateOptionMap(key string, value string) (err error) {
 			operation_setting.SelfUseModeEnabled = boolValue
 		case "CheckSensitiveOnPromptEnabled":
 			setting.CheckSensitiveOnPromptEnabled = boolValue
+		case "PromptReviewEnabled":
+			setting.PromptReviewEnabled = boolValue
 		case "ModelRequestRateLimitEnabled":
 			setting.ModelRequestRateLimitEnabled = boolValue
 		case "StopOnSensitiveEnabled":
@@ -606,6 +615,26 @@ func updateOptionMap(key string, value string) (err error) {
 		common.QuotaPerUnit, _ = strconv.ParseFloat(value, 64)
 	case "SensitiveWords":
 		setting.SensitiveWordsFromString(value)
+	case "PromptReviewModel":
+		if strings.TrimSpace(value) != "" {
+			setting.PromptReviewModel = strings.TrimSpace(value)
+		}
+	case "PromptReviewReasoningEffort":
+		setting.PromptReviewReasoningEffort = setting.NormalizePromptReviewReasoningEffort(value)
+	case "PromptReviewBaseURL":
+		if strings.TrimSpace(value) != "" {
+			setting.PromptReviewBaseURL = strings.TrimRight(strings.TrimSpace(value), "/")
+		}
+	case "PromptReviewTimeoutMs":
+		if intValue, parseErr := strconv.Atoi(value); parseErr == nil {
+			setting.PromptReviewTimeoutMs = intValue
+		}
+	case "PromptReviewBlockThreshold":
+		if floatValue, parseErr := strconv.ParseFloat(value, 64); parseErr == nil {
+			setting.PromptReviewBlockThreshold = floatValue
+		}
+	case "PromptReviewFailMode":
+		setting.PromptReviewFailMode = setting.NormalizePromptReviewFailMode(value)
 	case "AutomaticDisableKeywords":
 		operation_setting.AutomaticDisableKeywordsFromString(value)
 	case "AutomaticDisableStatusCodes":

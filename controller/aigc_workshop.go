@@ -558,6 +558,10 @@ func enqueueAigcVideoGeneration(c *gin.Context) {
 		abortAigcWorkshopOpenAIError(c, http.StatusBadRequest, err)
 		return
 	}
+	if taskErr := reviewTaskPrompt(c); taskErr != nil {
+		abortAigcWorkshopOpenAIError(c, taskErr.StatusCode, taskErr.Error)
+		return
+	}
 	if err = validateAigcWorkshopVideoReferenceURLs(request); err != nil {
 		abortAigcWorkshopOpenAIError(c, http.StatusBadRequest, err)
 		return

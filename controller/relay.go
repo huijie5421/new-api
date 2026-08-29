@@ -78,6 +78,13 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		newAPIError *types.NewAPIError
 		ws          *websocket.Conn
 	)
+	promptReviewInternal := service.IsPromptReviewRequest(c)
+	if promptReviewInternal {
+		service.MarkPromptReviewInternal(c)
+		// These gateway-only headers must never be forwarded to an upstream channel.
+		c.Request.Header.Del(service.PromptReviewInternalHeader)
+		c.Request.Header.Del(service.PromptReviewInternalSecretHeader)
+	}
 
 	if relayFormat == types.RelayFormatOpenAIRealtime {
 		var err error
@@ -136,12 +143,22 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		meta = fastTokenCountMetaForPricing(request)
 	}
 
-	if needSensitiveCheck && meta != nil {
-		contains, words := service.CheckSensitiveText(meta.CombineText)
-		if contains {
-			logger.LogWarn(c, fmt.Sprintf("user sensitive words detected: %s", strings.Join(words, ", ")))
-			newAPIError = types.NewError(err, types.ErrorCodeSensitiveWordsDetected)
+	if needSensitiveCheck && meta != nil && !promptReviewInternal {
+		result, words, blocked, reviewErr := service.ReviewPromptAfterKeyword(c.Request.Context(), meta.CombineText)
+		if reviewErr != nil && !blocked {
+			logger.LogWarn(c, "prompt review failed but fail mode allows request")
+		}
+		if blocked {
+			logger.LogWarn(c, fmt.Sprintf("prompt review blocked request: fingerprint=%s categories=%s reason=%s", service.PromptReviewTextFingerprint(meta.CombineText), strings.Join(result.Categories, ","), result.ReasonCode))
+			if reviewErr == nil && result.ReasonCode == "keyword_hit" {
+				newAPIError = types.NewError(errors.New("sensitive words detected"), types.ErrorCodeSensitiveWordsDetected, types.ErrOptionWithSkipRetry())
+			} else {
+				newAPIError = service.PromptReviewError(reviewErr)
+			}
 			return
+		}
+		if len(words) > 0 {
+			logger.LogInfo(c, fmt.Sprintf("prompt review allowed keyword hit: fingerprint=%s categories=%s reason=%s", service.PromptReviewTextFingerprint(meta.CombineText), strings.Join(result.Categories, ","), result.ReasonCode))
 		}
 	}
 
@@ -163,7 +180,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 
 	if priceData.FreeModel {
 		logger.LogInfo(c, fmt.Sprintf("模型 %s 免费，跳过预扣费", relayInfo.OriginModelName))
-	} else {
+	} else if !promptReviewInternal {
 		newAPIError = service.PreConsumeBilling(c, priceData.QuotaToPreConsume, relayInfo)
 		if newAPIError != nil {
 			return
@@ -505,6 +522,10 @@ func RelayTask(c *gin.Context) {
 		respondTaskError(c, taskErr)
 		return
 	}
+	if taskErr := reviewTaskPrompt(c); taskErr != nil {
+		respondTaskError(c, taskErr)
+		return
+	}
 
 	var result *relay.TaskSubmitResult
 	var taskErr *taskdto.TaskError
@@ -626,6 +647,32 @@ func executeTaskRelayAttempt(c *gin.Context, relayInfo *relaycommon.RelayInfo, c
 	}
 	c.Request.Body = io.NopCloser(bodyStorage)
 	return relay.RelayTaskSubmit(c, relayInfo)
+}
+
+func reviewTaskPrompt(c *gin.Context) *taskdto.TaskError {
+	if c == nil || service.IsPromptReviewRequest(c) || !setting.ShouldCheckPromptSensitive() {
+		return nil
+	}
+	storage, err := common.GetBodyStorage(c)
+	if err != nil {
+		return nil
+	}
+	body, err := storage.Bytes()
+	if err != nil {
+		return nil
+	}
+	var request relaycommon.TaskSubmitReq
+	if err := common.Unmarshal(body, &request); err != nil || strings.TrimSpace(request.Prompt) == "" {
+		return nil
+	}
+	_, _, blocked, reviewErr := service.ReviewPromptAfterKeyword(c.Request.Context(), request.Prompt)
+	if !blocked {
+		return nil
+	}
+	if reviewErr != nil {
+		return service.TaskErrorWrapperLocal(reviewErr, "prompt_review_failed", http.StatusUnprocessableEntity)
+	}
+	return service.TaskErrorWrapperLocal(errors.New("sensitive words detected"), string(types.ErrorCodeSensitiveWordsDetected), http.StatusUnprocessableEntity)
 }
 
 // respondTaskError 统一输出 Task 错误响应（含 429 限流提示改写）

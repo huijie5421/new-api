@@ -1,3 +1,4 @@
+import { PromptReviewSection } from '../request-limits/prompt-review-section'
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -50,6 +51,22 @@ const SECURITY_SECTIONS = [
           CheckSensitiveEnabled: settings.CheckSensitiveEnabled,
           CheckSensitiveOnPromptEnabled: settings.CheckSensitiveOnPromptEnabled,
           SensitiveWords: settings.SensitiveWords,
+        }}
+      />
+    ),
+  },
+  {
+    id: 'prompt-review',
+    titleKey: 'Semantic prompt review',
+    build: (settings: SecuritySettings) => (
+      <PromptReviewSection
+        defaultValues={{
+          PromptReviewEnabled: settings.PromptReviewEnabled,
+          PromptReviewModel: settings.PromptReviewModel,
+          PromptReviewReasoningEffort: settings.PromptReviewReasoningEffort,
+          PromptReviewTimeoutMs: settings.PromptReviewTimeoutMs,
+          PromptReviewBlockThreshold: settings.PromptReviewBlockThreshold,
+          PromptReviewFailMode: settings.PromptReviewFailMode,
         }}
       />
     ),

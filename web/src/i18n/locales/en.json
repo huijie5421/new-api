@@ -5524,6 +5524,25 @@
     "Maximum channel concurrency": "Maximum channel concurrency",
     "Maximum active upstream requests for this channel. Use 0 for unlimited.": "Maximum active upstream requests for this channel. Use 0 for unlimited.",
     "Channel RPM limit": "Channel RPM limit",
-    "Maximum accepted upstream requests in a rolling minute. Use 0 for unlimited.": "Maximum accepted upstream requests in a rolling minute. Use 0 for unlimited."
+    "Maximum accepted upstream requests in a rolling minute. Use 0 for unlimited.": "Maximum accepted upstream requests in a rolling minute. Use 0 for unlimited.",
+    "Semantic prompt review": "Semantic prompt review",
+    "Enable semantic second pass": "Enable semantic second pass",
+    "After a keyword match, send text-only content to the configured model for a second decision. Requests without a keyword match are not sent for review.": "After a keyword match, send text-only content to the configured model for a second decision. Requests without a keyword match are not sent for review.",
+    "Review model": "Review model",
+    "Defaults to gpt-5.6-luna. You can enter another model available in this gateway.": "Defaults to gpt-5.6-luna. You can enter another model available in this gateway.",
+    "Reasoning effort": "Reasoning effort",
+    "Review timeout": "Review timeout",
+    "Milliseconds, 250-10000": "Milliseconds, 250-10000",
+    "Block confidence threshold": "Block confidence threshold",
+    "Only high-confidence block decisions are enforced": "Only high-confidence block decisions are enforced",
+    "Review failure policy": "Review failure policy",
+    "Keep keyword block": "Keep keyword block",
+    "Block on review error": "Block on review error",
+    "Allow on review error": "Allow on review error",
+    "Controls requests when the second-pass model times out or fails.": "Controls requests when the second-pass model times out or fails.",
+    "Save prompt review": "Save prompt review",
+    "Low": "Low",
+    "Medium": "Medium",
+    "High": "High"
   }
 }

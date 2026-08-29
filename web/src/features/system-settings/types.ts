@@ -383,6 +383,12 @@ export type SecuritySettings = {
   CheckSensitiveEnabled: boolean
   CheckSensitiveOnPromptEnabled: boolean
   SensitiveWords: string
+  PromptReviewEnabled: boolean
+  PromptReviewModel: string
+  PromptReviewReasoningEffort: 'low' | 'medium' | 'high'
+  PromptReviewTimeoutMs: number
+  PromptReviewBlockThreshold: number
+  PromptReviewFailMode: 'block_on_keyword' | 'block' | 'allow'
   'fetch_setting.enable_ssrf_protection': boolean
   'fetch_setting.allow_private_ip': boolean
   'fetch_setting.domain_filter_mode': boolean

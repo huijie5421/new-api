@@ -5529,6 +5529,25 @@
     "Maximum channel concurrency": "渠道最大并发数",
     "Maximum active upstream requests for this channel. Use 0 for unlimited.": "该渠道同时处理的上游请求上限，填写 0 表示不限制。",
     "Channel RPM limit": "渠道 RPM 上限",
-    "Maximum accepted upstream requests in a rolling minute. Use 0 for unlimited.": "该渠道滚动一分钟内接受的上游请求上限，填写 0 表示不限制。"
+    "Maximum accepted upstream requests in a rolling minute. Use 0 for unlimited.": "该渠道滚动一分钟内接受的上游请求上限，填写 0 表示不限制。",
+    "Semantic prompt review": "语义二次审查",
+    "Enable semantic second pass": "启用语义二次审查",
+    "After a keyword match, send text-only content to the configured model for a second decision. Requests without a keyword match are not sent for review.": "命中关键词后，仅将文字内容发送到配置的模型进行二次判定；未命中关键词的请求不会发送审查。",
+    "Review model": "审查模型",
+    "Defaults to gpt-5.6-luna. You can enter another model available in this gateway.": "默认使用 gpt-5.6-luna，也可以填写本站可用的其他模型。",
+    "Reasoning effort": "思考强度",
+    "Review timeout": "审查超时",
+    "Milliseconds, 250-10000": "毫秒，范围 250-10000",
+    "Block confidence threshold": "拦截置信度阈值",
+    "Only high-confidence block decisions are enforced": "仅执行高于阈值的拦截判定",
+    "Review failure policy": "审查失败策略",
+    "Keep keyword block": "保持关键词拦截",
+    "Block on review error": "审查出错时拦截",
+    "Allow on review error": "审查出错时放行",
+    "Controls requests when the second-pass model times out or fails.": "控制二次审查模型超时或出错时的请求处理方式。",
+    "Save prompt review": "保存二次审查设置",
+    "Low": "低",
+    "Medium": "中",
+    "High": "高"
   }
 }
