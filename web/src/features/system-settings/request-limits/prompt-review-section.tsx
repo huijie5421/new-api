@@ -108,7 +108,7 @@ export function PromptReviewSection({
                   <FormLabel>{t('Enable semantic second pass')}</FormLabel>
                   <FormDescription>
                     {t(
-                      'After a keyword match, send text-only content to the configured model for a second decision. Requests without a keyword match are not sent for review.'
+                      'When enabled, send text-only requests to the configured model for a second decision. Keyword filtering remains the fast first pass.'
                     )}
                   </FormDescription>
                 </SettingsSwitchContent>

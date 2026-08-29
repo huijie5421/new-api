@@ -5527,7 +5527,7 @@
     "Maximum accepted upstream requests in a rolling minute. Use 0 for unlimited.": "Maximum accepted upstream requests in a rolling minute. Use 0 for unlimited.",
     "Semantic prompt review": "Semantic prompt review",
     "Enable semantic second pass": "Enable semantic second pass",
-    "After a keyword match, send text-only content to the configured model for a second decision. Requests without a keyword match are not sent for review.": "After a keyword match, send text-only content to the configured model for a second decision. Requests without a keyword match are not sent for review.",
+    "When enabled, send text-only requests to the configured model for a second decision. Keyword filtering remains the fast first pass.": "When enabled, send text-only requests to the configured model for a second decision. Keyword filtering remains the fast first pass.",
     "Review model": "Review model",
     "Defaults to gpt-5.6-luna. You can enter another model available in this gateway.": "Defaults to gpt-5.6-luna. You can enter another model available in this gateway.",
     "Reasoning effort": "Reasoning effort",

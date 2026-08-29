@@ -84,11 +84,11 @@ func PromptReviewAllows(result PromptReviewResult) bool {
 }
 
 // ReviewPromptAfterKeyword keeps the inexpensive Aho-Corasick pass as the
-// first gate. The semantic model is called only when a configured keyword was
-// found, which keeps the feature predictable for normal traffic.
+// first gate. When semantic review is enabled, it also reviews text without a
+// keyword hit so the administrator switch is effective with an empty list.
 func ReviewPromptAfterKeyword(ctx context.Context, text string) (PromptReviewResult, []string, bool, error) {
 	contains, words := CheckSensitiveText(text)
-	if !contains {
+	if !contains && !setting.PromptReviewEnabled {
 		return PromptReviewResult{Decision: "allow", ReasonCode: "keyword_miss"}, words, false, nil
 	}
 	if !setting.PromptReviewEnabled {
