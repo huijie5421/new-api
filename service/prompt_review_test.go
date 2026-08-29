@@ -90,7 +90,7 @@ func TestReviewPromptAfterKeywordUsesKeywordGate(t *testing.T) {
 		setting.SensitiveWords = originalWords
 	})
 
-	setting.PromptReviewEnabled = true
+	setting.PromptReviewEnabled = false
 	setting.SensitiveWords = []string{"fixture_keyword"}
 
 	result, words, blocked, err := ReviewPromptAfterKeyword(context.Background(), "ordinary text")
@@ -98,4 +98,23 @@ func TestReviewPromptAfterKeywordUsesKeywordGate(t *testing.T) {
 	require.False(t, blocked)
 	require.Empty(t, words)
 	require.Equal(t, "keyword_miss", result.ReasonCode)
+}
+
+func TestReviewPromptAfterKeywordReviewsTextWhenEnabled(t *testing.T) {
+	originalEnabled := setting.PromptReviewEnabled
+	originalToken := setting.PromptReviewToken
+	originalWords := setting.SensitiveWords
+	t.Cleanup(func() {
+		setting.PromptReviewEnabled = originalEnabled
+		setting.PromptReviewToken = originalToken
+		setting.SensitiveWords = originalWords
+	})
+
+	setting.PromptReviewEnabled = true
+	setting.PromptReviewToken = ""
+	setting.SensitiveWords = nil
+	_, words, blocked, err := ReviewPromptAfterKeyword(context.Background(), "ordinary text")
+	require.Error(t, err)
+	require.True(t, blocked)
+	require.Empty(t, words)
 }
