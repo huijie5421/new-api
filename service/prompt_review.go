@@ -96,7 +96,7 @@ func ReviewPromptAfterKeyword(ctx context.Context, text string) (PromptReviewRes
 	}
 	result, err := ReviewPromptText(ctx, text)
 	if err != nil {
-		return result, words, PromptReviewShouldBlockOnError(true), err
+		return result, words, PromptReviewShouldBlockOnError(contains), err
 	}
 	return result, words, !PromptReviewAllows(result), nil
 }
