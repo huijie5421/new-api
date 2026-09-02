@@ -147,7 +147,7 @@ const aigcWorkshopEncodedGroupPrefix = "uri:"
 var defaultAigcWorkshopModelConfig = aigcWorkshopModelConfig{
 	ImageGroups: []string{"GPT生图专用", "AzGPT生图", "abobe渠道生图"},
 	VideoGroups: []string{"即梦", "MiniMax/可灵视频"},
-	TextGroups:  []string{"GPT PLUS号池", "GPT PRO号池", "CCMAX极速版"},
+	TextGroups:  []string{"GptPro稳定", "CCMAX极速版"},
 }
 
 func AigcWorkshopModelBinding() gin.HandlerFunc {
