@@ -761,6 +761,104 @@ For commercial licensing, please contact support@quantumnous.com
     border-color: color-mix(in oklch, var(--primary) 64%, var(--border));
   }
 
+  .pricing-page-shell {
+    isolation: isolate;
+  }
+
+  .pricing-hero {
+    isolation: isolate;
+    background: color-mix(in oklch, var(--card) 93%, var(--primary) 7%);
+    box-shadow: 0 24px 60px -44px
+      color-mix(in oklch, var(--foreground) 38%, transparent);
+  }
+
+  .pricing-hero::after {
+    position: absolute;
+    right: -5rem;
+    bottom: -9rem;
+    width: 22rem;
+    height: 22rem;
+    border: 1px solid color-mix(in oklch, var(--primary) 30%, transparent);
+    border-radius: 999px;
+    content: '';
+    opacity: 0.45;
+  }
+
+  .pricing-hero-grid {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(
+        90deg,
+        color-mix(in oklch, var(--primary) 7%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        color-mix(in oklch, var(--primary) 7%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 38px 38px;
+    mask-image: linear-gradient(115deg, black, transparent 76%);
+    opacity: 0.7;
+  }
+
+  .pricing-hero-title {
+    color: var(--foreground);
+  }
+
+  .pricing-hero-stat {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    column-gap: 0.5rem;
+    border: 1px solid color-mix(in oklch, var(--border) 84%, transparent);
+    border-radius: 0.9rem;
+    background: color-mix(in oklch, var(--background) 58%, transparent);
+    padding: 0.85rem;
+    backdrop-filter: blur(12px);
+  }
+
+  .pricing-hero-stat strong {
+    font-size: 1.1rem;
+    font-weight: 650;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pricing-hero-stat span {
+    grid-column: 1 / -1;
+    margin-top: 0.45rem;
+    color: var(--muted-foreground);
+    font-size: 0.68rem;
+    white-space: nowrap;
+  }
+
+  .pricing-model-card {
+    background: color-mix(in oklch, var(--card) 94%, var(--primary) 6%);
+    box-shadow: 0 12px 30px -28px
+      color-mix(in oklch, var(--foreground) 45%, transparent);
+    transition:
+      transform 180ms ease,
+      border-color 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  .pricing-model-card:hover {
+    border-color: color-mix(in oklch, var(--primary) 48%, var(--border));
+    box-shadow: 0 20px 42px -30px
+      color-mix(in oklch, var(--primary) 48%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .dashboard-section-intro {
+    border: 1px solid color-mix(in oklch, var(--border) 86%, transparent);
+    border-radius: 1rem;
+    background: color-mix(in oklch, var(--card) 92%, var(--primary) 8%);
+    padding: 1rem 1.1rem;
+  }
+
   .app-top-nav a {
     letter-spacing: -0.01em;
   }

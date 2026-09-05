@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { getRouteApi, useNavigate } from '@tanstack/react-router'
-import { Eye, EyeOff } from 'lucide-react'
+import { BarChart3, Eye, EyeOff, GitBranch, UsersRound } from 'lucide-react'
 import { useState, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -176,18 +176,29 @@ function PerformanceOverviewFallback() {
   )
 }
 
-const SECTION_META: Record<DashboardSectionId, { titleKey: string }> = {
+const SECTION_META: Record<
+  DashboardSectionId,
+  { titleKey: string; descriptionKey: string; icon: typeof BarChart3 }
+> = {
   overview: {
     titleKey: 'Overview',
+    descriptionKey: 'A live view of your gateway workspace.',
+    icon: BarChart3,
   },
   models: {
     titleKey: 'Model Call Analytics',
+    descriptionKey: 'Understand which models drive volume, cost, and latency.',
+    icon: BarChart3,
   },
   flow: {
     titleKey: 'Flow',
+    descriptionKey: 'Trace traffic from users and keys into upstream channels.',
+    icon: GitBranch,
   },
   users: {
     titleKey: 'User Analytics',
+    descriptionKey: 'See usage concentration and account activity at a glance.',
+    icon: UsersRound,
   },
 }
 
@@ -261,8 +272,7 @@ export function Dashboard() {
     },
     [navigate]
   )
-  const showSectionTabs =
-    activeSection !== 'overview' && visibleSections.length > 1
+  const showSectionTabs = visibleSections.length > 1
   const modelActions =
     activeSection === 'models' ? (
       <>
@@ -322,7 +332,7 @@ export function Dashboard() {
       <SectionPageLayout.Title>{t(meta.titleKey)}</SectionPageLayout.Title>
       <SectionPageLayout.Content>
         <div className='space-y-3 sm:space-y-4'>
-          {activeSection !== 'overview' && (
+          {(showSectionTabs || sectionActions != null) && (
             <div className='flex flex-wrap items-center justify-between gap-1.5 sm:gap-2'>
               {showSectionTabs ? (
                 <Tabs value={activeSection} onValueChange={handleSectionChange}>
@@ -342,6 +352,24 @@ export function Dashboard() {
                   {sectionActions}
                 </div>
               )}
+            </div>
+          )}
+          {activeSection !== 'overview' && (
+            <div className='dashboard-section-intro'>
+              <div className='flex items-start gap-3'>
+                {(() => {
+                  const Icon = meta.icon
+                  return (
+                    <Icon className='text-primary mt-0.5 size-5 shrink-0' />
+                  )
+                })()}
+                <div>
+                  <p className='text-sm font-semibold'>{t(meta.titleKey)}</p>
+                  <p className='text-muted-foreground mt-1 text-xs leading-5 sm:text-sm'>
+                    {t(meta.descriptionKey)}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
           {activeSection === 'overview' && <OverviewDashboard />}
