@@ -103,17 +103,17 @@ For commercial licensing, please contact support@quantumnous.com
    * in theme-presets.css. Default mirrors `--font-sans` so behavior is
    * identical when no font preference is set. */
   --font-body: var(--font-sans);
-  --background: oklch(0.985 0.008 95);
+  --background: oklch(0.985 0.006 230);
   --foreground: oklch(0.2 0.025 230);
-  --card: oklch(0.998 0.004 95);
+  --card: oklch(0.998 0.002 230);
   --card-foreground: oklch(0.2 0.025 230);
-  --popover: oklch(0.998 0.004 95);
+  --popover: oklch(0.998 0.002 230);
   --popover-foreground: oklch(0.2 0.025 230);
-  --primary: oklch(0.57 0.115 190);
-  --primary-foreground: oklch(0.98 0.008 95);
-  --secondary: oklch(0.95 0.012 95);
-  --secondary-foreground: oklch(0.29 0.06 210);
-  --muted: oklch(0.958 0.009 95);
+  --primary: oklch(0.55 0.14 190);
+  --primary-foreground: oklch(0.98 0.006 230);
+  --secondary: oklch(0.95 0.012 230);
+  --secondary-foreground: oklch(0.29 0.06 220);
+  --muted: oklch(0.958 0.008 230);
   --muted-foreground: oklch(0.47 0.025 230);
   --accent: color-mix(in oklch, var(--primary) 12%, var(--background));
   --accent-foreground: oklch(0.145 0 0);
@@ -127,11 +127,11 @@ For commercial licensing, please contact support@quantumnous.com
   --info-foreground: oklch(0.985 0 0);
   --neutral: oklch(0.708 0 0);
   --neutral-foreground: oklch(0.145 0 0);
-  --border: oklch(0.9 0.012 95);
-  --input: oklch(0.9 0.012 95);
+  --border: oklch(0.9 0.012 230);
+  --input: oklch(0.9 0.012 230);
   --ring: oklch(0.61 0.12 190);
   --chart-1: oklch(0.63 0.14 190);
-  --chart-2: oklch(0.7 0.13 55);
+  --chart-2: oklch(0.7 0.13 75);
   --chart-3: oklch(0.58 0.1 230);
   --chart-4: oklch(0.68 0.16 330);
   --chart-5: oklch(0.67 0.14 145);
@@ -140,8 +140,8 @@ For commercial licensing, please contact support@quantumnous.com
   --overview-accent-3: oklch(0.58 0.1 230);
   --sidebar: color-mix(in oklch, var(--foreground) 1.7%, var(--background));
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.57 0.115 190);
-  --sidebar-primary-foreground: oklch(0.98 0.008 95);
+  --sidebar-primary: oklch(0.55 0.14 190);
+  --sidebar-primary-foreground: oklch(0.98 0.006 230);
   --sidebar-accent: color-mix(in oklch, var(--primary) 12%, var(--background));
   --sidebar-accent-foreground: oklch(0.579 0.196 255.909);
   --sidebar-border: oklch(0.93 0 0);
@@ -179,19 +179,19 @@ For commercial licensing, please contact support@quantumnous.com
 }
 
 .dark {
-  /* Ink canvas with cool glass surfaces and warm data accents. */
+  /* Ink canvas with cool glass surfaces and clear signal accents. */
   --background: oklch(0.16 0.018 230);
-  --foreground: oklch(0.96 0.008 95);
+  --foreground: oklch(0.96 0.008 230);
   --card: oklch(0.205 0.02 230);
-  --card-foreground: oklch(0.96 0.008 95);
+  --card-foreground: oklch(0.96 0.008 230);
   --popover: oklch(0.23 0.022 230);
-  --popover-foreground: oklch(0.96 0.008 95);
+  --popover-foreground: oklch(0.96 0.008 230);
   --primary: oklch(0.7 0.12 185);
   --primary-foreground: oklch(0.14 0.02 230);
   --secondary: oklch(0.27 0.02 230);
   --secondary-foreground: oklch(0.9 0.04 190);
   --muted: oklch(0.235 0.018 230);
-  --muted-foreground: oklch(0.76 0.012 95);
+  --muted-foreground: oklch(0.76 0.012 230);
   --accent: color-mix(in oklch, var(--primary) 20%, var(--background));
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
@@ -208,14 +208,14 @@ For commercial licensing, please contact support@quantumnous.com
   --input: oklch(1 0 0 / 16%);
   --ring: oklch(0.7 0.12 185);
   --chart-1: oklch(0.76 0.14 185);
-  --chart-2: oklch(0.78 0.14 70);
+  --chart-2: oklch(0.78 0.14 75);
   --chart-3: oklch(0.75 0.11 230);
   --chart-4: oklch(0.78 0.14 330);
   --chart-5: oklch(0.76 0.14 145);
   --sidebar: oklch(0.225 0 0);
   --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.588 0.123 246.488);
-  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-primary: oklch(0.7 0.12 185);
+  --sidebar-primary-foreground: oklch(0.14 0.02 230);
   --sidebar-accent: color-mix(in oklch, var(--primary) 20%, var(--background));
   --sidebar-accent-foreground: oklch(0.9 0.05 250);
   --sidebar-border: oklch(1 0 0 / 11%);

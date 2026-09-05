@@ -320,7 +320,7 @@ export function UserAuthForm({
             variant='outline'
             disabled={passkeyButtonDisabled}
             onClick={handlePasskeyLogin}
-            className='border-border/70 bg-background/55 h-11 w-full justify-center gap-2 rounded-xl text-[13px] shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#78aebb]/50 hover:bg-[#eef7f8] hover:shadow-md dark:hover:bg-[#183036]'
+            className='border-border/70 bg-card/60 h-11 w-full justify-center gap-2 rounded-xl text-[13px] shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md'
           >
             {isPasskeyLoading ? (
               <Loader2 className='h-4 w-4 animate-spin' />
@@ -373,7 +373,7 @@ export function UserAuthForm({
                       <UserRound className='text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2' />
                       <Input
                         placeholder={t('Enter your username or email')}
-                        className='border-border/80 bg-background/75 placeholder:text-muted-foreground/55 focus-visible:bg-background h-12 rounded-xl pr-4 pl-10 shadow-sm transition-[border,box-shadow,background] focus-visible:ring-2 focus-visible:ring-[#78aebb]/25'
+                        className='border-border/80 bg-card/70 placeholder:text-muted-foreground/55 focus-visible:bg-card focus-visible:ring-primary/20 h-12 rounded-xl pr-4 pl-10 shadow-sm transition-[border,box-shadow,background] focus-visible:ring-2'
                         {...field}
                       />
                     </div>
@@ -397,7 +397,7 @@ export function UserAuthForm({
                       <LockKeyhole className='text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 z-10 size-4 -translate-y-1/2' />
                       <PasswordInput
                         placeholder={t('Enter password')}
-                        className='[&>input]:border-border/80 [&>input]:bg-background/75 [&>input]:placeholder:text-muted-foreground/55 [&>input]:focus-visible:bg-background rounded-xl [&>input]:h-12 [&>input]:rounded-xl [&>input]:pr-11 [&>input]:pl-10 [&>input]:shadow-sm [&>input]:transition-[border,box-shadow,background] [&>input]:focus-visible:ring-2 [&>input]:focus-visible:ring-[#78aebb]/25'
+                        className='[&>input]:border-border/80 [&>input]:bg-card/70 [&>input]:placeholder:text-muted-foreground/55 [&>input]:focus-visible:bg-card [&>input]:focus-visible:ring-primary/20 rounded-xl [&>input]:h-12 [&>input]:rounded-xl [&>input]:pr-11 [&>input]:pl-10 [&>input]:shadow-sm [&>input]:transition-[border,box-shadow,background] [&>input]:focus-visible:ring-2'
                         {...field}
                       />
                     </div>
@@ -416,7 +416,7 @@ export function UserAuthForm({
             {/* Submit Button */}
             <Button
               type='submit'
-              className='mt-2 h-12 w-full justify-center gap-2 rounded-xl bg-[#10252b] text-white shadow-[0_12px_30px_-14px_rgba(16,37,43,0.8)] transition-all hover:-translate-y-0.5 hover:bg-[#19373f] hover:shadow-[0_16px_34px_-14px_rgba(16,37,43,0.9)] dark:bg-[#d6ecef] dark:text-[#10252b] dark:hover:bg-white'
+              className='bg-primary text-primary-foreground hover:bg-primary/90 mt-2 h-12 w-full justify-center gap-2 rounded-xl shadow-[0_12px_30px_-14px_rgba(52,205,174,0.7)] transition-all hover:-translate-y-0.5 hover:shadow-[0_16px_34px_-14px_rgba(52,205,174,0.8)]'
               disabled={isLoading || (requiresLegalConsent && !agreedToLegal)}
             >
               {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}

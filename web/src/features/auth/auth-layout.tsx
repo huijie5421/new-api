@@ -127,7 +127,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
           </div>
         </section>
 
-        <main className='relative flex min-h-svh items-center justify-center px-5 py-8 sm:px-10 lg:px-14 xl:px-24'>
+        <main className='auth-form-column relative flex min-h-svh items-center justify-center px-5 py-8 sm:px-10 lg:px-14 xl:px-24'>
           <div className='auth-mobile-brand absolute top-6 left-5 flex items-center gap-3 lg:hidden'>
             <div className='border-border/70 bg-card flex size-9 items-center justify-center overflow-hidden rounded-xl border shadow-sm'>
               {loading ? (
