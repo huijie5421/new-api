@@ -97,7 +97,7 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
       {/* 桌面端水平导航 */}
       <nav
         className={cn(
-          'hidden items-center space-x-4 lg:flex lg:space-x-4 xl:space-x-6',
+          'app-top-nav hidden items-center gap-1 lg:flex xl:gap-1.5',
           className
         )}
         {...props}
@@ -109,7 +109,12 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
               href={href}
               target='_blank'
               rel='noopener noreferrer'
-              className={`hover:text-primary text-sm font-medium transition-colors ${isActive ? '' : 'text-muted-foreground'}`}
+              className={cn(
+                'rounded-lg px-2.5 py-1.5 text-sm font-medium transition-all hover:bg-accent hover:text-foreground',
+                isActive
+                  ? 'bg-accent text-foreground shadow-sm'
+                  : 'text-muted-foreground'
+              )}
             >
               {title}
             </a>
@@ -118,7 +123,12 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
               key={`${title}-${href}`}
               to={href}
               disabled={disabled}
-              className={`hover:text-primary text-sm font-medium transition-colors ${isActive ? '' : 'text-muted-foreground'}`}
+              className={cn(
+                'rounded-lg px-2.5 py-1.5 text-sm font-medium transition-all hover:bg-accent hover:text-foreground',
+                isActive
+                  ? 'bg-accent text-foreground shadow-sm'
+                  : 'text-muted-foreground'
+              )}
             >
               {title}
             </Link>

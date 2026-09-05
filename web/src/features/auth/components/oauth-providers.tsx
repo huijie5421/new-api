@@ -163,7 +163,7 @@ export function OAuthProviders({
           </div>
         </div>
 
-        <div className='flex flex-col gap-2'>
+        <div className='auth-oauth-grid grid gap-2 sm:grid-cols-2'>
           {providerButtons.map(
             ({ key, label, onClick, icon, disabled: extraDisabled }) => (
               <Button
@@ -172,7 +172,7 @@ export function OAuthProviders({
                 type='button'
                 disabled={disabled || isLoading || extraDisabled}
                 onClick={onClick}
-                className='h-11 w-full justify-center gap-2 rounded-lg'
+                className='border-border/70 bg-background/55 h-11 w-full justify-center gap-2 rounded-xl text-[13px] shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#78aebb]/50 hover:bg-[#eef7f8] hover:shadow-md dark:hover:bg-[#183036]'
               >
                 {icon}
                 {label}

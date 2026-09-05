@@ -19,7 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from '@tanstack/react-router'
 import axios from 'axios'
-import { Loader2, LogIn, KeyRound } from 'lucide-react'
+import { KeyRound, Loader2, LogIn, LockKeyhole, UserRound } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -320,7 +320,7 @@ export function UserAuthForm({
             variant='outline'
             disabled={passkeyButtonDisabled}
             onClick={handlePasskeyLogin}
-            className='h-11 w-full justify-center gap-2 rounded-lg'
+            className='border-border/70 bg-background/55 h-11 w-full justify-center gap-2 rounded-xl text-[13px] shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#78aebb]/50 hover:bg-[#eef7f8] hover:shadow-md dark:hover:bg-[#183036]'
           >
             {isPasskeyLoading ? (
               <Loader2 className='h-4 w-4 animate-spin' />
@@ -352,7 +352,7 @@ export function UserAuthForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className={cn('grid gap-4', className)}
+        className={cn('auth-form grid gap-4', className)}
         {...props}
       >
         {hasAlternativeLogin && alternativeLoginMethods}
@@ -365,12 +365,18 @@ export function UserAuthForm({
               name='username'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('Username or Email')}</FormLabel>
+                  <FormLabel className='text-foreground/80 text-xs font-semibold tracking-wide'>
+                    {t('Username or Email')}
+                  </FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder={t('Enter your username or email')}
-                      {...field}
-                    />
+                    <div className='relative'>
+                      <UserRound className='text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2' />
+                      <Input
+                        placeholder={t('Enter your username or email')}
+                        className='border-border/80 bg-background/75 placeholder:text-muted-foreground/55 focus-visible:bg-background h-12 rounded-xl pr-4 pl-10 shadow-sm transition-[border,box-shadow,background] focus-visible:ring-2 focus-visible:ring-[#78aebb]/25'
+                        {...field}
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -383,12 +389,18 @@ export function UserAuthForm({
               name='password'
               render={({ field }) => (
                 <FormItem className='relative'>
-                  <FormLabel>{t('Password')}</FormLabel>
+                  <FormLabel className='text-foreground/80 text-xs font-semibold tracking-wide'>
+                    {t('Password')}
+                  </FormLabel>
                   <FormControl>
-                    <PasswordInput
-                      placeholder={t('Enter password')}
-                      {...field}
-                    />
+                    <div className='relative'>
+                      <LockKeyhole className='text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 z-10 size-4 -translate-y-1/2' />
+                      <PasswordInput
+                        placeholder={t('Enter password')}
+                        className='[&>input]:border-border/80 [&>input]:bg-background/75 [&>input]:placeholder:text-muted-foreground/55 [&>input]:focus-visible:bg-background rounded-xl [&>input]:h-12 [&>input]:rounded-xl [&>input]:pr-11 [&>input]:pl-10 [&>input]:shadow-sm [&>input]:transition-[border,box-shadow,background] [&>input]:focus-visible:ring-2 [&>input]:focus-visible:ring-[#78aebb]/25'
+                        {...field}
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                   <Link
@@ -404,7 +416,7 @@ export function UserAuthForm({
             {/* Submit Button */}
             <Button
               type='submit'
-              className='mt-2 w-full justify-center gap-2'
+              className='mt-2 h-12 w-full justify-center gap-2 rounded-xl bg-[#10252b] text-white shadow-[0_12px_30px_-14px_rgba(16,37,43,0.8)] transition-all hover:-translate-y-0.5 hover:bg-[#19373f] hover:shadow-[0_16px_34px_-14px_rgba(16,37,43,0.9)] dark:bg-[#d6ecef] dark:text-[#10252b] dark:hover:bg-white'
               disabled={isLoading || (requiresLegalConsent && !agreedToLegal)}
             >
               {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}

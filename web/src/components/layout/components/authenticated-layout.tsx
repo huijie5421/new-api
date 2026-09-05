@@ -53,7 +53,7 @@ export function AuthenticatedLayout(props: AuthenticatedLayoutProps) {
                 isAigcWorkshop
                   ? 'h-[calc(100svh-var(--app-header-height,0px))] w-full'
                   : 'h-[calc(100svh-var(--app-header-height,0px))]',
-                'min-h-0 overflow-hidden',
+                'app-content-surface min-h-0 overflow-hidden',
                 !isAigcWorkshop &&
                   'peer-data-[variant=inset]:h-[calc(100svh-var(--app-header-height,0px)-(var(--spacing)*4))]'
               )}
