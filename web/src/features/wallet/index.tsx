@@ -1,3 +1,9 @@
+import {
+  ArrowUpRight,
+  CreditCard,
+  ShieldCheck,
+  WalletCards,
+} from 'lucide-react'
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -21,6 +27,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { SectionPageLayout } from '@/components/layout'
+import { Button } from '@/components/ui/button'
 import { useStatus } from '@/hooks/use-status'
 import { useSystemConfig } from '@/hooks/use-system-config'
 import { getSelf } from '@/lib/api'
@@ -324,6 +331,40 @@ export function Wallet(props: WalletProps) {
         <SectionPageLayout.Title>{t('Wallet')}</SectionPageLayout.Title>
         <SectionPageLayout.Content>
           <div className='mx-auto flex w-full max-w-7xl flex-col gap-4 sm:gap-5'>
+            <section className='wallet-command-header relative overflow-hidden rounded-2xl border p-5 shadow-xs sm:p-6'>
+              <div className='wallet-command-header-mark' aria-hidden='true' />
+              <div className='relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between'>
+                <div className='max-w-2xl'>
+                  <div className='text-primary mb-3 flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] uppercase'>
+                    <WalletCards className='size-3.5' />
+                    Wallet / Finance
+                  </div>
+                  <h2 className='text-2xl font-semibold tracking-[-0.035em] sm:text-3xl'>
+                    {t('Keep your gateway moving.')}
+                  </h2>
+                  <p className='text-muted-foreground mt-2 max-w-xl text-sm leading-6'>
+                    {t(
+                      'Add credits, manage subscriptions, and keep every production request ready to run.'
+                    )}
+                  </p>
+                </div>
+                <div className='flex flex-wrap items-center gap-2'>
+                  <span className='wallet-command-status text-muted-foreground inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs'>
+                    <ShieldCheck className='text-success size-3.5' />
+                    {t('Secure billing')}
+                  </span>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => setBillingDialogOpen(true)}
+                  >
+                    <CreditCard data-icon='inline-start' />
+                    {t('Billing history')}
+                    <ArrowUpRight data-icon='inline-end' />
+                  </Button>
+                </div>
+              </div>
+            </section>
             <WalletStatsCard user={user} loading={userLoading} />
 
             <div

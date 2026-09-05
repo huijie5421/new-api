@@ -34,6 +34,7 @@ import {
   Layers3,
   Library,
   ListChecks,
+  LockKeyhole,
   Loader2,
   MessageSquare,
   Package,
@@ -2499,7 +2500,7 @@ export function AigcWorkshop(props: AigcWorkshopProps) {
   }
 
   return (
-    <div className='relative flex h-full min-h-0 w-full min-w-0 flex-1 overflow-hidden bg-[radial-gradient(circle_at_18%_18%,rgba(129,140,248,0.22),transparent_34%),radial-gradient(circle_at_84%_20%,rgba(244,114,182,0.20),transparent_32%),linear-gradient(135deg,rgba(248,250,252,0.96),rgba(253,242,248,0.78))] dark:bg-[radial-gradient(circle_at_18%_18%,rgba(99,102,241,0.18),transparent_34%),radial-gradient(circle_at_84%_20%,rgba(190,24,93,0.16),transparent_32%),linear-gradient(135deg,rgba(9,9,11,0.98),rgba(24,24,27,0.96))]'>
+    <div className='aigc-workshop-shell relative flex h-full min-h-0 w-full min-w-0 flex-1 overflow-hidden'>
       <input
         ref={imageReferenceInputRef}
         type='file'
@@ -3078,13 +3079,14 @@ function OriginImageStudio(props: OriginImageStudioProps) {
       <div className='pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.42),rgba(255,255,255,0.08))]' />
       <section className='relative mx-auto flex w-full max-w-6xl min-w-0 flex-col items-center'>
         <div className='text-center'>
-          <h1 className='text-2xl leading-tight font-light tracking-normal text-violet-700 sm:text-4xl md:text-5xl dark:text-violet-200'>
-            <span className='text-violet-400'>✦</span> {t(moduleTitle)}{' '}
-            <span className='text-violet-400'>✦</span>
+          <h1 className='aigc-workshop-title flex items-center justify-center gap-3 text-2xl leading-tight font-semibold tracking-[-0.04em] sm:text-4xl md:text-5xl'>
+            <Sparkles className='text-primary size-5 sm:size-7' />
+            {t(moduleTitle)}
+            <Sparkles className='text-primary size-5 sm:size-7' />
           </h1>
           <p className='text-muted-foreground mt-2 text-xs tracking-normal sm:mt-4 sm:text-sm'>
-            <span className='text-amber-500'>•</span> {t(moduleSubtitle)}{' '}
-            <span className='text-amber-500'>•</span>
+            <span className='text-primary'>/</span> {t(moduleSubtitle)}{' '}
+            <span className='text-primary'>/</span>
           </p>
         </div>
 
@@ -3105,7 +3107,7 @@ function OriginImageStudio(props: OriginImageStudioProps) {
               >
                 <Icon className='size-4' />
                 {module.value === 'video' ? (
-                  <span className='hidden sm:inline'>🎬</span>
+                  <Film className='hidden size-3.5 sm:inline' />
                 ) : null}
                 {t(module.titleKey)}
               </button>
@@ -3119,7 +3121,7 @@ function OriginImageStudio(props: OriginImageStudioProps) {
           >
             <Film className='size-4' />
             {t('音乐创作')}
-            <span className='hidden text-xs sm:inline'>🔒</span>
+            <LockKeyhole className='hidden size-3.5 sm:inline' />
           </button>
         </div>
 

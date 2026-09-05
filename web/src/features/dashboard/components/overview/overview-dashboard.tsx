@@ -20,6 +20,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   ArrowRight,
+  ArrowUpRight,
   BookOpen,
   Check,
   ChevronDown,
@@ -28,10 +29,12 @@ import {
   Copy,
   CreditCard,
   FileText,
+  Gauge,
   KeyRound,
   ListChecks,
   RadioTower,
   ShieldCheck,
+  Sparkles,
   TerminalSquare,
   Timer,
   type LucideIcon,
@@ -455,6 +458,87 @@ function CompactQuickAction(props: { action: QuickAction }) {
   )
 }
 
+function DashboardCommandHero(props: {
+  name: string
+  requestCount: number
+  model: string
+  ready: boolean
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <section className='dashboard-command-hero relative overflow-hidden rounded-2xl border p-5 shadow-xs sm:p-7'>
+      <div className='dashboard-command-hero-grid' aria-hidden='true' />
+      <div className='relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.82fr)] lg:items-end'>
+        <div className='max-w-2xl'>
+          <div className='text-primary mb-4 flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] uppercase'>
+            <Sparkles className='size-3.5' aria-hidden='true' />
+            {t('Welcome back, {{name}}', { name: props.name })}
+          </div>
+          <h1 className='max-w-xl text-3xl leading-[1.05] font-semibold tracking-[-0.045em] text-balance sm:text-5xl'>
+            {t('Build boldly. Route beautifully.')}
+          </h1>
+          <p className='text-muted-foreground mt-4 max-w-xl text-sm leading-6 sm:text-base'>
+            {t(
+              'Your model traffic, creative tools, and account operations in one calm command center.'
+            )}
+          </p>
+          <div className='mt-6 flex flex-wrap gap-2'>
+            <Button size='sm' render={<Link to='/playground' />}>
+              <ArrowRight data-icon='inline-start' />
+              {t('Open Playground')}
+            </Button>
+            <Button variant='outline' size='sm' render={<Link to='/keys' />}>
+              <KeyRound data-icon='inline-start' />
+              {t('Manage API Keys')}
+            </Button>
+          </div>
+        </div>
+
+        <div className='dashboard-command-hero-metrics grid grid-cols-3 gap-2 sm:gap-3'>
+          <div className='dashboard-hero-metric'>
+            <span className='text-muted-foreground flex items-center gap-1.5 text-[10px] font-medium tracking-wide uppercase'>
+              <RadioTower className='size-3.5' />
+              {t('Gateway')}
+            </span>
+            <strong className='mt-3 block text-sm font-semibold'>
+              {props.ready ? t('Ready') : t('Needs setup')}
+            </strong>
+            <span className='text-muted-foreground mt-1 block text-[11px]'>
+              {t('Keys and routing')}
+            </span>
+          </div>
+          <div className='dashboard-hero-metric'>
+            <span className='text-muted-foreground flex items-center gap-1.5 text-[10px] font-medium tracking-wide uppercase'>
+              <Gauge className='size-3.5' />
+              {t('Requests')}
+            </span>
+            <strong className='mt-3 block text-sm font-semibold tabular-nums'>
+              {props.requestCount.toLocaleString()}
+            </strong>
+            <span className='text-muted-foreground mt-1 block text-[11px]'>
+              {t('All time')}
+            </span>
+          </div>
+          <div className='dashboard-hero-metric'>
+            <span className='text-muted-foreground flex items-center gap-1.5 text-[10px] font-medium tracking-wide uppercase'>
+              <TerminalSquare className='size-3.5' />
+              {t('Model')}
+            </span>
+            <strong className='mt-3 block truncate text-sm font-semibold'>
+              {props.model}
+            </strong>
+            <span className='text-muted-foreground mt-1 flex items-center gap-1 text-[11px]'>
+              <ArrowUpRight className='size-3' />
+              {t('Live catalog')}
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export function OverviewDashboard() {
   const { t } = useTranslation()
   const user = useAuthStore((state) => state.auth.user)
@@ -619,6 +703,12 @@ export function OverviewDashboard() {
 
   return (
     <div className='flex flex-col gap-4'>
+      <DashboardCommandHero
+        name={user?.display_name || user?.username || t('Operator')}
+        requestCount={requestCount}
+        model={modelsQuery.data?.[0] ?? t('Loading')}
+        ready={Boolean(preferredKey && apiInfoItems.length > 0)}
+      />
       {setupGuideExpanded ? (
         <CardStaggerContainer className='grid items-stretch gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]'>
           <CardStaggerItem className='bg-card h-full overflow-hidden rounded-2xl border shadow-xs'>

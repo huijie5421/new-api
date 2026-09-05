@@ -463,6 +463,46 @@ For commercial licensing, please contact support@quantumnous.com
     width: 100%;
   }
 
+  .section-page-header {
+    position: relative;
+    background: color-mix(in oklch, var(--background) 94%, var(--primary) 6%);
+    border-bottom: 1px solid color-mix(in oklch, var(--border) 84%, transparent);
+  }
+
+  .section-page-header::after {
+    position: absolute;
+    right: 1rem;
+    bottom: -1px;
+    left: 1rem;
+    height: 1px;
+    content: '';
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklch, var(--primary) 64%, transparent),
+      transparent
+    );
+    opacity: 0.72;
+  }
+
+  .section-page-heading h2 {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    color: var(--foreground);
+  }
+
+  .section-page-heading h2::before {
+    width: 0.42rem;
+    height: 1.55rem;
+    flex: none;
+    border-radius: 999px;
+    content: '';
+    background: var(--primary);
+    box-shadow: 0 0 20px color-mix(in oklch, var(--primary) 42%, transparent);
+  }
+
   .app-sidebar {
     background: color-mix(in oklch, var(--sidebar) 92%, var(--background));
     border-color: color-mix(in oklch, var(--border) 78%, transparent);
@@ -510,6 +550,215 @@ For commercial licensing, please contact support@quantumnous.com
 
   .app-content-surface [data-slot='card']:hover {
     border-color: color-mix(in oklch, var(--primary) 22%, var(--border));
+  }
+
+  .dashboard-command-hero {
+    isolation: isolate;
+    background: color-mix(in oklch, var(--card) 92%, var(--primary) 8%);
+  }
+
+  .dashboard-command-hero::before {
+    position: absolute;
+    top: -5rem;
+    right: 10%;
+    width: 18rem;
+    height: 18rem;
+    border: 1px solid color-mix(in oklch, var(--primary) 30%, transparent);
+    border-radius: 999px;
+    content: '';
+    opacity: 0.42;
+  }
+
+  .dashboard-command-hero::after {
+    position: absolute;
+    top: 2.25rem;
+    right: 2.25rem;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 999px;
+    content: '';
+    background: var(--primary);
+    box-shadow: 0 0 0 7px color-mix(in oklch, var(--primary) 14%, transparent);
+  }
+
+  .dashboard-command-hero-grid {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(
+        90deg,
+        color-mix(in oklch, var(--primary) 8%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        color-mix(in oklch, var(--primary) 8%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 34px 34px;
+    mask-image: linear-gradient(115deg, black 0%, transparent 74%);
+    opacity: 0.6;
+  }
+
+  .dashboard-hero-metric {
+    min-width: 0;
+    border: 1px solid color-mix(in oklch, var(--border) 85%, transparent);
+    border-radius: 0.9rem;
+    background: color-mix(in oklch, var(--background) 55%, transparent);
+    padding: 0.85rem;
+    backdrop-filter: blur(12px);
+  }
+
+  .wallet-command-header {
+    isolation: isolate;
+    background: color-mix(
+      in oklch,
+      var(--card) 94%,
+      var(--overview-accent-3) 6%
+    );
+  }
+
+  .wallet-command-header::after {
+    position: absolute;
+    right: -2rem;
+    bottom: -5rem;
+    width: 18rem;
+    height: 18rem;
+    border: 1px solid
+      color-mix(in oklch, var(--overview-accent-2) 38%, transparent);
+    border-radius: 999px;
+    content: '';
+    opacity: 0.38;
+  }
+
+  .wallet-command-header-mark {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 42%;
+    background-image: linear-gradient(
+      135deg,
+      transparent 0 45%,
+      color-mix(in oklch, var(--primary) 9%, transparent) 45% 46%,
+      transparent 46% 100%
+    );
+    opacity: 0.75;
+  }
+
+  .wallet-command-status {
+    background: color-mix(in oklch, var(--background) 70%, transparent);
+  }
+
+  .channel-monitor-hero {
+    position: relative;
+    isolation: isolate;
+    background: color-mix(in oklch, var(--card) 94%, var(--primary) 6%);
+  }
+
+  .channel-monitor-hero::after {
+    position: absolute;
+    right: -3rem;
+    bottom: -9rem;
+    width: 22rem;
+    height: 22rem;
+    border: 1px solid color-mix(in oklch, var(--primary) 30%, transparent);
+    border-radius: 999px;
+    content: '';
+    opacity: 0.45;
+  }
+
+  .channel-monitor-hero-icon {
+    border: 1px solid color-mix(in oklch, var(--primary) 28%, var(--border));
+    background: color-mix(in oklch, var(--primary) 16%, var(--background));
+    color: var(--primary);
+  }
+
+  .channel-monitor-summary-item {
+    display: grid;
+    min-width: 5.5rem;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    column-gap: 0.45rem;
+    border: 1px solid color-mix(in oklch, var(--border) 86%, transparent);
+    border-radius: 0.85rem;
+    background: color-mix(in oklch, var(--background) 62%, transparent);
+    padding: 0.7rem 0.8rem;
+    backdrop-filter: blur(10px);
+  }
+
+  .channel-monitor-summary-item strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.9rem;
+    font-weight: 650;
+    white-space: nowrap;
+  }
+
+  .channel-monitor-summary-item span {
+    grid-column: 1 / -1;
+    margin-top: 0.25rem;
+    color: var(--muted-foreground);
+    font-size: 0.68rem;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .aigc-workshop-shell {
+    isolation: isolate;
+    background: var(--background);
+    color: var(--foreground);
+  }
+
+  .aigc-workshop-shell::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    content: '';
+    background-image:
+      linear-gradient(
+        90deg,
+        color-mix(in oklch, var(--primary) 6%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        color-mix(in oklch, var(--primary) 6%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 40px 40px;
+    mask-image: linear-gradient(135deg, black, transparent 72%);
+    opacity: 0.72;
+  }
+
+  .aigc-workshop-title {
+    color: var(--foreground);
+  }
+
+  .aigc-workshop-dock {
+    border: 1px solid color-mix(in oklch, var(--border) 86%, transparent);
+    background: color-mix(in oklch, var(--card) 88%, transparent);
+    box-shadow: 0 24px 50px -30px
+      color-mix(in oklch, var(--foreground) 42%, transparent);
+  }
+
+  .aigc-workshop-shell .text-violet-700,
+  .aigc-workshop-shell .text-violet-400,
+  .aigc-workshop-shell .text-violet-200 {
+    color: var(--primary) !important;
+  }
+
+  .aigc-workshop-shell .bg-violet-950 {
+    background: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+  }
+
+  .aigc-workshop-shell .accent-violet-950 {
+    accent-color: var(--primary);
+  }
+
+  .aigc-workshop-shell [class*='hover:border-violet-400']:hover {
+    border-color: color-mix(in oklch, var(--primary) 64%, var(--border));
   }
 
   .app-top-nav a {

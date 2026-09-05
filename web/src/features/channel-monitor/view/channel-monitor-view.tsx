@@ -1,7 +1,9 @@
 import {
   Activity,
   AlertTriangle,
+  CheckCircle2,
   FileStack,
+  Gauge,
   History,
   Loader2,
   Pencil,
@@ -9,6 +11,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  ShieldCheck,
   Trash2,
 } from 'lucide-react'
 /*
@@ -214,6 +217,29 @@ export default function ChannelMonitorView() {
     })
   }, [monitors, search, providerFilter])
 
+  const monitorSummary = useMemo(() => {
+    const enabled = monitors.filter((monitor) => monitor.enabled).length
+    const healthy = monitors.filter(
+      (monitor) =>
+        statusTone(
+          monitor.last_status,
+          monitor.last_latency_ms,
+          monitor.api_mode
+        ) === 'success'
+    ).length
+    const latencies = monitors
+      .map((monitor) => monitor.last_latency_ms)
+      .filter((value): value is number => value != null)
+    const averageLatency = latencies.length
+      ? Math.round(
+          latencies.reduce((total, value) => total + value, 0) /
+            latencies.length
+        )
+      : null
+
+    return { enabled, healthy, averageLatency }
+  }, [monitors])
+
   const handleToggleEnabled = async (monitor: ChannelMonitor) => {
     setTogglingId(monitor.id)
     // optimistic update
@@ -298,42 +324,61 @@ export default function ChannelMonitorView() {
   return (
     <div className='h-full space-y-6 overflow-y-auto p-4 sm:p-6'>
       {/* Header */}
-      <Card className='overflow-hidden border-blue-500/20'>
+      <Card className='channel-monitor-hero overflow-hidden'>
         <div className='relative overflow-hidden'>
-          <div className='absolute inset-0 bg-gradient-to-br from-blue-500/10 via-indigo-500/10 to-purple-500/10' />
-          <div className='absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.12),transparent_55%)]' />
-          <CardContent className='relative flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between'>
-            <div className='flex items-center gap-3'>
-              <div className='flex size-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg'>
-                <Activity className='size-5 text-white' />
+          <CardContent className='relative flex flex-col gap-6 p-5 sm:p-6'>
+            <div className='flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between'>
+              <div className='flex items-start gap-3'>
+                <div className='channel-monitor-hero-icon flex size-11 shrink-0 items-center justify-center rounded-xl shadow-lg'>
+                  <Activity className='size-5' />
+                </div>
+                <div>
+                  <div className='text-primary mb-1 text-[11px] font-semibold tracking-[0.2em] uppercase'>
+                    {t('Operations / V1 probe')}
+                  </div>
+                  <h1 className='text-2xl font-semibold tracking-tight'>
+                    {t('Channel Monitors')}
+                  </h1>
+                  <div className='mt-1 flex flex-wrap items-center gap-2'>
+                    <Badge variant='outline' className='text-xs'>
+                      {t('V1 Active Probe')}
+                    </Badge>
+                    <p className='text-muted-foreground text-sm'>
+                      {t(
+                        'Track upstream channel availability and latency over time.'
+                      )}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h1 className='text-xl font-bold'>{t('Channel Monitors')}</h1>
-                <div className='mt-1 flex flex-wrap items-center gap-2'>
-                  <Badge variant='outline' className='text-xs'>
-                    {t('V1 Active Probe')}
-                  </Badge>
-                  <p className='text-muted-foreground text-sm'>
-                    {t(
-                      'Track upstream channel availability and latency over time.'
-                    )}
-                  </p>
+              <div className='channel-monitor-summary grid grid-cols-3 gap-2 sm:gap-3'>
+                <div className='channel-monitor-summary-item'>
+                  <ShieldCheck className='text-success size-4' />
+                  <strong>{monitorSummary.healthy}</strong>
+                  <span>{t('Healthy')}</span>
+                </div>
+                <div className='channel-monitor-summary-item'>
+                  <CheckCircle2 className='text-primary size-4' />
+                  <strong>{monitorSummary.enabled}</strong>
+                  <span>{t('Enabled')}</span>
+                </div>
+                <div className='channel-monitor-summary-item'>
+                  <Gauge className='text-warning size-4' />
+                  <strong>
+                    {monitorSummary.averageLatency != null
+                      ? `${monitorSummary.averageLatency}ms`
+                      : '—'}
+                  </strong>
+                  <span>{t('Avg latency')}</span>
                 </div>
               </div>
             </div>
-            <div className='flex items-center gap-2'>
-              <Button
-                variant='outline'
-                onClick={() => setTemplatesOpen(true)}
-                className='bg-background/60 backdrop-blur'
-              >
+            <div className='flex flex-wrap items-center gap-2'>
+              <Button variant='outline' onClick={() => setTemplatesOpen(true)}>
                 <FileStack className='size-4' />
                 {t('Templates')}
               </Button>
-              <Button
-                onClick={openCreate}
-                className='bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md hover:from-blue-700 hover:to-indigo-700'
-              >
+              <Button onClick={openCreate}>
                 <Plus className='size-4' />
                 {t('Create Monitor')}
               </Button>
