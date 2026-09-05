@@ -166,20 +166,20 @@ export function Pricing() {
         <PageTransition className='pricing-page-shell relative mx-auto w-full max-w-[1800px] px-3 pt-16 pb-8 sm:px-6 sm:pt-20 sm:pb-10 xl:px-8'>
           <header className='pricing-hero relative mx-auto mb-5 overflow-hidden rounded-3xl border p-5 sm:mb-8 sm:p-8 lg:p-10'>
             <div className='pricing-hero-grid' aria-hidden='true' />
-            <div className='relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.7fr)] lg:items-end'>
-              <div className='max-w-3xl'>
-                <div className='text-primary mb-4 flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] uppercase'>
-                  <Sparkles className='size-3.5' />
-                  Aizzz / Model catalog
+            <div className='pricing-hero-layout relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.64fr)] lg:items-stretch'>
+              <div className='pricing-hero-copy flex min-w-0 flex-col justify-between'>
+                <div>
+                  <div className='text-primary mb-4 flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] uppercase'>
+                    <span className='pricing-live-dot' />
+                    {t('Live model catalog')}
+                  </div>
+                  <h1 className='pricing-hero-title text-3xl leading-[1.05] font-semibold tracking-[-0.05em] sm:text-5xl lg:text-6xl'>
+                    {t('Model Square')}
+                  </h1>
+                  <p className='text-muted-foreground mt-3 max-w-xl text-sm leading-6'>
+                    {t('Compare models, pricing, and endpoints in one place.')}
+                  </p>
                 </div>
-                <h1 className='pricing-hero-title text-3xl leading-[1.05] font-semibold tracking-[-0.05em] sm:text-5xl lg:text-6xl'>
-                  {t('Find the right model for the work.')}
-                </h1>
-                <p className='text-muted-foreground mt-4 max-w-2xl text-sm leading-6 sm:text-base'>
-                  {t(
-                    'Compare capabilities, endpoints, groups, and live pricing before you route production traffic.'
-                  )}
-                </p>
                 <SearchBar
                   value={searchInput}
                   onChange={setSearchInput}
@@ -187,35 +187,54 @@ export function Pricing() {
                   placeholder={t(
                     'Search model name, provider, endpoint, or tag...'
                   )}
-                  className='pricing-search mt-5 max-w-2xl sm:mt-7'
+                  className='pricing-search mt-6 max-w-2xl sm:mt-8'
                 />
               </div>
 
-              <div className='grid grid-cols-3 gap-2 sm:gap-3'>
-                <div className='pricing-hero-stat'>
-                  <Store className='text-primary size-4' />
-                  <strong>{models?.length || 0}</strong>
-                  <span>{t('Models')}</span>
+              <div className='pricing-hero-console'>
+                <div className='pricing-hero-radar' aria-hidden='true'>
+                  <span className='pricing-hero-radar-ring pricing-hero-radar-ring-large' />
+                  <span className='pricing-hero-radar-ring pricing-hero-radar-ring-medium' />
+                  <span className='pricing-hero-radar-ring pricing-hero-radar-ring-small' />
+                  <span className='pricing-hero-radar-core'>
+                    <Sparkles className='size-4' />
+                  </span>
                 </div>
-                <div className='pricing-hero-stat'>
-                  <Layers3 className='text-primary size-4' />
-                  <strong>{vendors?.length || 0}</strong>
-                  <span>{t('Providers')}</span>
-                </div>
-                <div className='pricing-hero-stat'>
-                  <Search className='text-primary size-4' />
+                <div className='pricing-hero-console-copy'>
+                  <span className='text-muted-foreground text-[10px] font-semibold tracking-[0.18em] uppercase'>
+                    {t('Catalog signal')}
+                  </span>
                   <strong>{filteredModels.length}</strong>
-                  <span>{t('In view')}</span>
+                  <span className='text-muted-foreground text-xs'>
+                    {t('models ready to compare')}
+                  </span>
+                </div>
+                <div className='pricing-hero-console-metrics grid grid-cols-3 gap-2'>
+                  <div className='pricing-hero-console-metric'>
+                    <Store className='text-primary size-3.5' />
+                    <span>{models?.length || 0}</span>
+                    <small>{t('Models')}</small>
+                  </div>
+                  <div className='pricing-hero-console-metric'>
+                    <Layers3 className='text-primary size-3.5' />
+                    <span>{vendors?.length || 0}</span>
+                    <small>{t('Providers')}</small>
+                  </div>
+                  <div className='pricing-hero-console-metric'>
+                    <Search className='text-primary size-3.5' />
+                    <span>{activeFilterCount}</span>
+                    <small>{t('Filters')}</small>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className='border-border/60 relative mt-6 flex flex-wrap items-center gap-2 border-t pt-4'>
+            <div className='border-border/60 relative mt-6 flex flex-wrap items-center gap-3 border-t pt-4'>
               <span className='text-muted-foreground text-xs'>
-                {t('Need to test a model first?')}
+                {t('Choose a model, then test it in your own flow.')}
               </span>
               <Link
                 to='/playground'
-                className='text-primary inline-flex items-center gap-1 text-xs font-semibold hover:underline'
+                className='text-primary inline-flex items-center gap-1 text-xs font-semibold transition-transform hover:translate-x-0.5 hover:underline'
               >
                 {t('Open Playground')}
                 <ArrowRight className='size-3.5' />

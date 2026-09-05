@@ -607,6 +607,16 @@ For commercial licensing, please contact support@quantumnous.com
     background: color-mix(in oklch, var(--background) 55%, transparent);
     padding: 0.85rem;
     backdrop-filter: blur(12px);
+    transition:
+      transform 180ms ease,
+      border-color 180ms ease,
+      background-color 180ms ease;
+  }
+
+  .dashboard-hero-metric:hover {
+    border-color: color-mix(in oklch, var(--primary) 44%, var(--border));
+    background: color-mix(in oklch, var(--primary) 10%, var(--background));
+    transform: translateY(-2px);
   }
 
   .wallet-command-header {
@@ -807,6 +817,151 @@ For commercial licensing, please contact support@quantumnous.com
     color: var(--foreground);
   }
 
+  .pricing-live-dot {
+    width: 0.42rem;
+    height: 0.42rem;
+    border-radius: 999px;
+    background: var(--primary);
+    box-shadow: 0 0 0 5px color-mix(in oklch, var(--primary) 14%, transparent);
+    animation: pricing-live-pulse 2.6s ease-in-out infinite;
+  }
+
+  .pricing-hero-console {
+    position: relative;
+    min-height: 14rem;
+    overflow: hidden;
+    border: 1px solid color-mix(in oklch, var(--border) 86%, transparent);
+    border-radius: 1.25rem;
+    background: color-mix(in oklch, var(--background) 54%, transparent);
+    padding: 1.1rem;
+    backdrop-filter: blur(14px);
+  }
+
+  .pricing-hero-radar {
+    position: absolute;
+    top: -3rem;
+    right: -1rem;
+    width: 16rem;
+    height: 16rem;
+  }
+
+  .pricing-hero-radar-ring,
+  .pricing-hero-radar-core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: block;
+    border-radius: 999px;
+    transform: translate(-50%, -50%);
+  }
+
+  .pricing-hero-radar-ring {
+    border: 1px solid color-mix(in oklch, var(--primary) 32%, transparent);
+    animation: pricing-radar-breathe 4s ease-in-out infinite;
+  }
+
+  .pricing-hero-radar-ring-large {
+    width: 15rem;
+    height: 15rem;
+  }
+
+  .pricing-hero-radar-ring-medium {
+    width: 10rem;
+    height: 10rem;
+    animation-delay: -1.2s;
+  }
+
+  .pricing-hero-radar-ring-small {
+    width: 5rem;
+    height: 5rem;
+    animation-delay: -2.1s;
+  }
+
+  .pricing-hero-radar-core {
+    display: flex;
+    width: 2.6rem;
+    height: 2.6rem;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    box-shadow: 0 0 0 9px color-mix(in oklch, var(--primary) 14%, transparent);
+  }
+
+  .pricing-hero-console-copy {
+    position: absolute;
+    right: 1.1rem;
+    bottom: 5.6rem;
+    display: flex;
+    max-width: 10rem;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .pricing-hero-console-copy strong {
+    margin-top: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 2.4rem;
+    font-weight: 650;
+    letter-spacing: -0.06em;
+  }
+
+  .pricing-hero-console-metrics {
+    position: absolute;
+    right: 1.1rem;
+    bottom: 1.1rem;
+    left: 1.1rem;
+  }
+
+  .pricing-hero-console-metric {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    column-gap: 0.4rem;
+    border: 1px solid color-mix(in oklch, var(--border) 82%, transparent);
+    border-radius: 0.65rem;
+    background: color-mix(in oklch, var(--card) 64%, transparent);
+    padding: 0.5rem;
+  }
+
+  .pricing-hero-console-metric span {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    font-weight: 650;
+  }
+
+  .pricing-hero-console-metric small {
+    grid-column: 1 / -1;
+    margin-top: 0.2rem;
+    color: var(--muted-foreground);
+    font-size: 0.62rem;
+  }
+
+  @keyframes pricing-live-pulse {
+    0%,
+    100% {
+      opacity: 0.45;
+      transform: scale(0.9);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.08);
+    }
+  }
+
+  @keyframes pricing-radar-breathe {
+    0%,
+    100% {
+      opacity: 0.28;
+      transform: translate(-50%, -50%) scale(0.97);
+    }
+    50% {
+      opacity: 0.72;
+      transform: translate(-50%, -50%) scale(1.03);
+    }
+  }
+
   .pricing-hero-stat {
     display: grid;
     min-width: 0;
@@ -836,6 +991,8 @@ For commercial licensing, please contact support@quantumnous.com
   }
 
   .pricing-model-card {
+    isolation: isolate;
+    overflow: hidden;
     background: color-mix(in oklch, var(--card) 94%, var(--primary) 6%);
     box-shadow: 0 12px 30px -28px
       color-mix(in oklch, var(--foreground) 45%, transparent);
@@ -843,6 +1000,27 @@ For commercial licensing, please contact support@quantumnous.com
       transform 180ms ease,
       border-color 180ms ease,
       box-shadow 180ms ease;
+    animation: pricing-card-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .pricing-model-grid .pricing-model-card:nth-child(2) {
+    animation-delay: 35ms;
+  }
+
+  .pricing-model-grid .pricing-model-card:nth-child(3) {
+    animation-delay: 70ms;
+  }
+
+  .pricing-model-grid .pricing-model-card:nth-child(4) {
+    animation-delay: 105ms;
+  }
+
+  .pricing-model-grid .pricing-model-card:nth-child(5) {
+    animation-delay: 140ms;
+  }
+
+  .pricing-model-grid .pricing-model-card:nth-child(6) {
+    animation-delay: 175ms;
   }
 
   .pricing-model-card:hover {
@@ -852,11 +1030,170 @@ For commercial licensing, please contact support@quantumnous.com
     transform: translateY(-2px);
   }
 
+  @keyframes pricing-card-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .pricing-model-card-signal {
+    position: absolute;
+    top: 0;
+    right: 1.1rem;
+    left: 1.1rem;
+    height: 2px;
+    border-radius: 999px;
+    content: '';
+    background: color-mix(in oklch, var(--primary) 34%, transparent);
+    opacity: 0.55;
+    transition:
+      background-color 180ms ease,
+      opacity 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  .pricing-model-card-healthy .pricing-model-card-signal {
+    background: var(--success);
+  }
+
+  .pricing-model-card:hover .pricing-model-card-signal {
+    opacity: 1;
+    box-shadow: 0 0 16px color-mix(in oklch, var(--primary) 54%, transparent);
+  }
+
+  .pricing-model-icon {
+    border: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+    transition:
+      transform 180ms ease,
+      border-color 180ms ease,
+      background-color 180ms ease;
+  }
+
+  .pricing-model-card:hover .pricing-model-icon {
+    border-color: color-mix(in oklch, var(--primary) 52%, var(--border));
+    background: color-mix(in oklch, var(--primary) 12%, var(--muted));
+    transform: rotate(-4deg) scale(1.06);
+  }
+
+  .pricing-model-details,
+  .pricing-model-copy {
+    transition:
+      color 160ms ease,
+      background-color 160ms ease,
+      border-color 160ms ease,
+      transform 160ms ease;
+  }
+
+  .pricing-model-details:hover,
+  .pricing-model-copy:hover {
+    border-color: color-mix(in oklch, var(--primary) 52%, var(--border));
+    transform: translateY(-1px);
+  }
+
+  .pricing-model-price {
+    transition: transform 180ms ease;
+  }
+
+  .pricing-model-card:hover .pricing-model-price {
+    transform: translateX(2px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pricing-live-dot,
+    .pricing-hero-radar-ring,
+    .pricing-model-grid .pricing-model-card,
+    .pricing-model-card,
+    .pricing-model-icon,
+    .pricing-model-details,
+    .pricing-model-copy,
+    .pricing-model-price {
+      animation: none;
+      transition: none;
+      transform: none;
+    }
+  }
+
   .dashboard-section-intro {
     border: 1px solid color-mix(in oklch, var(--border) 86%, transparent);
     border-radius: 1rem;
     background: color-mix(in oklch, var(--card) 92%, var(--primary) 8%);
     padding: 1rem 1.1rem;
+  }
+
+  .dashboard-kpi-board {
+    isolation: isolate;
+    background: color-mix(in oklch, var(--card) 95%, var(--primary) 5%);
+  }
+
+  .dashboard-kpi-main {
+    position: relative;
+  }
+
+  .dashboard-kpi-main::before {
+    position: absolute;
+    top: 1.3rem;
+    bottom: 1.3rem;
+    left: 0;
+    width: 2px;
+    border-radius: 999px;
+    content: '';
+    background: var(--primary);
+    box-shadow: 0 0 18px color-mix(in oklch, var(--primary) 45%, transparent);
+  }
+
+  .dashboard-kpi-item {
+    position: relative;
+    overflow: hidden;
+    border-color: color-mix(in oklch, var(--border) 84%, transparent);
+    transition:
+      transform 180ms ease,
+      border-color 180ms ease,
+      background-color 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  .dashboard-kpi-item::after {
+    position: absolute;
+    right: -2rem;
+    bottom: -2.5rem;
+    width: 7rem;
+    height: 7rem;
+    border: 1px solid color-mix(in oklch, var(--primary) 20%, transparent);
+    border-radius: 999px;
+    content: '';
+    opacity: 0.6;
+  }
+
+  .dashboard-kpi-item:hover {
+    border-color: color-mix(in oklch, var(--primary) 42%, var(--border));
+    box-shadow: 0 16px 30px -26px
+      color-mix(in oklch, var(--primary) 50%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .dashboard-credit-rail {
+    background: color-mix(in oklch, var(--primary) 7%, var(--background));
+  }
+
+  .dashboard-credit-rail > div:first-child {
+    position: relative;
+  }
+
+  .dashboard-credit-rail > div:first-child::before {
+    position: absolute;
+    top: -0.5rem;
+    right: -0.35rem;
+    width: 5rem;
+    height: 5rem;
+    border: 1px solid color-mix(in oklch, var(--primary) 30%, transparent);
+    border-radius: 999px;
+    content: '';
+    opacity: 0.55;
   }
 
   .app-top-nav a {
